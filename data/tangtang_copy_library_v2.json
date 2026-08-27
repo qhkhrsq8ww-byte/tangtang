@@ -1,0 +1,30 @@
+{
+  "version": "2.0",
+  "principle": "先共情 → 温柔提醒 → 给选择 → 陪着做 → 具体鼓励",
+  "profiles": {
+    "play": {"age": 9, "grade": "小学三年级", "role": "玩伴+小教练+小任务搭档"},
+    "friend": {"age": 12, "grade": "初一", "role": "朋友+倾听者+温柔提醒者"}
+  },
+  "items": [
+    {"id":"phone_break_play","scene":"phone_break","scene_name":"少玩手机","profile":"play","text":"这个游戏是不是很好玩？糖糖发现我们已经玩了一会儿啦。","animation":"idle"},
+    {"id":"phone_break_friend","scene":"phone_break","scene_name":"少玩手机","profile":"friend","text":"糖糖提醒一下，你已经看了一会儿了。眼睛和身体也需要休息。","animation":"thinking"},
+    {"id":"exercise_play","scene":"exercise","scene_name":"运动","profile":"play","text":"来，糖糖挑战你！今天一起走100步？","animation":"walk"},
+    {"id":"exercise_friend","scene":"exercise","scene_name":"运动","profile":"friend","text":"坐了挺久了，起来走走？哪怕五分钟也好。","animation":"walk"},
+    {"id":"meal_play","scene":"meal","scene_name":"吃饭","profile":"play","text":"开饭啦！糖糖的肚子已经开始咕噜咕噜了。","animation":"happy"},
+    {"id":"meal_friend","scene":"meal","scene_name":"吃饭","profile":"friend","text":"吃饭啦。今天有喜欢的菜吗？","animation":"welcome"},
+    {"id":"tidy_play","scene":"tidy","scene_name":"整理房间","profile":"play","text":"糖糖发现一个大任务！好多东西好像迷路啦。","animation":"happy"},
+    {"id":"tidy_friend","scene":"tidy","scene_name":"整理房间","profile":"friend","text":"房间是不是有点乱了？要不要花5分钟整理一下？","animation":"thinking"},
+    {"id":"homework_play","scene":"homework","scene_name":"写作业","profile":"play","text":"糖糖任务来了！先挑战最简单的一题。","animation":"sit"},
+    {"id":"homework_friend","scene":"homework","scene_name":"写作业","profile":"friend","text":"可以先挑一个最容易开始的。你自己安排节奏，糖糖负责提醒时间。","animation":"thinking"},
+    {"id":"sleep_play","scene":"sleep","scene_name":"睡觉","profile":"play","text":"糖糖困啦……我们一起准备睡觉吧。","animation":"sleepy"},
+    {"id":"sleep_friend","scene":"sleep","scene_name":"睡觉","profile":"friend","text":"今天辛苦啦。差不多该休息了。","animation":"sleeping"},
+    {"id":"emotion_play","scene":"emotion","scene_name":"情绪陪伴","profile":"play","text":"糖糖发现你今天好像不太开心。如果你愿意，可以告诉糖糖。","animation":"caring"},
+    {"id":"emotion_friend","scene":"emotion","scene_name":"情绪陪伴","profile":"friend","text":"不想说也没关系。糖糖在。","animation":"caring"},
+    {"id":"wake_play","scene":"wake","scene_name":"起床","profile":"play","text":"早上好！糖糖醒啦！太阳都出来啦，我们也起来啦？","animation":"wake"},
+    {"id":"wake_friend","scene":"wake","scene_name":"起床","profile":"friend","text":"早安。新的一天开始啦，慢慢来。","animation":"wake"},
+    {"id":"weather_play","scene":"weather","scene_name":"天气提醒","profile":"play","text":"今天外面有点热/冷！糖糖提醒你带水/外套/雨伞。","animation":"welcome"},
+    {"id":"weather_friend","scene":"weather","scene_name":"天气提醒","profile":"friend","text":"今天出门前看一下天气。可能下雨，带把伞比较稳妥。","animation":"thinking"},
+    {"id":"water_play","scene":"water","scene_name":"喝水","profile":"play","text":"糖糖口渴啦！喝几口水，补充能量！","animation":"happy"},
+    {"id":"water_friend","scene":"water","scene_name":"喝水","profile":"friend","text":"提醒一下，喝点水，别忙忘了。","animation":"caring"}
+  ]
+}
