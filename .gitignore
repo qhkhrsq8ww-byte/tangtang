@@ -1,0 +1,16 @@
+# 敏感文件 - 不入库
+code/cat/cat-stt-config.sh
+code/cat/cat-chat-history.json
+code/cat/cat-state.json
+code/cat/cat-memory.json
+code/cat/cat-mood.txt
+code/cat/voices.json
+code/cat/sofa_index.js
+code/cat/sofa_upload.html
+code/cat/package-lock.json
+code/cat/bin/
+code/cat/generated-images/
+code/cat/assets_ref/
+
+# macOS
+.DS_Store

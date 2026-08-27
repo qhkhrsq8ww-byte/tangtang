@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>糖糖</title>
+<style>
+  html,body{margin:0;height:100%;background:#1a1a2e;font-family:"PingFang SC","Microsoft YaHei",sans-serif;overflow:hidden;}
+  .stage{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;}
+  .cat{font-size:28vh;line-height:1;animation:breathe 3s ease-in-out infinite;filter:drop-shadow(0 0 30px rgba(255,165,0,.5));}
+  .name{color:#ffb347;font-size:6vh;font-weight:bold;margin-top:2vh;letter-spacing:.3em;}
+  .mood{color:#ffd9a0;font-size:3.4vh;margin-top:2vh;opacity:.9;text-align:center;padding:0 4vw;min-height:4vh;}
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="cat" id="face">🐱</div>
+  <div class="name">小 橘</div>
+  <div class="mood" id="mood">喵～ 我在呢</div>
+</div>
+<script>
+  // 1) URL 参数优先（?mood= &face=）
+  const p=new URLSearchParams(location.search);
+  const uFace=p.get('face'), uMood=p.get('mood');
+  if(uFace) document.getElementById('face').textContent=uFace;
+  let lastMood = uMood || '';
+  if(uMood) document.getElementById('mood').textContent=uMood;
+
+  // 2) 轮询 cat-mood.txt（避免中文 URL 编码问题，且能让提醒自动刷新）
+  async function poll(){
+    try{
+      const r=await fetch('cat-mood.txt?t='+Date.now());
+      if(r.ok){
+        const t=(await r.text()).trim();
+        if(t && t!==lastMood){
+          lastMood=t;
+          document.getElementById('mood').textContent=t;
+        }
+      }
+    }catch(e){}
+  }
+  poll();
+  setInterval(poll, 3000);
+</script>
+</body>
+</html>

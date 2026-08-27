@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>糖糖·全屏舞台</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;
+    font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-user-select:none;user-select:none;cursor:default;
+    background:radial-gradient(120% 120% at 50% 0%,#2b2440 0%,#1a1730 55%,#120f22 100%);
+    color:#fff;}
+  /* 星点背景 */
+  .stars{position:fixed;inset:0;z-index:0;opacity:.5;
+    background-image:radial-gradient(2px 2px at 20% 30%,#fff 50%,transparent),
+      radial-gradient(1.5px 1.5px at 70% 20%,#fff 50%,transparent),
+      radial-gradient(1.5px 1.5px at 40% 70%,#fff 50%,transparent),
+      radial-gradient(2px 2px at 85% 60%,#fff 50%,transparent),
+      radial-gradient(1.5px 1.5px at 55% 45%,#fff 50%,transparent),
+      radial-gradient(1.5px 1.5px at 10% 80%,#fff 50%,transparent);}
+
+  /* 大时钟 */
+  #clock{position:fixed;top:6vh;left:0;right:0;z-index:2;text-align:center;text-shadow:0 4px 24px rgba(0,0,0,.5);}
+  #time{font-size:13vw;font-weight:800;letter-spacing:2px;line-height:1;
+    background:linear-gradient(180deg,#fff,#ffd9a8);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  #date{font-size:3vw;opacity:.7;margin-top:1vh;font-weight:600;}
+
+  /* 全屏按钮 */
+  #fs{position:fixed;top:18px;right:18px;z-index:5;padding:10px 16px;border-radius:24px;
+    background:rgba(255,255,255,.14);color:#fff;font-size:15px;border:1px solid rgba(255,255,255,.25);
+    cursor:pointer;backdrop-filter:blur(6px);}
+  #fs:hover{background:rgba(255,255,255,.24);}
+
+  /* 糖糖主形象（中央大图，可拖动） */
+  #pet{position:fixed;right:5vw;bottom:5vh;width:40vmin;max-width:480px;z-index:3;touch-action:none;cursor:grab;}
+  #pet.drag{cursor:grabbing;}
+  .wrap{position:relative;width:100%;animation:breathe 3.4s ease-in-out infinite;transform-origin:50% 92%;}
+  @keyframes breathe{0%,100%{transform:scale(1) translateY(0)}50%{transform:scale(1.03) translateY(-3px)}}
+  .hop{animation:hop .5s ease;}
+  @keyframes hop{0%{transform:translateY(0)}40%{transform:translateY(-20px)}100%{transform:translateY(0)}}
+
+  /* 主图状态切换 */
+  .pet-img{width:100%;height:auto;display:block;transition:filter .3s ease, transform .3s ease;}
+  .pet-img.state-bright{filter:brightness(1.1) saturate(1.15);}
+  .pet-img.state-soft{filter:brightness(1.04) saturate(.95);}
+  .pet-img.state-night{filter:brightness(.55) saturate(.7) hue-rotate(-15deg);}
+  .pet-img.state-dreamy{filter:brightness(1.05) hue-rotate(8deg);}
+  .pet-img.state-energy{filter:saturate(1.25) contrast(1.05);}
+  .pet-img.state-sleep{filter:brightness(.85) saturate(.8) blur(.3px);}
+
+  /* 表情层（SVG，覆盖在主图上） */
+  .overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+
+  #bubble{position:absolute;bottom:100%;left:50%;transform:translateX(-50%) scale(.6);
+    margin-bottom:14px;max-width:80vw;min-width:90px;padding:14px 20px;background:#fffef9;color:#7a4a20;
+    font-size:clamp(18px,3.4vw,30px);line-height:1.5;border-radius:24px;box-shadow:0 8px 26px rgba(0,0,0,.35);
+    opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;text-align:center;font-weight:800;}
+  #bubble.show{opacity:1;transform:translateX(-50%) scale(1);}
+  #bubble::after{content:"";position:absolute;bottom:-11px;left:50%;transform:translateX(-50%);
+    border-left:11px solid transparent;border-right:11px solid transparent;border-top:13px solid #fffef9;}
+
+  #hint{position:fixed;left:50%;bottom:2.5vh;transform:translateX(-50%);z-index:2;
+    color:rgba(255,255,255,.55);font-size:14px;background:rgba(0,0,0,.28);padding:6px 14px;border-radius:20px;
+    pointer-events:none;animation:fade 8s forwards;}
+  @keyframes fade{0%,60%{opacity:1}100%{opacity:0}}
+
+  /* 状态指示器（小角标） */
+  #stateBadge{position:fixed;top:18px;left:18px;z-index:5;padding:8px 14px;border-radius:24px;
+    background:rgba(255,255,255,.14);color:#fff;font-size:13px;font-weight:600;
+    border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(6px);display:flex;align-items:center;gap:6px;}
+  #stateBadge .dot{width:8px;height:8px;border-radius:50%;background:#FFD34D;box-shadow:0 0 8px #FFD34D;}
+</style>
+</head>
+<body>
+<div class="stars"></div>
+
+<div id="stateBadge"><span class="dot"></span><span id="stateText">待机 idle</span></div>
+
+<div id="clock">
+  <div id="time">00:00</div>
+  <div id="date"></div>
+</div>
+
+<button id="fs">⛶ 全屏</button>
+
+<div id="hint">点一下画面进入全屏 · 拖动糖糖可挪位置 · 点糖糖它会撒娇</div>
+
+<div id="pet" title="拖动我 / 点我撒娇">
+  <div id="bubble"></div>
+  <div class="wrap" id="wrap">
+    <img id="petImg" class="pet-img state-soft" src="assets/tangtang-base.png" alt="糖糖">
+    <svg class="overlay" id="overlay" viewBox="0 0 200 200"></svg>
+  </div>
+</div>
+
+<script>
+  // 状态定义：和 tangtang-states.html 同步
+  const STATES = {
+    idle:        { img: 'assets/tangtang-base.png',     filter: '',              overlay: '',                                                                bubble: '汪汪～' },
+    happy:       { img: 'assets/tangtang-happy.png',    filter: 'state-bright',  overlay: '<g><text x="50%" y="15%" font-size="20" text-anchor="middle" fill="#FF8FA3" opacity=".85">♥ ♥ ♥</text></g>', bubble: '糖糖好开心～' },
+    curious:     { img: 'assets/tangtang-curious.png',  filter: 'state-soft',    overlay: '<g><text x="78%" y="22%" font-size="22" text-anchor="middle" fill="#4FC3F7" font-weight="bold" font-family="sans-serif">?</text></g>', bubble: '咦？这是什么呀？' },
+    thinking:    { img: 'assets/tangtang-base.png',     filter: '',              overlay: '<g><text x="50%" y="20%" font-size="16" text-anchor="middle" fill="#FF8FA3">💭</text><text x="78%" y="20%" font-size="16" text-anchor="middle" fill="#FF8FA3">?</text></g>', bubble: '让糖糖想想…' },
+    caring:      { img: 'assets/tangtang-base.png',     filter: 'state-soft',    overlay: '<g><text x="75%" y="25%" font-size="18" text-anchor="middle" fill="#FF8FA3">♥</text></g>', bubble: '糖糖在这里陪你～' },
+    encouraging: { img: 'assets/tangtang-happy.png',    filter: 'state-energy',  overlay: '<g><text x="50%" y="14%" font-size="14" text-anchor="middle" fill="#FF8FA3" font-weight="bold">加油！</text></g>', bubble: '你已经超棒啦！' },
+    walking:     { img: 'assets/tangtang-base.png',     filter: 'state-soft',    overlay: motionDots(), bubble: '散步去咯～' },
+    running:     { img: 'assets/tangtang-base.png',     filter: 'state-energy',  overlay: motionDots(true), bubble: '冲鸭冲鸭！' },
+    sitting:     { img: 'assets/tangtang-base.png',     filter: '',              overlay: '', bubble: '糖糖坐好啦～' },
+    lying:       { img: 'assets/tangtang-base.png',     filter: 'state-soft',    overlay: '<g><text x="50%" y="60%" font-size="11" text-anchor="middle" fill="#8B5E3C" opacity=".5">～</text></g>', bubble: '糖糖趴着等你～' },
+    sleepy:      { img: 'assets/tangtang-base.png',     filter: 'state-sleep',   overlay: '<g><text x="50%" y="22%" font-size="20" text-anchor="middle" fill="#9575CD" opacity=".75">z z</text></g>', bubble: '糖糖有点困了…' },
+    sleeping:    { img: 'assets/tangtang-sleeping.png', filter: 'state-sleep',   overlay: '<g><text x="65%" y="20%" font-size="22" text-anchor="middle" fill="#9575CD" opacity=".9">Z z z</text></g>', bubble: '呼噜噜…' },
+    welcome:     { img: 'assets/tangtang-happy.png',    filter: 'state-bright',  overlay: '<g><text x="50%" y="16%" font-size="14" text-anchor="middle" fill="#FFB300" font-weight="bold">欢迎回家！</text></g>', bubble: '航航回来啦！' },
+    accompany:   { img: 'assets/tangtang-base.png',     filter: 'state-dreamy',  overlay: '<g><text x="50%" y="55%" font-size="9" text-anchor="middle" fill="#FFF" opacity=".5">～ ～ ～</text></g>', bubble: '糖糖陪你～' },
+    wakeup:      { img: 'assets/tangtang-curious.png',  filter: 'state-bright',  overlay: '<g><text x="72%" y="20%" font-size="18" text-anchor="middle" fill="#FFD700">☀</text></g>', bubble: '早安航航！' },
+    night:       { img: 'assets/tangtang-sleeping.png', filter: 'state-night',   overlay: '<g><text x="20%" y="15%" font-size="16" text-anchor="middle" fill="#F0E68C">☾</text><text x="78%" y="22%" font-size="11" text-anchor="middle" fill="#F0E68C">★</text></g>', bubble: '晚安航航～' }
+  };
+
+  function motionDots(fast) {
+    const c = fast ? 5 : 3;
+    let s = '<g>';
+    for (let i = 0; i < c; i++) s += `<text x="${15 - i * 4}%" y="${50 + Math.random() * 30}%" font-size="10" text-anchor="middle" fill="#8B5E3C" opacity=".${4 - i}">·</text>`;
+    return s + '</g>';
+  }
+
+  const pet = document.getElementById('pet');
+  const petImg = document.getElementById('petImg');
+  const overlay = document.getElementById('overlay');
+  const bubble = document.getElementById('bubble');
+  const wrap = document.getElementById('wrap');
+  const stateText = document.getElementById('stateText');
+  let lastMood = '', bubbleTimer = null, fsTried = false;
+
+  function setState(name) {
+    const s = STATES[name] || STATES.idle;
+    petImg.className = 'pet-img ' + s.filter;
+    petImg.src = s.img;
+    overlay.innerHTML = s.overlay;
+    stateText.textContent = name;
+  }
+
+  function speak(text) {
+    if (!text) return;
+    bubble.textContent = text;
+    bubble.classList.add('show');
+    wrap.classList.remove('hop'); void wrap.offsetWidth; wrap.classList.add('hop');
+    clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(() => bubble.classList.remove('show'), 7000);
+  }
+
+  function speakState(stateName) {
+    const s = STATES[stateName] || STATES.idle;
+    speak(s.bubble);
+  }
+
+  function goFull() {
+    const el = document.documentElement;
+    if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.requestFullscreen) el.requestFullscreen();
+  }
+
+  const cute = ['汪汪～', '最喜欢你啦', '摸摸头～', '陪你玩呀', '乖乖喝水哦', '今天也要开心', '糖糖在呢', '抱抱！'];
+  pet.addEventListener('click', e => {
+    e.stopPropagation();
+    speak(cute[Math.floor(Math.random() * cute.length)]);
+  });
+
+  document.body.addEventListener('click', () => { if (!fsTried) { fsTried = true; goFull(); } });
+
+  let dx = 0, dy = 0, dragging = false;
+  pet.addEventListener('pointerdown', e => {
+    dragging = true; pet.classList.add('drag');
+    const r = pet.getBoundingClientRect();
+    dx = e.clientX - r.left; dy = e.clientY - r.top;
+    pet.style.right = 'auto'; pet.style.bottom = 'auto';
+    pet.style.left = r.left + 'px'; pet.style.top = r.top + 'px';
+    pet.setPointerCapture(e.pointerId);
+  });
+  pet.addEventListener('pointermove', e => { if (!dragging) return; pet.style.left = (e.clientX - dx) + 'px'; pet.style.top = (e.clientY - dy) + 'px'; });
+  pet.addEventListener('pointerup', () => { dragging = false; pet.classList.remove('drag'); });
+
+  document.getElementById('fs').addEventListener('click', e => { e.stopPropagation(); goFull(); });
+
+  function tick() {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    document.getElementById('time').textContent = p(d.getHours()) + ':' + p(d.getMinutes());
+    const wk = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
+    document.getElementById('date').textContent = `${d.getMonth() + 1}月${d.getDate()}日 星期${wk}`;
+  }
+  tick(); setInterval(tick, 1000 * 20);
+
+  const p = new URLSearchParams(location.search);
+  if (p.get('mood')) speak(p.get('mood'));
+  if (p.get('state')) { setState(p.get('state')); speakState(p.get('state')); }
+
+  async function poll() {
+    try {
+      const r = await fetch('cat-mood.txt?t=' + Date.now());
+      if (r.ok) {
+        const t = (await r.text()).trim();
+        if (t && t !== lastMood) {
+          lastMood = t;
+          speak(t);
+          // 检测状态切换（文件名约定：[state] 内容）
+          const m = t.match(/^\[(\w+)\]/);
+          if (m && STATES[m[1]]) {
+            setState(m[1]);
+          }
+        }
+      }
+    } catch (e) {}
+  }
+  poll(); setInterval(poll, 3000);
+
+  setState('idle');
+</script>
+</body>
+</html>

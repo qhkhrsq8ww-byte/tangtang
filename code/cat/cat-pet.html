@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>糖糖·悬浮宠物</title>
+<style>
+  html,body{margin:0;height:100%;background:transparent;overflow:hidden;
+    font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-user-select:none;user-select:none;cursor:default;}
+  #pet{position:fixed;right:40px;bottom:40px;width:210px;z-index:9999;touch-action:none;cursor:grab;}
+  #pet.drag{cursor:grabbing;}
+  .wrap{position:relative;width:210px;height:235px;animation:breathe 3.4s ease-in-out infinite;transform-origin:50% 92%;}
+  @keyframes breathe{0%,100%{transform:scale(1) translateY(0)}50%{transform:scale(1.03) translateY(-3px)}}
+  .hop{animation:hop .5s ease;}
+  @keyframes hop{0%{transform:translateY(0)}40%{transform:translateY(-20px)}100%{transform:translateY(0)}}
+
+  .pet-img{width:210px;height:235px;display:block;transition:filter .3s ease;}
+  .pet-img.state-bright{filter:brightness(1.1) saturate(1.15);}
+  .pet-img.state-soft{filter:brightness(1.04) saturate(.95);}
+  .pet-img.state-night{filter:brightness(.55) saturate(.7) hue-rotate(-15deg);}
+  .pet-img.state-dreamy{filter:brightness(1.05) hue-rotate(8deg);}
+  .pet-img.state-energy{filter:saturate(1.25) contrast(1.05);}
+  .pet-img.state-sleep{filter:brightness(.85) saturate(.8) blur(.3px);}
+  .overlay{position:absolute;left:0;top:0;width:210px;height:235px;pointer-events:none;}
+
+  #bubble{position:absolute;bottom:205px;left:50%;transform:translateX(-50%) scale(.6);
+    max-width:240px;min-width:70px;padding:11px 15px;background:#fffef9;color:#7a4a20;
+    font-size:16px;line-height:1.5;border-radius:18px;box-shadow:0 6px 18px rgba(0,0,0,.22);
+    opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;text-align:center;font-weight:700;}
+  #bubble.show{opacity:1;transform:translateX(-50%) scale(1);}
+  #bubble::after{content:"";position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+    border-left:9px solid transparent;border-right:9px solid transparent;border-top:11px solid #fffef9;}
+
+  #hint{position:fixed;left:50%;top:16px;transform:translateX(-50%);color:rgba(255,255,255,.6);
+    font-size:13px;background:rgba(0,0,0,.32);padding:6px 12px;border-radius:20px;pointer-events:none;
+    animation:fade 7s forwards;}
+  @keyframes fade{0%,65%{opacity:1}100%{opacity:0}}
+</style>
+</head>
+<body>
+<div id="hint">拖动糖糖可以挪位置 · 点它会撒娇</div>
+
+<div id="pet" title="拖动我 / 点我撒娇">
+  <div id="bubble"></div>
+  <div class="wrap" id="wrap">
+    <img id="petImg" class="pet-img state-soft" src="assets/tangtang-base.png" alt="糖糖">
+    <svg class="overlay" id="overlay" viewBox="0 0 210 235"></svg>
+  </div>
+</div>
+
+<script>
+  const STATES = {
+    idle:        { img: 'assets/tangtang-base.png',     filter: '',              overlay: '' },
+    happy:       { img: 'assets/tangtang-happy.png',    filter: 'state-bright',  overlay: '<g><text x="105" y="40" font-size="22" text-anchor="middle" fill="#FF8FA3" opacity=".85">♥ ♥ ♥</text></g>' },
+    curious:     { img: 'assets/tangtang-curious.png',  filter: 'state-soft',    overlay: '<g><text x="170" y="50" font-size="22" text-anchor="middle" fill="#4FC3F7" font-weight="bold" font-family="sans-serif">?</text></g>' },
+    thinking:    { img: 'assets/tangtang-base.png',     filter: '',              overlay: '<g><text x="50" y="50" font-size="16" text-anchor="middle" fill="#FF8FA3">💭</text></g>' },
+    caring:      { img: 'assets/tangtang-base.png',     filter: 'state-soft',    overlay: '<g><text x="160" y="55" font-size="20" text-anchor="middle" fill="#FF8FA3">♥</text></g>' },
+    encouraging: { img: 'assets/tangtang-happy.png',    filter: 'state-energy',  overlay: '<g><text x="105" y="35" font-size="14" text-anchor="middle" fill="#FF8FA3" font-weight="bold">加油！</text></g>' },
+    walking:     { img: 'assets/tangtang-base.png',     filter: 'state-soft',    overlay: '<g><text x="20" y="100" font-size="14" text-anchor="middle" fill="#8B5E3C" opacity=".4">·</text><text x="30" y="120" font-size="12" text-anchor="middle" fill="#8B5E3C" opacity=".3">·</text></g>' },
+    running:     { img: 'assets/tangtang-base.png',     filter: 'state-energy',  overlay: '<g><text x="15" y="80" font-size="14" text-anchor="middle" fill="#8B5E3C" opacity=".4">·</text><text x="25" y="100" font-size="12" text-anchor="middle" fill="#8B5E3C" opacity=".3">·</text><text x="35" y="120" font-size="10" text-anchor="middle" fill="#8B5E3C" opacity=".2">·</text></g>' },
+    sitting:     { img: 'assets/tangtang-base.png',     filter: '',              overlay: '' },
+    lying:       { img: 'assets/tangtang-base.png',     filter: 'state-soft',    overlay: '' },
+    sleepy:      { img: 'assets/tangtang-base.png',     filter: 'state-sleep',   overlay: '<g><text x="155" y="55" font-size="20" text-anchor="middle" fill="#9575CD" opacity=".75">z z</text></g>' },
+    sleeping:    { img: 'assets/tangtang-sleeping.png', filter: 'state-sleep',   overlay: '<g><text x="160" y="50" font-size="22" text-anchor="middle" fill="#9575CD" opacity=".9">Z z z</text></g>' },
+    welcome:     { img: 'assets/tangtang-happy.png',    filter: 'state-bright',  overlay: '<g><text x="105" y="40" font-size="14" text-anchor="middle" fill="#FFB300" font-weight="bold">欢迎回家！</text></g>' },
+    accompany:   { img: 'assets/tangtang-base.png',     filter: 'state-dreamy',  overlay: '' },
+    wakeup:      { img: 'assets/tangtang-curious.png',  filter: 'state-bright',  overlay: '<g><text x="155" y="45" font-size="18" text-anchor="middle" fill="#FFD700">☀</text></g>' },
+    night:       { img: 'assets/tangtang-sleeping.png', filter: 'state-night',   overlay: '<g><text x="40" y="35" font-size="16" text-anchor="middle" fill="#F0E68C">☾</text><text x="170" y="50" font-size="11" text-anchor="middle" fill="#F0E68C">★</text></g>' }
+  };
+
+  const pet = document.getElementById('pet');
+  const petImg = document.getElementById('petImg');
+  const overlay = document.getElementById('overlay');
+  const bubble = document.getElementById('bubble');
+  const wrap = document.getElementById('wrap');
+  let lastMood = '', bubbleTimer = null;
+
+  function setState(name) {
+    const s = STATES[name] || STATES.idle;
+    petImg.className = 'pet-img ' + s.filter;
+    petImg.src = s.img;
+    overlay.innerHTML = s.overlay;
+  }
+
+  function speak(text) {
+    if (!text) return;
+    bubble.textContent = text;
+    bubble.classList.add('show');
+    wrap.classList.remove('hop'); void wrap.offsetWidth; wrap.classList.add('hop');
+    clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(() => bubble.classList.remove('show'), 5000);
+  }
+
+  const cute = ['汪汪～', '最喜欢你啦', '摸摸头～', '陪你玩呀', '乖乖喝水哦', '今天也要开心', '糖糖在呢', '抱抱！'];
+  pet.addEventListener('click', e => {
+    e.stopPropagation();
+    speak(cute[Math.floor(Math.random() * cute.length)]);
+  });
+
+  let dx = 0, dy = 0, dragging = false;
+  pet.addEventListener('pointerdown', e => {
+    dragging = true; pet.classList.add('drag');
+    const r = pet.getBoundingClientRect();
+    dx = e.clientX - r.left; dy = e.clientY - r.top;
+    pet.style.right = 'auto'; pet.style.bottom = 'auto';
+    pet.style.left = r.left + 'px'; pet.style.top = r.top + 'px';
+    pet.setPointerCapture(e.pointerId);
+  });
+  pet.addEventListener('pointermove', e => { if (!dragging) return; pet.style.left = (e.clientX - dx) + 'px'; pet.style.top = (e.clientY - dy) + 'px'; });
+  pet.addEventListener('pointerup', () => { dragging = false; pet.classList.remove('drag'); });
+
+  const p = new URLSearchParams(location.search);
+  if (p.get('mood')) speak(p.get('mood'));
+  if (p.get('state')) setState(p.get('state'));
+
+  async function poll() {
+    try {
+      const r = await fetch('cat-mood.txt?t=' + Date.now());
+      if (r.ok) {
+        const t = (await r.text()).trim();
+        if (t && t !== lastMood) {
+          lastMood = t;
+          const cleanText = t.replace(/^\[\w+\]\s*/, '');
+          speak(cleanText);
+          const m = t.match(/^\[(\w+)\]/);
+          if (m && STATES[m[1]]) setState(m[1]);
+        }
+      }
+    } catch (e) {}
+  }
+  poll(); setInterval(poll, 3000);
+
+  setState('idle');
+</script>
+</body>
+</html>

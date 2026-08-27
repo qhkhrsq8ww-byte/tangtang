@@ -1,0 +1,125 @@
+<svg viewBox="0 0 210 235" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="white" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#F2ECE2"/>
+    </linearGradient>
+    <radialGradient id="belly" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#F6EEE3"/>
+    </radialGradient>
+    <linearGradient id="collar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFD34D"/><stop offset="100%" stop-color="#F5B800"/>
+    </linearGradient>
+    <clipPath id="headClip"><ellipse cx="105" cy="88" rx="64" ry="58"/></clipPath>
+    <clipPath id="bodyClip"><path d="M50 148 C34 166,36 206,64 216 C90 228,120 228,146 216 C174 206,176 166,160 148 C132 128,78 128,50 148 Z"/></clipPath>
+  </defs>
+
+  <!-- 尾巴：贴背卷曲蓬松毛球 -->
+  <g class="tail">
+    <circle cx="160" cy="170" r="12" fill="url(#white)" stroke="#E4D8C6" stroke-width="1.8"/>
+    <circle cx="172" cy="176" r="9" fill="#F6F0E4" stroke="#E4D8C6" stroke-width="1.5"/>
+    <circle cx="166" cy="162" r="8" fill="#FDFAF2" stroke="#E4D8C6" stroke-width="1.3"/>
+  </g>
+
+  <!-- 身体：云朵轮廓（多个相连半圆凸起=卷毛） -->
+  <path d="M50 148 C34 166,36 206,64 216 C90 228,120 228,146 216 C174 206,176 166,160 148
+           Q168 140 158 142 Q150 132 142 138 Q134 128 124 134 Q114 124 105 130 Q96 124 86 134 Q78 128 70 138 Q62 132 58 142 Q48 140 50 148 Z"
+        fill="url(#white)"/>
+  <g clip-path="url(#bodyClip)">
+    <path d="M46 148 Q52 142 60 150 Q70 160 64 176 Q56 190 50 184 Q42 176 46 148 Z" fill="#EFE6D6" opacity=".8"/>
+    <path d="M124 212 Q142 208 152 194 Q160 178 152 164 Q140 180 132 196 Q124 208 124 212 Z" fill="#EFE6D6" opacity=".8"/>
+    <ellipse cx="100" cy="150" rx="20" ry="11" fill="#E8DCC8" opacity=".5"/>
+    <!-- 身体卷毛纹理线 -->
+    <path d="M72 160 q6 4 12 0 M90 166 q6 4 12 0 M108 168 q6 4 12 0" fill="none" stroke="#E4D8C6" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>
+    <circle cx="92" cy="158" r="9" fill="#F6F0E4"/>
+    <circle cx="108" cy="162" r="10" fill="#F6F0E4"/>
+    <circle cx="120" cy="156" r="8" fill="#F6F0E4"/>
+    <ellipse cx="105" cy="172" rx="26" ry="16" fill="#F0F4F8" opacity=".35"/>
+  </g>
+  <path d="M58 151 C46 166,46 200,66 214 C90 226,120 226,144 214 C164 200,164 166,152 151" fill="none" stroke="#E4D8C6" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="105" cy="202" rx="42" ry="30" fill="#000000" opacity=".05"/>
+  <ellipse cx="105" cy="182" rx="31" ry="36" fill="url(#belly)"/>
+  <!-- 前爪 -->
+  <ellipse cx="83" cy="214" rx="16" ry="10" fill="#FFFFFF" stroke="#E4D8C6" stroke-width="1.4"/>
+  <ellipse cx="127" cy="214" rx="16" ry="10" fill="#FFFFFF" stroke="#E4D8C6" stroke-width="1.4"/>
+  <circle cx="83" cy="212" r="2.3" fill="#EFD9C2"/><circle cx="127" cy="212" r="2.3" fill="#EFD9C2"/>
+
+  <!-- 右前腿抬起 -->
+  <path d="M126 168 Q150 158 154 136 L163 141 Q157 160 136 176 Z" fill="url(#white)" stroke="#E4D8C6" stroke-width="1.6" stroke-linejoin="round"/>
+  <ellipse cx="153" cy="132" rx="13" ry="14" fill="#FFFFFF" stroke="#E4D8C6" stroke-width="1.5"/>
+  <circle cx="153" cy="125" r="2.2" fill="#EFD9C2"/><circle cx="153" cy="132" r="2.2" fill="#EFD9C2"/>
+  <ellipse cx="153" cy="137" rx="5.5" ry="4" fill="#FFC9D0" opacity=".8"/>
+
+  <!-- 垂耳：水滴云朵形，垂到脸颊中部（比熊灵魂） -->
+  <path d="M54 68 C38 40 66 32 92 38 C112 42 118 62 106 80 C94 100 70 98 54 68 Z" fill="url(#white)" stroke="#D8CBB6" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M156 68 C172 40 144 32 118 38 C98 42 92 62 104 80 C116 100 140 98 156 68 Z" fill="url(#white)" stroke="#D8CBB6" stroke-width="2.2" stroke-linejoin="round"/>
+  <!-- 耳内蓬松毛 -->
+  <path d="M64 62 C54 46 70 42 86 46 C98 50 102 62 94 74 C86 86 74 82 64 62 Z" fill="#F3EBDD" opacity=".9"/>
+  <path d="M146 62 C156 46 140 42 124 46 C112 50 108 62 116 74 C124 86 136 82 146 62 Z" fill="#F3EBDD" opacity=".9"/>
+  <!-- 耳外卷毛 -->
+  <circle cx="50" cy="62" r="6" fill="#FDFAF2"/>
+  <circle cx="48" cy="76" r="5.5" fill="#F6F0E4"/>
+  <circle cx="160" cy="62" r="6" fill="#FDFAF2"/>
+  <circle cx="162" cy="76" r="5.5" fill="#F6F0E4"/>
+
+  <!-- 头顶棉花糖卷毛 + 中分线 -->
+  <g clip-path="url(#headClip)">
+    <circle cx="76" cy="46" r="11" fill="#F8F3E9"/>
+    <circle cx="92" cy="38" r="12" fill="#FDFAF2"/>
+    <circle cx="110" cy="34" r="13" fill="#F8F3E9"/>
+    <circle cx="128" cy="40" r="11" fill="#FDFAF2"/>
+    <circle cx="142" cy="50" r="9" fill="#F8F3E9"/>
+    <circle cx="66" cy="54" r="8" fill="#F8F3E9"/>
+    <circle cx="100" cy="30" r="10" fill="#FFFDF8"/>
+    <circle cx="120" cy="30" r="9" fill="#FFFDF8"/>
+    <!-- 中分线 -->
+    <path d="M105 30 q-2 8 0 16 q2 8 0 16" fill="none" stroke="#E4D8C6" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
+  </g>
+
+  <!-- 头部：蓬松大圆脸（云朵轮廓） -->
+  <ellipse cx="105" cy="88" rx="64" ry="58" fill="url(#white)"/>
+  <path d="M41 88 A64 58 0 0 0 169 88" fill="none" stroke="#E4D8C6" stroke-width="2"/>
+
+  <!-- 腮帮绒毛 -->
+  <g clip-path="url(#headClip)">
+    <ellipse cx="50" cy="106" rx="16" ry="20" fill="#F6F0E4"/>
+    <ellipse cx="160" cy="106" rx="16" ry="20" fill="#F6F0E4"/>
+  </g>
+
+  <!-- 大眼睛（带眼眶浅灰阴影=湿漉漉） -->
+  <g class="eyes">
+    <g transform="translate(82,88)">
+      <ellipse cx="0" cy="0" rx="15.5" ry="18" fill="#F3EBDD" opacity=".8"/>
+      <ellipse cx="0" cy="0" rx="13" ry="16" fill="#2b1c12"/>
+      <circle cx="4" cy="-5" r="4.6" fill="#fff"/><circle cx="-4" cy="5" r="2.2" fill="#fff" opacity=".85"/>
+    </g>
+    <g transform="translate(128,88)">
+      <ellipse cx="0" cy="0" rx="15.5" ry="18" fill="#F3EBDD" opacity=".8"/>
+      <ellipse cx="0" cy="0" rx="13" ry="16" fill="#2b1c12"/>
+      <circle cx="-4" cy="-5" r="4.6" fill="#fff"/><circle cx="4" cy="5" r="2.2" fill="#fff" opacity=".85"/>
+    </g>
+  </g>
+
+  <!-- 鼻子：纯黑大鼻头 -->
+  <ellipse cx="105" cy="106" rx="9.5" ry="7.5" fill="#1a1a1a"/>
+  <ellipse cx="102" cy="103.5" rx="3.2" ry="2.4" fill="#4a4a4a" opacity=".75"/>
+
+  <!-- 嘴：微笑小狗嘴 + 小舌头 -->
+  <path d="M105 113 q-8 8 -17 0 M105 113 q8 8 17 0" fill="none" stroke="#5a3a20" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M95 110 q10 6 20 0" fill="none" stroke="#5a3a20" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>
+  <path d="M101 115 q4 7 8 0 q-4 7 -8 0 Z" fill="#FF8FA3" stroke="#F0708A" stroke-width=".8"/>
+
+  <!-- 腮红 -->
+  <ellipse cx="66" cy="110" rx="12" ry="7" fill="#FFB6C1" opacity=".45"/>
+  <ellipse cx="144" cy="110" rx="12" ry="7" fill="#FFB6C1" opacity=".45"/>
+
+  <!-- 黄色项圈 + 糖糖铭牌 -->
+  <g class="collar">
+    <path d="M64 138 Q105 152 146 138 Q146 146 105 158 Q64 146 64 138 Z" fill="url(#collar)" stroke="#E0A800" stroke-width="1.5"/>
+    <ellipse cx="105" cy="153" rx="11" ry="8" fill="#FFD34D" stroke="#E0A800" stroke-width="1.2"/>
+    <rect x="96" y="148" width="18" height="9" rx="3" fill="#FFF6DC"/>
+    <text x="105" y="155.5" font-size="6.2" text-anchor="middle" fill="#8B5E3C" font-weight="bold" font-family="sans-serif">糖糖</text>
+  </g>
+
+  <!-- 阴影 -->
+  <ellipse cx="105" cy="226" rx="62" ry="8" fill="#000000" opacity=".08"/>
+</svg>
