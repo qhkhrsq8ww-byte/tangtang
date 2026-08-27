@@ -14,3 +14,5 @@ code/cat/assets_ref/
 
 # macOS
 .DS_Store
+code/cat/cat-voiceprints.json
+code/cat/cat-habits.json
