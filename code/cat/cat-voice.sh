@@ -3,16 +3,19 @@
 # 链路：听 → 辨 → 懂 → 答 → 说
 # 说明：声纹/习惯数据仅写入本地，不提交Git。
 set -u
-CAT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=cat-lib.sh
+. "$SCRIPT_DIR/cat-lib.sh"
+
 DUR="${1:-5}"
 PCM="/tmp/tangtang_voice.pcm"
 
-# 可通过环境变量指定儿童模式；默认friend更保守
-PROFILE="${TANGTANG_PROFILE:-friend}"
+PROFILE="${TANGTANG_PROFILE:-play}"
 case "$PROFILE" in
   play|friend) ;;
-  *) PROFILE="friend" ;;
+  *) PROFILE="play" ;;
 esac
+export TANGTANG_PROFILE="$PROFILE"
 
 echo "🎤 糖糖在听...（${DUR}秒，${PROFILE}模式）"
 if ! "$CAT_DIR/cat-listen.sh" "$DUR" "$PCM" >/dev/null 2>&1; then
@@ -33,18 +36,20 @@ if [ -z "$TEXT" ]; then
 fi
 
 echo "   你说: $TEXT"
-# unknown只作为本地匿名访客记录，不冒充家庭成员
-LOG_NAME="$WHO"
-"$CAT_DIR/cat-vp.py" log "$LOG_NAME" "$TEXT" >/dev/null 2>&1 || true
+# unknown 只作为本地匿名访客，不冒充家庭成员
+if [ "$WHO" != "unknown" ]; then
+  "$CAT_DIR/cat-vp.py" log "$WHO" "$TEXT" >/dev/null 2>&1 || true
+else
+  "$CAT_DIR/cat-vp.py" log "unknown" "" >/dev/null 2>&1 || true
+fi
 
-# 让聊天层接收年龄模式；cat-chat.py若暂不支持第二参数，可忽略该参数并保持原调用方式。
 echo "💬 糖糖思考中..."
-REPLY=$(TANGTANG_PROFILE="$PROFILE" TANGTANG_SPEAKER="$WHO" "/usr/bin/python3" "$CAT_DIR/cat-chat.py" "$TEXT" 2>/dev/null | tr -d '\n')
+REPLY=$(TANGTANG_PROFILE="$PROFILE" TANGTANG_SPEAKER="$WHO" /usr/bin/python3 "$CAT_DIR/cat-chat.py" "$TEXT" 2>/dev/null | tr -d '\n')
 if [ -z "$REPLY" ]; then
   REPLY="糖糖刚才有点走神啦，我们再聊聊？"
 fi
 
 echo "   糖糖: $REPLY"
-printf '%s\n' "$REPLY" > "$CAT_DIR/cat-mood.txt"
+printf '%s\n' "[idle] $REPLY" > "$CAT_DIR/cat-mood.txt"
 "$CAT_DIR/cat-say.sh" "$REPLY" cute
 rm -f "$PCM"

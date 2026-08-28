@@ -68,7 +68,9 @@
   /* 状态指示器（小角标） */
   #stateBadge{position:fixed;top:18px;left:18px;z-index:5;padding:8px 14px;border-radius:24px;
     background:rgba(255,255,255,.14);color:#fff;font-size:13px;font-weight:600;
-    border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(6px);display:flex;align-items:center;gap:6px;}
+    border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(6px);align-items:center;gap:6px;
+    display:none;}
+  #stateBadge.debug{display:flex;}
   #stateBadge .dot{width:8px;height:8px;border-radius:50%;background:#FFD34D;box-shadow:0 0 8px #FFD34D;}
 </style>
 </head>
@@ -102,17 +104,17 @@
     curious:     { img: 'assets/tangtang-curious.png',  filter: 'state-soft',    overlay: '<g><text x="78%" y="22%" font-size="22" text-anchor="middle" fill="#4FC3F7" font-weight="bold" font-family="sans-serif">?</text></g>', bubble: '咦？这是什么呀？' },
     thinking:    { img: 'assets/tangtang-base.png',     filter: '',              overlay: '<g><text x="50%" y="20%" font-size="16" text-anchor="middle" fill="#FF8FA3">💭</text><text x="78%" y="20%" font-size="16" text-anchor="middle" fill="#FF8FA3">?</text></g>', bubble: '让糖糖想想…' },
     caring:      { img: 'assets/tangtang-base.png',     filter: 'state-soft',    overlay: '<g><text x="75%" y="25%" font-size="18" text-anchor="middle" fill="#FF8FA3">♥</text></g>', bubble: '糖糖在这里陪你～' },
-    encouraging: { img: 'assets/tangtang-happy.png',    filter: 'state-energy',  overlay: '<g><text x="50%" y="14%" font-size="14" text-anchor="middle" fill="#FF8FA3" font-weight="bold">加油！</text></g>', bubble: '你已经超棒啦！' },
+    encouraging: { img: 'assets/tangtang-happy.png',    filter: 'state-energy',  overlay: '<g><text x="50%" y="14%" font-size="18" text-anchor="middle" fill="#FF8FA3" opacity=".85">♥ ♥</text></g>', bubble: '你已经超棒啦！' },
     walking:     { img: 'assets/tangtang-base.png',     filter: 'state-soft',    overlay: motionDots(), bubble: '散步去咯～' },
     running:     { img: 'assets/tangtang-base.png',     filter: 'state-energy',  overlay: motionDots(true), bubble: '冲鸭冲鸭！' },
     sitting:     { img: 'assets/tangtang-base.png',     filter: '',              overlay: '', bubble: '糖糖坐好啦～' },
     lying:       { img: 'assets/tangtang-base.png',     filter: 'state-soft',    overlay: '<g><text x="50%" y="60%" font-size="11" text-anchor="middle" fill="#8B5E3C" opacity=".5">～</text></g>', bubble: '糖糖趴着等你～' },
     sleepy:      { img: 'assets/tangtang-base.png',     filter: 'state-sleep',   overlay: '<g><text x="50%" y="22%" font-size="20" text-anchor="middle" fill="#9575CD" opacity=".75">z z</text></g>', bubble: '糖糖有点困了…' },
     sleeping:    { img: 'assets/tangtang-sleeping.png', filter: 'state-sleep',   overlay: '<g><text x="65%" y="20%" font-size="22" text-anchor="middle" fill="#9575CD" opacity=".9">Z z z</text></g>', bubble: '呼噜噜…' },
-    welcome:     { img: 'assets/tangtang-happy.png',    filter: 'state-bright',  overlay: '<g><text x="50%" y="16%" font-size="14" text-anchor="middle" fill="#FFB300" font-weight="bold">欢迎回家！</text></g>', bubble: '航航回来啦！' },
+    welcome:     { img: 'assets/tangtang-happy.png',    filter: 'state-bright',  overlay: '<g><text x="50%" y="16%" font-size="18" text-anchor="middle" fill="#FF8FA3" opacity=".85">♥ ♥ ♥</text></g>', bubble: '欢迎回家～' },
     accompany:   { img: 'assets/tangtang-base.png',     filter: 'state-dreamy',  overlay: '<g><text x="50%" y="55%" font-size="9" text-anchor="middle" fill="#FFF" opacity=".5">～ ～ ～</text></g>', bubble: '糖糖陪你～' },
-    wakeup:      { img: 'assets/tangtang-curious.png',  filter: 'state-bright',  overlay: '<g><text x="72%" y="20%" font-size="18" text-anchor="middle" fill="#FFD700">☀</text></g>', bubble: '早安航航！' },
-    night:       { img: 'assets/tangtang-sleeping.png', filter: 'state-night',   overlay: '<g><text x="20%" y="15%" font-size="16" text-anchor="middle" fill="#F0E68C">☾</text><text x="78%" y="22%" font-size="11" text-anchor="middle" fill="#F0E68C">★</text></g>', bubble: '晚安航航～' }
+    wakeup:      { img: 'assets/tangtang-curious.png',  filter: 'state-bright',  overlay: '<g><text x="72%" y="20%" font-size="18" text-anchor="middle" fill="#FFD700">☀</text></g>', bubble: '早安！' },
+    night:       { img: 'assets/tangtang-sleeping.png', filter: 'state-night',   overlay: '<g><text x="20%" y="15%" font-size="16" text-anchor="middle" fill="#F0E68C">☾</text><text x="78%" y="22%" font-size="11" text-anchor="middle" fill="#F0E68C">★</text></g>', bubble: '晚安～' }
   };
 
   function motionDots(fast) {
@@ -145,11 +147,6 @@
     wrap.classList.remove('hop'); void wrap.offsetWidth; wrap.classList.add('hop');
     clearTimeout(bubbleTimer);
     bubbleTimer = setTimeout(() => bubble.classList.remove('show'), 7000);
-  }
-
-  function speakState(stateName) {
-    const s = STATES[stateName] || STATES.idle;
-    speak(s.bubble);
   }
 
   function goFull() {
@@ -189,8 +186,9 @@
   tick(); setInterval(tick, 1000 * 20);
 
   const p = new URLSearchParams(location.search);
+  if (p.get('debug') === '1') document.getElementById('stateBadge').classList.add('debug');
   if (p.get('mood')) speak(p.get('mood'));
-  if (p.get('state')) { setState(p.get('state')); speakState(p.get('state')); }
+  if (p.get('state')) { setState(p.get('state')); }
 
   async function poll() {
     try {
@@ -199,12 +197,10 @@
         const t = (await r.text()).trim();
         if (t && t !== lastMood) {
           lastMood = t;
-          speak(t);
-          // 检测状态切换（文件名约定：[state] 内容）
+          const cleanText = t.replace(/^\[\w+\]\s*/, '');
+          speak(cleanText);
           const m = t.match(/^\[(\w+)\]/);
-          if (m && STATES[m[1]]) {
-            setState(m[1]);
-          }
+          if (m && STATES[m[1]]) setState(m[1]);
         }
       }
     } catch (e) {}

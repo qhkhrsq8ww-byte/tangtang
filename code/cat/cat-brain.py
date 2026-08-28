@@ -1,125 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-糖糖 · 智能陪伴大脑（离线规则引擎 v2.0）
+糖糖 · 智能陪伴大脑（离线规则引擎 v2.1）
 ====================================================
-负责：情绪漂移 + 记忆 + 决策(选话术) + 状态持久化
-人设：温柔粘人的奶牛猫「糖糖」，口头禅「喵～」
+负责：情绪漂移 + 记忆 + 打扰冷却 + 话术（JSON 优先）+ 状态持久化
+人设：白色比熊小狗「糖糖」，口头禅「汪汪～」
 ====================================================
 用法:
   python3 cat-brain.py <event> [参数]
 事件:
-  greet           主人呼叫(默认，上猫/打招呼)
-  wake            早安
-  sleep           晚安
-  rest            久坐提醒
-  meal [lunch|dinner]  饭点关怀
-  home            主人回家
-  random          随机撒娇(约60%概率开口，其余静默)
-  pat             摸头(被夸奖/点击)
-  say "<文字>"    主人指定它说(带人设语气包装)
-  status          查看状态(调试)
+  greet / wake / sleep / rest / meal [lunch|dinner] / home / random
+  pat / say "<文字>" / status / play / homework / tidy / exercise
+  emotion / weather / water
 输出:
-  一行话术(可能为空=这次不说话)  或  "话术<TAB>情绪标签<TAB>画面对应状态"
-画面对应状态: idle/happy/curious/thinking/caring/encouraging/walking/running/sitting/lying/sleepy/sleeping/welcome/accompany/wakeup/night
+  一行：话术<TAB>情绪标签<TAB>画面对应状态
+  话术为空表示这次不说话（冷却或 random 静默）
 """
 import json, os, sys, random, datetime
 
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
-STATE_FILE = os.path.join(CAT_DIR, "cat-state.json")
-MEMORY_FILE = os.path.join(CAT_DIR, "cat-memory.json")
+DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
+STATE_FILE = os.path.join(DATA_DIR, "cat-state.json")
+MEMORY_FILE = os.path.join(DATA_DIR, "cat-memory.json")
 
-def now():
-    return datetime.datetime.now()
-
-def load_state():
-    if os.path.exists(STATE_FILE):
-        try:
-            with open(STATE_FILE, encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {
-        "happiness": 70, "energy": 70, "loneliness": 20, "affection": 50,
-        "last_interaction": now().isoformat(timespec="minutes"),
-        "interactions_today": 0, "today": now().strftime("%Y-%m-%d"),
-        "total_sessions": 0
-    }
-
-def load_memory():
-    if os.path.exists(MEMORY_FILE):
-        try:
-            with open(MEMORY_FILE, encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {
-        "nickname": "主人", "first_met": now().strftime("%Y-%m-%d"),
-        "total_interactions": 0, "birthday": None
-    }
-
-def save_state(s):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(s, f, ensure_ascii=False, indent=2)
-
-def save_memory(m):
-    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(m, f, ensure_ascii=False, indent=2)
-
-def drift(state):
-    """时间漂移：距上次互动越久越想念；开心缓慢回落；深夜犯困"""
-    try:
-        last = datetime.datetime.fromisoformat(state["last_interaction"])
-    except Exception:
-        last = now()
-    h = max(0.0, (now() - last).total_seconds() / 3600.0)
-    state["loneliness"] = min(100, round(state["loneliness"] + h * 5, 1))
-    state["happiness"] = max(0, round(state["happiness"] - h * 1.5, 1))
-    hr = now().hour
-    if 23 <= hr or hr < 6:
-        state["energy"] = min(60, state["energy"])
-    # 跨天重置今日计数
-    today = now().strftime("%Y-%m-%d")
-    if state.get("today") != today:
-        state["today"] = today
-        state["interactions_today"] = 0
-    return state
-
-def mood_label(state):
-    """当前心情标签"""
-    if state["loneliness"] >= 65: return "lonely"
-    if state["energy"] <= 30:      return "sleepy"
-    if state["happiness"] >= 75:   return "happy"
-    if state["happiness"] <= 35:   return "low"
-    return "calm"
-
-def interact(state, memory, kind):
-    """记录一次互动，返回情绪增量"""
-    if kind == "greet":
-        state["happiness"] = min(100, state["happiness"] + 8)
-        state["loneliness"] = max(0, state["loneliness"] - 18)
-        state["affection"] = min(100, state["affection"] + 3)
-        state["energy"] = max(0, state["energy"] - 2)
-    elif kind == "pat":
-        state["happiness"] = min(100, state["happiness"] + 12)
-        state["loneliness"] = max(0, state["loneliness"] - 12)
-        state["affection"] = min(100, state["affection"] + 5)
-    elif kind == "home":
-        state["happiness"] = min(100, state["happiness"] + 15)
-        state["loneliness"] = max(0, state["loneliness"] - 30)
-        state["affection"] = min(100, state["affection"] + 5)
-    elif kind == "care":   # 提醒/饭点/早晚安（猫主动关心）
-        state["affection"] = min(100, state["affection"] + 1)
-    state["interactions_today"] = state.get("interactions_today", 0) + 1
-    memory["total_interactions"] = memory.get("total_interactions", 0) + 1
-    state["last_interaction"] = now().isoformat(timespec="minutes")
-    return state
-
-# ---------------- 话术库（比熊小狗糖糖 · 9岁 PLAY 模式 · 话术库 V2.0） ----------------
-# 来源: tangtang/docs/糖糖AI儿童陪伴话术库_V2.0.md
-# 原则: 先共情 → 温柔提醒 → 给选择 → 陪着做 → 具体鼓励
-# 每个事件：按心情标签给话术；affection 高时更亲昵
-# 事件 → 画面对应状态 的映射（让前端能自动切换 16 状态图）
 EVENT_STATE = {
     "greet": "welcome", "home": "welcome", "welcome": "welcome",
     "wake": "wakeup",
@@ -134,147 +37,346 @@ EVENT_STATE = {
     "say": "idle", "random": "idle",
 }
 
+EVENT_SCENE = {
+    "rest": "phone_break",
+    "wake": "wake",
+    "sleep": "sleep",
+    "meal": "meal",
+    "homework": "homework",
+    "tidy": "tidy",
+    "exercise": "exercise",
+    "play": "exercise",
+    "emotion": "emotion",
+    "weather": "weather",
+    "water": "water",
+}
+
+# 主动提醒冷却（分钟）。点名/摸摸/指定说不冷却。
+COOLDOWN_MINUTES = {
+    "rest": 30, "play": 45, "exercise": 45, "water": 60,
+    "homework": 40, "tidy": 40, "weather": 180,
+    "meal": 90, "wake": 240, "sleep": 180, "emotion": 60,
+    "random": 20, "home": 120,
+}
+USER_EVENTS = {"greet", "pat", "say", "status"}
+
 REPLY = {
     "greet": {
-        "happy":  ["主人来啦～ 糖糖好想你！尾巴都摇成小铃铛啦～",
+        "happy":  ["来啦～ 糖糖好想你！尾巴都摇成小铃铛啦～",
                    "汪汪～ 看到你糖糖就开心得想转圈圈！"],
-        "calm":   ["汪汪～ 我在呢，主人。",
-                   "主人来啦，糖糖一直在等你～"],
+        "calm":   ["汪汪～ 我在呢。",
+                   "你来啦，糖糖一直在等你～"],
         "lonely": ["你终于来啦……糖糖一个人等了好久，想死你啦～",
-                   "汪汪……主人不在的时候，糖糖总觉得空落落的，快来抱抱！"],
-        "sleepy": ["汪汪……糖糖刚才打了个盹，主人你来啦～",
-                   "哈欠～ 主人来啦，糖糖揉揉眼睛陪你～"],
-        "low":    ["汪汪……主人，糖糖今天有点没精神，能陪陪我吗？",
-                   "主人……糖糖有点蔫蔫的，抱一下就好啦～"],
+                   "汪汪……你不在的时候，糖糖总觉得空落落的，快来抱抱！"],
+        "sleepy": ["汪汪……糖糖刚才打了个盹，你来啦～",
+                   "哈欠～ 你来啦，糖糖揉揉眼睛陪你～"],
+        "low":    ["汪汪……糖糖今天有点没精神，能陪陪我吗？",
+                   "糖糖有点蔫蔫的，抱一下就好啦～"],
     },
-    "wake": {   # 起床（9岁 PLAY）
+    "wake": {
         "_": ["早上好！糖糖醒啦！太阳都出来啦，我们也起来啦？",
               "汪汪～ 新的一天！糖糖已经准备好陪你啦！",
               "还想躺一会儿呀？那糖糖再陪你30秒～",
               "起床成功！糖糖给你一个早安击掌！"],
     },
-    "sleep": {   # 睡觉（9岁 PLAY）
+    "sleep": {
         "_": ["糖糖困啦……今天玩得开心吗？我们一起准备睡觉吧。",
               "手机也要休息啦～ 糖糖陪你。晚安！明天见！",
-              "该睡觉啦主人，糖糖也要闭眼休息啦，做个好梦～"],
+              "该睡觉啦，糖糖也要闭眼休息啦，做个好梦～"],
     },
-    "rest": {   # 少玩手机/久坐（9岁 PLAY）
+    "rest": {
         "_": ["这个游戏是不是很好玩？糖糖发现我们已经玩了一会儿啦。",
               "眼睛要休息一下啦。来，糖糖挑战你：站起来30秒！",
               "不想休息也没关系，糖糖再提醒一次，你自己决定～",
               "刚才说好的休息时间到啦。糖糖先起来活动一下，你跟我来！",
               "看屏幕好久啦，起来活动活动，让眼睛和身体都休息一下～ 糖糖陪你！"],
     },
-    "meal": {   # 吃饭（9岁 PLAY）
+    "meal": {
         "lunch":  ["开饭啦！糖糖的肚子已经开始咕噜咕噜了。",
                    "先吃一口你喜欢的？慢慢吃，不急～",
                    "是不是今天的饭饭不太合口味？我们先吃一点点，好不好？"],
-        "dinner": ["晚饭时间到啦，主人要好好吃饭，糖糖陪着你不孤单～",
-                   "天都黑啦，主人记得吃晚饭，热乎乎的才香～"],
+        "dinner": ["晚饭时间到啦，要好好吃饭，糖糖陪着你不孤单～",
+                   "天都黑啦，记得吃晚饭，热乎乎的才香～"],
     },
-    "home": {   # 欢迎回家
+    "home": {
         "_": ["欢迎回家～ 糖糖等你好久啦，尾巴都要摇成小铃铛了！",
-              "主人回来啦！糖糖开心得跳起来～"],
+              "回来啦！糖糖开心得跳起来～"],
     },
-    "pat": {   # 摸摸
-        "_": ["呼噜呼噜～ 最喜欢你摸啦～",
+    "pat": {
+        "_": ["汪汪～ 最喜欢你摸啦～",
               "汪汪～ 摸摸头好舒服，糖糖幸福得冒泡泡啦～"],
     },
-    "random": {   # 随机撒娇
+    "random": {
         "happy":  ["汪汪～ 糖糖想你了，过来摸摸头好不好？",
-                   "呼噜呼噜～ 糖糖在打盹，梦里都是主人呢。"],
-        "calm":   ["主人主人，你还在吗？糖糖一个人有点无聊～",
+                   "糖糖在打盹，梦里都是你呢。"],
+        "calm":   ["还在吗？糖糖一个人有点无聊～",
                    "汪汪～ 偷偷告诉你，糖糖今天也超级喜欢你哦。"],
-        "lonely": ["汪汪……主人，糖糖好想听你的声音，理理我好不好？"],
+        "lonely": ["汪汪……糖糖好想听你的声音，理理我好不好？"],
         "sleepy": ["哈欠～ 糖糖有点困了，但还想再陪你一会儿……"],
-        "low":    ["汪汪……糖糖躲在小角落里，主人来摸摸头就会好起来啦。"],
+        "low":    ["汪汪……糖糖躲在小角落里，来摸摸头就会好起来啦。"],
     },
-    "play": {   # 出去玩（9岁 PLAY 运动向，唐僧式念经）
-        "_": ["航航～ 出去玩嘛出去玩嘛，外面的太阳都在等你啦～",
-             "航航航航～ 别宅着啦，出去跑跑跳跳多开心，糖糖陪你去～",
+    "play": {
+        "_": ["出去玩嘛出去玩嘛，外面的太阳都在等你啦～",
+             "别宅着啦，出去跑跑跳跳多开心，糖糖陪你去～",
              "糖糖运动任务！今天一起走100步？糖糖先出发啦！",
-             "出去玩嘛～ 出去玩嘛～ 航航的腿都等不及要跑步啦～",
+             "出去玩嘛～ 出去玩嘛～ 腿都等不及要跑步啦～",
              "挑战开始！跳10下！任务完成！今天的身体电量充满一点啦！"],
     },
-    "homework": {   # 写作业（9岁 PLAY 新增）
+    "homework": {
         "_": ["糖糖任务来了！先挑战最简单的一题！",
               "完成一题！再来一题！",
               "没关系，我们只做第一题。第一题完成以后再决定下一步～"],
     },
-    "tidy": {   # 整理房间（9岁 PLAY 新增）
+    "tidy": {
         "_": ["糖糖发现一个大任务！好多东西好像迷路啦。",
               "你负责把玩具送回家，糖糖负责计时！30秒开始！",
               "哇！好多东西回家啦！糖糖给你鼓掌～"],
     },
-    "exercise": {   # 运动（9岁 PLAY 新增）
+    "exercise": {
         "_": ["糖糖运动任务！今天一起走100步？",
               "糖糖先出发啦！挑战开始！跳10下！",
               "任务完成！今天的身体电量充满一点啦！"],
     },
-    "emotion": {   # 情绪陪伴（9岁 PLAY 新增）
+    "emotion": {
         "_": ["糖糖发现你今天好像不太开心。如果你愿意，可以告诉糖糖～",
               "好吧，糖糖就在这里陪你。",
               "听起来真的有点难受。我们慢慢想办法～"],
     },
-    "weather": {   # 天气提醒（9岁 PLAY 新增）
-        "_": ["今天外面有点热！糖糖提醒你带水～",
-              "今天外面有点冷！糖糖提醒你带外套～",
+    "weather": {
+        "_": ["出门前看一眼天气，热就带水，冷就带外套～",
               "好像要下雨，糖糖提醒你带雨伞～"],
     },
-    "water": {   # 喝水（9岁 PLAY 新增）
+    "water": {
         "_": ["糖糖口渴啦！喝几口水，补充能量！",
-              "航航，来喝水啦，咕嘟咕嘟，身体棒棒～"],
+              "来喝水啦，咕嘟咕嘟，身体棒棒～"],
     },
 }
 
+
+def now():
+    return datetime.datetime.now()
+
+
+def current_profile():
+    p = (os.environ.get("TANGTANG_PROFILE") or "play").strip().lower()
+    return p if p in ("play", "friend") else "play"
+
+
+def child_name(memory):
+    env = (os.environ.get("TANGTANG_CHILD_NAME") or "").strip()
+    if env:
+        return env
+    nick = (memory.get("nickname") or "").strip()
+    return nick or "小朋友"
+
+
+def load_json(path, default):
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return default
+
+
+def save_json(path, data):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
+
+def load_state():
+    return load_json(STATE_FILE, {
+        "happiness": 70, "energy": 70, "loneliness": 20, "affection": 50,
+        "last_interaction": now().isoformat(timespec="minutes"),
+        "interactions_today": 0, "today": now().strftime("%Y-%m-%d"),
+        "total_sessions": 0, "proactive_log": {},
+    })
+
+
+def load_memory():
+    return load_json(MEMORY_FILE, {
+        "nickname": "小朋友", "first_met": now().strftime("%Y-%m-%d"),
+        "total_interactions": 0, "birthday": None,
+    })
+
+
+def save_state(s):
+    save_json(STATE_FILE, s)
+
+
+def save_memory(m):
+    save_json(MEMORY_FILE, m)
+
+
+def copy_library_paths():
+    repo_data = os.path.abspath(os.path.join(CAT_DIR, "..", "..", "data", "tangtang_copy_library_v2.json"))
+    return [
+        os.path.join(CAT_DIR, "tangtang_copy_library_v2.json"),
+        repo_data,
+    ]
+
+
+def load_copy_library():
+    for path in copy_library_paths():
+        if os.path.exists(path):
+            data = load_json(path, None)
+            if isinstance(data, dict) and data.get("items"):
+                return data
+    return None
+
+
+COPY_LIB = load_copy_library()
+
+
+def pick_from_library(event, profile):
+    if not COPY_LIB:
+        return None
+    scene = EVENT_SCENE.get(event)
+    if not scene:
+        return None
+    items = COPY_LIB.get("items") or []
+    matched = [i for i in items if i.get("scene") == scene and i.get("profile") == profile]
+    if not matched:
+        matched = [i for i in items if i.get("scene") == scene]
+    texts = [i.get("text") for i in matched if i.get("text")]
+    if not texts:
+        return None
+    return random.choice(texts)
+
+
+def drift(state):
+    """时间漂移：距上次互动越久越想念；开心缓慢回落；深夜犯困"""
+    try:
+        last = datetime.datetime.fromisoformat(state["last_interaction"])
+    except Exception:
+        last = now()
+    h = max(0.0, (now() - last).total_seconds() / 3600.0)
+    state["loneliness"] = min(100, round(state["loneliness"] + h * 5, 1))
+    state["happiness"] = max(0, round(state["happiness"] - h * 1.5, 1))
+    hr = now().hour
+    if 23 <= hr or hr < 6:
+        state["energy"] = min(60, state["energy"])
+    today = now().strftime("%Y-%m-%d")
+    if state.get("today") != today:
+        state["today"] = today
+        state["interactions_today"] = 0
+    return state
+
+
+def mood_label(state):
+    if state["loneliness"] >= 65:
+        return "lonely"
+    if state["energy"] <= 30:
+        return "sleepy"
+    if state["happiness"] >= 75:
+        return "happy"
+    if state["happiness"] <= 35:
+        return "low"
+    return "calm"
+
+
+def interact(state, memory, kind):
+    if kind == "greet":
+        state["happiness"] = min(100, state["happiness"] + 8)
+        state["loneliness"] = max(0, state["loneliness"] - 18)
+        state["affection"] = min(100, state["affection"] + 3)
+        state["energy"] = max(0, state["energy"] - 2)
+    elif kind == "pat":
+        state["happiness"] = min(100, state["happiness"] + 12)
+        state["loneliness"] = max(0, state["loneliness"] - 12)
+        state["affection"] = min(100, state["affection"] + 5)
+    elif kind == "home":
+        state["happiness"] = min(100, state["happiness"] + 15)
+        state["loneliness"] = max(0, state["loneliness"] - 30)
+        state["affection"] = min(100, state["affection"] + 5)
+    elif kind == "care":
+        state["affection"] = min(100, state["affection"] + 1)
+    state["interactions_today"] = state.get("interactions_today", 0) + 1
+    memory["total_interactions"] = memory.get("total_interactions", 0) + 1
+    state["last_interaction"] = now().isoformat(timespec="minutes")
+    return state
+
+
+def should_speak(state, event):
+    if event in USER_EVENTS:
+        return True
+    minutes = COOLDOWN_MINUTES.get(event)
+    if minutes is None:
+        return True
+    log = state.get("proactive_log") or {}
+    last = log.get(event)
+    if not last:
+        return True
+    try:
+        last_dt = datetime.datetime.fromisoformat(last)
+    except Exception:
+        return True
+    delta = (now() - last_dt).total_seconds() / 60.0
+    return delta >= minutes
+
+
+def mark_spoken(state, event):
+    if event in USER_EVENTS or event not in COOLDOWN_MINUTES:
+        return
+    log = state.setdefault("proactive_log", {})
+    log[event] = now().isoformat(timespec="minutes")
+
+
 def pick(replies, label):
-    r = replies.get(label) or replies.get("_") or ["喵～"]
+    r = replies.get(label) or replies.get("_") or ["汪汪～"]
     return random.choice(r)
+
 
 def compose(state, memory, event, arg):
     """决策：返回 (话术, 情绪标签)"""
     label = mood_label(state)
-    nick = memory.get("nickname", "主人")
+    nick = child_name(memory)
     high = state["affection"] >= 80
+    profile = current_profile()
 
     if event == "say":
         text = (arg or "").strip()
         if not text:
             return "", "calm"
-        # 人设语气包装
         if high:
-            text = f"{text}～ 主人，糖糖最喜欢你啦喵～"
+            text = f"{text}～ {nick}，糖糖最喜欢你啦汪汪～"
         else:
-            text = f"{text}，喵～"
+            text = f"{text}，汪汪～"
         return text, label
 
     if event == "status":
         s = (f"糖糖状态｜开心{state['happiness']:.0f} 精力{state['energy']:.0f} "
              f"想念{state['loneliness']:.0f} 亲密度{state['affection']:.0f} "
-             f"今日互动{state.get('interactions_today',0)}次 心情[{label}]")
+             f"今日互动{state.get('interactions_today', 0)}次 心情[{label}] "
+             f"人格[{profile}]")
         return s, "calm"
 
     if event == "random":
-        # 约 60% 概率开口，避免太烦
         if random.random() > 0.6:
             return "", label
         return pick(REPLY["random"], label), label
 
+    lib_text = pick_from_library(event, profile)
+    if lib_text:
+        return lib_text, label
+
     if event == "meal":
-        lbl = "lunch" if arg == "dinner" else ("dinner" if arg == "dinner" else "lunch")
-        # arg 可能是 lunch/dinner
         key = arg if arg in ("lunch", "dinner") else "lunch"
         r = REPLY["meal"].get(key, REPLY["meal"]["lunch"])
         return random.choice(r), label
 
     if event in REPLY:
-        # greet 等带心情变体
         r = REPLY[event]
         if label in r:
             return pick(r, label), label
         return pick(r, "_"), label
 
     return "汪汪～", label
+
 
 def main():
     event = sys.argv[1] if len(sys.argv) > 1 else "greet"
@@ -283,30 +385,43 @@ def main():
     state = load_state()
     memory = load_memory()
     state = drift(state)
+    label = mood_label(state)
 
-    # 记录互动（care 类不显著提升情绪，但仍更新记忆/时间）
+    if event == "status":
+        text, label = compose(state, memory, event, arg)
+        save_state(state)
+        save_memory(memory)
+        print(text)
+        return
+
+    if not should_speak(state, event):
+        save_state(state)
+        print(f"\t{label}\tidle")
+        return
+
     if event in ("greet", "pat", "home"):
         state = interact(state, memory, event)
-    elif event in ("wake", "sleep", "rest", "meal", "say", "random", "play",
+    elif event in ("wake", "sleep", "rest", "meal", "say", "play",
                    "homework", "tidy", "exercise", "emotion", "weather", "water"):
         state = interact(state, memory, "care")
 
     text, label = compose(state, memory, event, arg)
+    if event == "random" and text:
+        state = interact(state, memory, "care")
+    if text:
+        mark_spoken(state, event)
 
     save_state(state)
     save_memory(memory)
 
-    if event == "status":
-        print(text)
-    else:
-        state = EVENT_STATE.get(event, "idle")
-        if event == "random":
-            mood_state = {"happy":"happy", "calm":"idle", "lonely":"caring",
-                          "sleepy":"sleepy", "low":"caring"}.get(label, "idle")
-            state = mood_state
-        elif event == "say":
-            state = "idle"
-        print(f"{text}\t{label}\t{state}")
+    visual = EVENT_STATE.get(event, "idle")
+    if event == "random":
+        visual = {"happy": "happy", "calm": "idle", "lonely": "caring",
+                  "sleepy": "sleepy", "low": "caring"}.get(label, "idle")
+    elif event == "say":
+        visual = "idle"
+    print(f"{text}\t{label}\t{visual}")
+
 
 if __name__ == "__main__":
     main()

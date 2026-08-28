@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 猫咪「小橘」发声核心：Edge 神经语音（XiaoxiaoNeural，可爱中文）
+// 糖糖发声核心：Edge 神经语音（XiaoxiaoNeural）
 // 用法: node cat-tts.js "文本" [style] [voice]
 //   style: cheerful / affectionate / gentle / default
 //   默认 voice: zh-CN-XiaoxiaoNeural
@@ -7,7 +7,7 @@ const edgeTTS = require('edge-tts');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
 
-const text = process.argv[2] || '喵～';
+const text = process.argv[2] || '汪汪～';
 const style = process.argv[3] || 'cheerful';
 const voice = process.argv[4] || 'zh-CN-XiaoxiaoNeural';
 const out = '/tmp/cat_tts.mp3';

@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import WS from 'ws';
 
-const text = process.argv[2] || '喵～';
+const text = process.argv[2] || '汪汪～';
 const tone = process.argv[3] || 'cute';
 const voice = process.argv[4] || 'zh-CN-XiaoxiaoNeural';
 const out = '/tmp/cat_tts.mp3';

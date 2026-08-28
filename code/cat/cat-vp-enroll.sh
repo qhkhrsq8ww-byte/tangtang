@@ -2,10 +2,13 @@
 # 糖糖 · 一键声纹建档
 # 用法: ./cat-vp-enroll.sh <名字> [段数=3]
 # 会引导用户录 N 段语音（每段 5 秒），然后建档
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=cat-lib.sh
+. "$SCRIPT_DIR/cat-lib.sh"
 NAME="${1:?用法: cat-vp-enroll.sh <名字> [段数=3]}"
 N="${2:-3}"
-FF=/Users/lv/.qclaw/workspace/cat/bin/ffmpeg
-VP=/Users/lv/.qclaw/workspace/cat/cat-vp.py
+FF="$(tangtang_ffmpeg)"
+VP="$CAT_DIR/cat-vp.py"
 TMP=/tmp/cat_vp_enroll_$$
 mkdir -p "$TMP"
 
