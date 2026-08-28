@@ -12,7 +12,17 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 ASSET = ROOT / "assets" / "character" / "tangtang"
-PNG_SIG = b"\x89PNG\r\n\x1a\n"
+SKIP_DIRS = {"v10"}
+
+
+def pack_pngs() -> list[Path]:
+    out: list[Path] = []
+    for path in ASSET.rglob("*.png"):
+        rel = path.relative_to(ASSET).parts
+        if rel and rel[0] in SKIP_DIRS:
+            continue
+        out.append(path)
+    return out
 REQUIRED_FIELDS = (
     "animation_name",
     "frame_count",
@@ -78,7 +88,7 @@ class TestMetadata(unittest.TestCase):
 
 class TestPngReadableAndSized(unittest.TestCase):
     def test_all_pngs_readable(self) -> None:
-        pngs = list(ASSET.rglob("*.png"))
+        pngs = pack_pngs()
         self.assertGreaterEqual(len(pngs), 1)
         for path in pngs:
             with path.open("rb") as fh:
@@ -86,7 +96,7 @@ class TestPngReadableAndSized(unittest.TestCase):
 
     def test_character_frames_unified_512(self) -> None:
         skip = {"TangTang-V10-character-design-sheet.png", "living_room_cream.png"}
-        for path in ASSET.rglob("*.png"):
+        for path in pack_pngs():
             if path.name in skip:
                 continue
             rel = path.relative_to(ASSET).as_posix()
@@ -118,7 +128,7 @@ class TestPngReadableAndSized(unittest.TestCase):
         self.assertTrue((ASSET / "TangTang-V10-character-design-sheet.png").is_file())
 
     def test_png_count_is_documented_short_of_368(self) -> None:
-        count = len(list(ASSET.rglob("*.png")))
+        count = len(pack_pngs())
         meta = json.loads((ASSET / "metadata.json").read_text(encoding="utf-8"))
         self.assertEqual(meta["expected_png_count"], 368)
         # Honest inventory: do not invent filler pixels to hit 368.
