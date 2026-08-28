@@ -2,11 +2,14 @@
 # 复制为 tangtang-config.sh 后按家庭填写。tangtang-config.sh 不入库。
 #   cp tangtang-config.example.sh tangtang-config.sh
 
-# play=约9岁玩伴模式；friend=约12岁朋友模式
+# play=航航；friend=洽洽；说话人识别成功后会按名册覆盖
 export TANGTANG_PROFILE="play"
 
-# 糖糖口头称呼。不要把真实姓名提交到 Git。
+# 糖糖口头称呼。语音识别到家人后会改成对方的 display_name。
 export TANGTANG_CHILD_NAME="小朋友"
+
+# 家庭名册：仓库 data/family.json（爷爷/奶奶/爸爸/洽洽/航航）
+# export TANGTANG_FAMILY_FILE="/absolute/path/to/family.json"
 
 # 投影 AirPlay（按家里局域网修改）
 export TANGTANG_PROJECTOR_IP="192.168.31.104"

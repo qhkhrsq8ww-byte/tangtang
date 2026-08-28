@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "family_id": "home",
+  "note": "五口之家名册。声纹与习惯流水只存在本机 cat-habits.json / cat-voiceprints.json，不入库。",
+  "members": [
+    {
+      "member_id": "grandpa",
+      "display_name": "爷爷",
+      "relation": "grandfather",
+      "age": null,
+      "profile": "elder",
+      "aliases": ["爷爷", "grandpa", "grandfather", "外公"],
+      "permissions": {"self_private": true, "family_summary": true},
+      "preferences": {"preferred_greeting": "爷爷"}
+    },
+    {
+      "member_id": "grandma",
+      "display_name": "奶奶",
+      "relation": "grandmother",
+      "age": null,
+      "profile": "elder",
+      "aliases": ["奶奶", "grandma", "grandmother", "外婆"],
+      "permissions": {"self_private": true, "family_summary": true},
+      "preferences": {"preferred_greeting": "奶奶"}
+    },
+    {
+      "member_id": "dad",
+      "display_name": "爸爸",
+      "relation": "father",
+      "age": null,
+      "profile": "adult",
+      "aliases": ["爸爸", "爸", "dad", "父亲"],
+      "permissions": {"self_private": true, "family_summary": true},
+      "preferences": {"preferred_greeting": "爸爸"}
+    },
+    {
+      "member_id": "qiaqia",
+      "display_name": "洽洽",
+      "relation": "child",
+      "age": 12,
+      "profile": "friend",
+      "aliases": ["洽洽", "qiaqia"],
+      "permissions": {"self_private": true, "family_summary": false},
+      "preferences": {"preferred_greeting": "洽洽"}
+    },
+    {
+      "member_id": "hanghang",
+      "display_name": "航航",
+      "relation": "child",
+      "age": 9,
+      "profile": "play",
+      "aliases": ["航航", "hanghang"],
+      "permissions": {"self_private": true, "family_summary": false},
+      "preferences": {"preferred_greeting": "航航"}
+    }
+  ],
+  "behavior_event_types": [
+    "wake", "sleep", "meal", "water", "exercise", "screen",
+    "study", "work", "outdoor", "home", "chore", "conversation", "mood_signal"
+  ]
+}

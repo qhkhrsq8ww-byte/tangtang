@@ -159,7 +159,7 @@ def now():
 
 def current_profile():
     p = (os.environ.get("TANGTANG_PROFILE") or "play").strip().lower()
-    return p if p in ("play", "friend") else "play"
+    return p if p in ("play", "friend", "adult", "elder") else "play"
 
 
 def child_name(memory):
