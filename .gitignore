@@ -20,3 +20,5 @@ code/cat/assets_ref/
 code/cat/cat-voiceprints.json
 code/cat/cat-habits.json
 .env
+__pycache__/
+*.pyc

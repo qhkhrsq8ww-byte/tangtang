@@ -11,3 +11,15 @@ class MemoryError(ValueError):
 
 class ActionError(ValueError):
     """Illegal presentation action (orchestrator output)."""
+
+
+class PrivacyError(ValueError):
+    """Illegal privacy classification or store routing."""
+
+
+class PathError(ValueError):
+    """Path traversal or write outside TANGTANG_HOME."""
+
+
+class ShellError(ValueError):
+    """Event/LLM text must not reach a shell."""

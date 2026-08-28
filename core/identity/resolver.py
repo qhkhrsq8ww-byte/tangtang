@@ -91,6 +91,18 @@ class IdentityResolver:
                 return True
         return False
 
+    def is_child(self, member_id: str | None) -> bool:
+        """Public: hanghang / 弟弟 / child_9 (and sister aliases) are children."""
+        if not member_id:
+            return False
+        canonical = self._lookup(member_id) or member_id
+        if self._is_child(canonical) or self._is_child(member_id):
+            return True
+        for prod, group in PRODUCT_GROUPS.items():
+            if prod in CHILD_PRODUCTS and (member_id in group or canonical in group):
+                return True
+        return False
+
     def resolve(self, observation: Mapping[str, Any] | str | None) -> str | None:
         """Read observation → member_id. Strings are treated as a label only."""
         if observation is None:
