@@ -17,6 +17,7 @@ KEY = os.environ.get("QCLAW_LLM_API_KEY", "")
 DEFAULT_MODEL = "pool-deepseek-v4-pro"
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
+PROFILE_RESOLVER = os.path.join(CAT_DIR, "tangtang-profile.py")
 
 FORBIDDEN_OUTPUT = (
     "你必须", "警告你", "根据系统检测", "根据系统监测",
@@ -25,7 +26,6 @@ FORBIDDEN_OUTPUT = (
     "作为人工智能", "作为AI",
 )
 
-# 只做拦截，不提供任何方法细节
 RISK_MARKERS = (
     "不想活", "自杀", "杀死自己", "伤害自己",
     "想死", "去死", "割腕", "跳楼",
@@ -40,13 +40,36 @@ SAFE_REPLY = (
 FALLBACK_REPLY = "汪汪～ 糖糖在呢。"
 
 
+def resolve_family():
+    speaker = speaker_id()
+    if speaker in ("unknown", "", "访客") or not os.path.exists(PROFILE_RESOLVER):
+        return {"member_id": "unknown", "display_name": "小朋友", "profile": "play", "relation": "unknown"}
+    try:
+        out = subprocess.check_output(
+            ["/usr/bin/python3", PROFILE_RESOLVER, "--speaker", speaker],
+            text=True, timeout=3,
+        )
+        data = json.loads(out.strip())
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+    return {"member_id": "unknown", "display_name": "小朋友", "profile": "play", "relation": "unknown"}
+
+
 def current_profile():
-    p = (os.environ.get("TANGTANG_PROFILE") or "play").strip().lower()
-    return p if p in ("play", "friend") else "play"
+    explicit = (os.environ.get("TANGTANG_PROFILE") or "").strip().lower()
+    if explicit in ("play", "friend", "adult", "elder"):
+        return explicit
+    return str(resolve_family().get("profile") or "play")
 
 
 def child_name():
-    return (os.environ.get("TANGTANG_CHILD_NAME") or "小朋友").strip() or "小朋友"
+    env = (os.environ.get("TANGTANG_CHILD_NAME") or "").strip()
+    if env:
+        return env
+    family = resolve_family()
+    return str(family.get("display_name") or "小朋友")
 
 
 def speaker_id():
@@ -57,6 +80,7 @@ def build_persona():
     profile = current_profile()
     name = child_name()
     speaker = speaker_id()
+    family = resolve_family()
     species = (
         "你是「糖糖」，一只住在投影里的白色比熊小狗。"
         "毛发蓬松雪白，黑眼睛棕鼻子，戴黄色项圈和骨形铭牌。"
@@ -66,6 +90,18 @@ def build_persona():
         style = (
             "当前是 friend 模式（大约12岁）：你是朋友、倾听者、温柔提醒者。"
             "尊重对方，给选择，不要幼态化，不要说教。1-2句，口语化。"
+        )
+    elif profile == "adult":
+        style = (
+            "当前是 adult 模式（爸爸/妈妈）：你是家庭伙伴，不是监督者。"
+            "语气自然、简洁、有分寸；可以协助安排家庭事务、提醒休息和关心家人。"
+            "不要把孩子的私人信息主动告诉成人，不要制造监控感。"
+        )
+    elif profile == "elder":
+        style = (
+            "当前是 elder 模式（爷爷/奶奶）：你是亲切的小狗伙伴。"
+            "语速和表达想象得更从容，少用网络流行语，不幼稚化对方。"
+            "可以聊日常、吃饭、休息、散步和家庭生活，但不要进行医学诊断。"
         )
     else:
         style = (
@@ -83,7 +119,10 @@ def build_persona():
     if speaker in ("unknown", "", "访客"):
         who = "还不能确定说话的人是谁。用通用亲切称呼，不要假装认识，不要提起其他家庭成员的私事。"
     else:
-        who = "只陪伴当前说话的人，不要提起其他孩子的私事或拿他们比较。"
+        who = (
+            f"当前家庭成员：{family.get('display_name', name)}，关系：{family.get('relation', 'unknown')}。"
+            "只陪伴当前说话的人，不要提起其他孩子的私事或拿他们比较。"
+        )
     return f"{species}\n{style}\n{safety}\n{who}\n默认称呼：{name}。"
 
 
@@ -159,7 +198,7 @@ def brain_fallback(user_text):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("text", nargs="?", default="", help="小朋友说的话")
+    ap.add_argument("text", nargs="?", default="", help="说话内容")
     ap.add_argument("--model", default=DEFAULT_MODEL)
     args = ap.parse_args()
 
