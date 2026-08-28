@@ -18,6 +18,9 @@ code/cat/bin/
 code/cat/generated-images/
 code/cat/assets_ref/
 
+# Node 依赖（install 阶段生成，不入库）
+code/cat/node_modules/
+
 # macOS
 .DS_Store
 code/cat/cat-voiceprints.json
