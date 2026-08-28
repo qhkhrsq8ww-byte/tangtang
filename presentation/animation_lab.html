@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>糖糖 V10 · Animation Lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --fur: #FFFFFF;
+    --cream: #F5D6A5;
+    --bandana: #8EC5FF;
+    --bandana-dark: #6B9BD1;
+    --gold: #FFE4B5;
+    --ink: #3d2b1f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1b1410; color: var(--ink); font-family: -apple-system, "PingFang SC", sans-serif; }
+  .stage-wrap {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #111;
+  }
+  .stage {
+    position: relative;
+    width: min(100vw, calc(100vh * 16 / 9));
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #fff8f0 center/cover no-repeat;
+  }
+  .stage img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .character {
+    position: absolute;
+    left: 50%;
+    bottom: 4.5%;
+    width: calc(512 / 1920 * 100%);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    transform: translateX(-50%);
+    object-fit: contain;
+    pointer-events: none;
+  }
+  .hud {
+    position: absolute;
+    left: 16px; top: 12px;
+    color: #3d2b1f;
+    background: rgba(255,255,255,.72);
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .chrome {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 10px 12px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: linear-gradient(transparent, rgba(255,248,240,.92));
+  }
+  button {
+    border: 0;
+    background: var(--bandana);
+    color: #1b2a40;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.active { background: var(--bandana-dark); color: #fff; }
+  body.projection .chrome, body.projection .hud { display: none; }
+</style>
+</head>
+<body>
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+    <img class="bg" id="bg" alt="" />
+    <img class="character" id="dog" alt="糖糖" />
+    <div class="hud" id="hud">loading…</div>
+    <div class="chrome" id="chrome"></div>
+  </div>
+</div>
+<script>
+const ASSET = "../assets/character/tangtang";
+const STATES = ["idle","listen","happy","encourage","sad","walk","run","sit","lie","sleep","blink"];
+let meta = null;
+let frames = [];
+let idx = 0;
+let timer = null;
+let current = "idle";
+
+async function loadMeta() {
+  const res = await fetch(`${ASSET}/metadata.json`);
+  meta = await res.json();
+  document.getElementById("bg").src = `${ASSET}/backgrounds/living_room_cream.png`;
+  const chrome = document.getElementById("chrome");
+  STATES.forEach((name) => {
+    const b = document.createElement("button");
+    b.textContent = name;
+    b.onclick = () => play(name);
+    chrome.appendChild(b);
+  });
+  const proj = new URLSearchParams(location.search).get("projection");
+  if (proj === "1") document.body.classList.add("projection");
+  play("idle");
+}
+
+function listedFrames(name) {
+  const spec = meta.animations[name] || meta.animations.idle;
+  const folder = spec.folder || name;
+  const count = spec.frame_count || 1;
+  const found = [];
+  // Prefer numbered frames that exist; missing ones are skipped (no crash).
+  return { spec, folder, count, found };
+}
+
+async function exists(url) {
+  try {
+    const r = await fetch(url, { method: "HEAD" });
+    return r.ok;
+  } catch (e) { return false; }
+}
+
+async function play(name) {
+  const spec = (meta.animations[name] || meta.animations.idle);
+  const folder = spec.folder || name;
+  const want = spec.frame_count || 1;
+  const urls = [];
+  for (let i = 0; i < want; i++) {
+    const url = `${ASSET}/${folder}/${String(i).padStart(2,"0")}.png`;
+    if (await exists(url)) urls.push(url);
+  }
+  if (spec.continuous && urls.length < (spec.min_playable || 8)) {
+    return play("idle");
+  }
+  if (!urls.length) {
+    const fallback = `${ASSET}/idle/00.png`;
+    urls.push(fallback);
+  }
+  frames = urls;
+  idx = 0;
+  current = urls[0].includes("/idle/") && name !== "idle" ? "idle" : name;
+  document.querySelectorAll(".chrome button").forEach((b) => {
+    b.classList.toggle("active", b.textContent === name);
+  });
+  const fps = Math.min(spec.fps || 8, name === "sleep" ? 4 : 12);
+  if (timer) clearInterval(timer);
+  const tick = () => {
+    const img = document.getElementById("dog");
+    img.src = frames[idx];
+    document.getElementById("hud").innerHTML =
+      `State ${ (spec.preferred_state || name).toUpperCase() } · ${name}<br>` +
+      `frame ${idx + 1}/${frames.length} · ${fps} fps · loop ${spec.loop}<br>` +
+      `canvas 1920×1080 · character 512 · scale 1.0`;
+    idx = spec.loop ? (idx + 1) % frames.length : Math.min(idx + 1, frames.length - 1);
+  };
+  tick();
+  timer = setInterval(tick, Math.max(1000 / fps, 1000 / 12));
+}
+
+loadMeta().catch((err) => {
+  document.getElementById("hud").textContent = "metadata missing — open via python3 -m http.server 8765";
+  console.error(err);
+});
+</script>
+</body>
+</html>
