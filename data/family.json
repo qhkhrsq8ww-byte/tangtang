@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "family_id": "home",
-  "note": "五口之家名册。声纹与习惯流水只存在本机 cat-habits.json / cat-voiceprints.json，不入库。",
+  "note": "五口之家名册。声纹与习惯流水只存在客厅 Mac Air 本机硬盘（~/Library/Application Support/Tangtang），不入库，不写路由器硬盘。",
   "members": [
     {
       "member_id": "grandpa",

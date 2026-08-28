@@ -25,6 +25,11 @@ export TANGTANG_REQUIRE_PRESENCE=1
 export TANGTANG_PROJECTOR_IP="192.168.31.104"
 export TANGTANG_AIRPLAY_PORT="61949"
 
+# 记忆目录：先只写客厅 Mac Air 本机硬盘，不写路由器硬盘。
+# 不填则默认：~/Library/Application Support/Tangtang
+# 以后要备份到路由器盘再单独做，现在不要填 /Volumes/ 或 smb://
+# export TANGTANG_DATA_DIR="$HOME/Library/Application Support/Tangtang"
+
 # 百度语音识别（优先环境变量；也可放在 gitignore 的 cat-stt-config.sh）
 # export BAIDU_STT_API_KEY=""
 # export BAIDU_STT_SECRET_KEY=""

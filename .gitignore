@@ -1,4 +1,5 @@
 # 敏感文件 - 不入库
+# 正式记忆写在本机 ~/Library/Application Support/Tangtang ；下面是旧路径残留，仍忽略
 code/cat/cat-stt-config.sh
 code/cat/tangtang-config.sh
 code/cat/tangtang-local.json
@@ -21,3 +22,5 @@ code/cat/assets_ref/
 .DS_Store
 code/cat/cat-voiceprints.json
 code/cat/cat-habits.json
+__pycache__/
+*.pyc

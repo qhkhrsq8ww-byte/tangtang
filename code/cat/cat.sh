@@ -11,6 +11,7 @@
 #   ./cat.sh habits [成员]    # 查看五口之家习惯摘要（不投屏）
 #   ./cat.sh preview          # 打印今日语音提醒文案（不发声）
 #   ./cat.sh presence         # 看洽洽/航航是否在客厅网段
+#   ./cat.sh data             # 看记忆文件写在本机哪
 #   ./cat.sh chat "想聊的"     # 云端真对话
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -41,6 +42,12 @@ while [ $# -gt 0 ]; do
       ;;
     presence)
       exec "$CAT_DIR/cat-presence.sh"
+      ;;
+    data)
+      echo "记忆目录（Mac Air 本机硬盘，不写路由器）"
+      echo "$TANGTANG_DATA_DIR"
+      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|voiceprints|chat-history|remind-log)' || true
+      exit 0
       ;;
     chat) CHAT_REQ=1; shift;;
     *) TEXT="$1"; shift;;

@@ -16,7 +16,11 @@ BASE = os.environ.get("QCLAW_LLM_BASE_URL", "http://127.0.0.1:19000/proxy/llm")
 KEY = os.environ.get("QCLAW_LLM_API_KEY", "")
 DEFAULT_MODEL = "pool-deepseek-v4-pro"
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
+if CAT_DIR not in sys.path:
+    sys.path.insert(0, CAT_DIR)
+from tangtang_paths import data_dir  # noqa: E402
+
+DATA_DIR = data_dir()
 
 FORBIDDEN_OUTPUT = (
     "你必须", "警告你", "根据系统检测", "根据系统监测",
@@ -220,6 +224,7 @@ def main():
     history.append({"role": "user", "content": args.text})
     history.append({"role": "assistant", "content": reply})
     history = history[-20:]
+    os.makedirs(os.path.dirname(hist_file) or ".", exist_ok=True)
     tmp = hist_file + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False)

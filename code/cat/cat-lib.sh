@@ -17,6 +17,16 @@ export TANGTANG_PROJECTOR_IP TANGTANG_AIRPLAY_PORT
 export TANGTANG_REQUIRE_PRESENCE
 export TANGTANG_HOST_QIAQIA TANGTANG_HOST_HANGHANG
 
+# 记忆只写本机硬盘（Mac Air: ~/Library/Application Support/Tangtang）
+# 现在不要指向路由器 Samba。未设置时由 tangtang_paths.py 解析并迁移旧文件。
+if [ -z "${TANGTANG_DATA_DIR:-}" ]; then
+  TANGTANG_DATA_DIR="$(/usr/bin/python3 "$CAT_DIR/tangtang_paths.py" 2>/dev/null || true)"
+  [ -n "$TANGTANG_DATA_DIR" ] || TANGTANG_DATA_DIR="$CAT_DIR"
+fi
+export TANGTANG_DATA_DIR
+TANGTANG_REMIND_LOG="${TANGTANG_DATA_DIR}/cat-remind-log.txt"
+export TANGTANG_REMIND_LOG
+
 # 手机是否在客厅网段（Mac 在客厅）。ICMP 不通时再看 ARP，兼容 iPhone 省电不回 ping。
 tangtang_host_on_lan() {
   local host="$1"
