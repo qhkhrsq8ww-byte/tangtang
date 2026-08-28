@@ -149,8 +149,10 @@ class PrivacyPipeline:
             )))
             result.stored_family = fam.ok
             if decision.allow_family_summary:
-                s = isolate(lambda: self.stores.summary.add(
-                    member_id=decision.member_id, summary="family-note"
+                s = isolate(lambda: self.stores.summary.add_structured(
+                    member_id=decision.member_id,
+                    mood=None,
+                    interaction_count=1,
                 ))
                 result.stored_summary = s.ok
             if decision.allow_habit_store:

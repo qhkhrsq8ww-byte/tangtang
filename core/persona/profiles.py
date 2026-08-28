@@ -144,8 +144,14 @@ class PersonaRenderer:
         exact = self._exact.get((mid, text_in))
         if exact:
             out = exact
-        elif scene in {"phone", "sitting"}:
+        elif scene in {"phone", "sitting", "exercise"}:
             out = WALK_SUGGESTION
+        elif scene == "no_meal":
+            out = "汪汪～ 要不要先吃一点再忙？"
+        elif scene == "late_sleep":
+            out = "汪汪～ 有点晚了，要不要先去睡？"
+        elif scene == "home":
+            out = "汪汪～ 欢迎回家。"
         elif role == "elder":
             name = spec.get("display") or "您"
             out = f"汪汪～ {name}，糖糖在呢。"

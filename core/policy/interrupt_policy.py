@@ -11,7 +11,9 @@ from datetime import datetime, time, timedelta, timezone
 from typing import Any
 
 DECISIONS = frozenset({"SPEAK", "SILENT", "DELAY", "LOG_ONLY"})
-PROACTIVE_SCENES = frozenset({"phone", "sitting", "no_meal", "late_sleep", "home", "away"})
+PROACTIVE_SCENES = frozenset({
+    "phone", "sitting", "no_meal", "late_sleep", "home", "away", "exercise",
+})
 DEFAULT_COOLDOWN = timedelta(minutes=15)
 
 # Repeat of the same proactive scene → do not nag.
@@ -22,6 +24,17 @@ _REPEAT_DECISION = {
     "late_sleep": "SILENT",
     "home": "LOG_ONLY",
     "away": "SILENT",
+    "exercise": "LOG_ONLY",
+}
+
+_EVENT_TYPE_SCENE = {
+    "phone.usage": "phone",
+    "activity.sedentary": "sitting",
+    "meal.missed": "no_meal",
+    "exercise.missing": "exercise",
+    "sleep.late": "late_sleep",
+    "family.arrived": "home",
+    "family.left": "away",
 }
 
 
@@ -34,6 +47,9 @@ def infer_scene(observation: Mapping[str, Any] | None) -> str | None:
     scene = obs.get("scene")
     if isinstance(scene, str) and scene.strip() in PROACTIVE_SCENES:
         return scene.strip()
+    event_type = obs.get("event_type")
+    if isinstance(event_type, str) and event_type in _EVENT_TYPE_SCENE:
+        return _EVENT_TYPE_SCENE[event_type]
     if obs.get("presence_home") is False and not obs.get("interactive"):
         return "away"
     if obs.get("just_arrived") or obs.get("arrived_home"):
@@ -44,6 +60,8 @@ def infer_scene(observation: Mapping[str, Any] | None) -> str | None:
         return "sitting"
     if obs.get("no_meal") or obs.get("missed_meal"):
         return "no_meal"
+    if obs.get("exercise") or obs.get("missing_exercise"):
+        return "exercise"
     if obs.get("late_sleep") or obs.get("past_bedtime"):
         return "late_sleep"
     return None
@@ -96,6 +114,8 @@ class InterruptPolicy:
 
         if obs.get("emergency"):
             return "SPEAK"
+        if obs.get("sleeping") or obs.get("asleep"):
+            return "SILENT"
         if obs.get("active_conversation"):
             return "SILENT"
         at_school = bool(obs.get("school_hours") or obs.get("at_school"))
@@ -110,10 +130,12 @@ class InterruptPolicy:
         # Empty living room: never chat into the dark.
         if scene == "away" or (presence_home is False and not interactive):
             return "SILENT"
-        if not interactive and self.is_quiet_hours(when):
-            return "SILENT"
         if obs.get("recently_interrupted"):
             return "DELAY"
+        if obs.get("importance") == "low":
+            return "LOG_ONLY"
+        if not interactive and self.is_quiet_hours(when):
+            return "SILENT"
         if scene in PROACTIVE_SCENES:
             member = str(obs.get("member_id") or obs.get("audience") or "*")
             key = (member, scene)
@@ -122,18 +144,7 @@ class InterruptPolicy:
             decision = "SPEAK"
             self._mark_spoke(key, when)
             return decision
-        if obs.get("importance") == "low":
-            return "LOG_ONLY"
         return "SPEAK"
-
-    def should_interrupt(
-        self,
-        observation: Mapping[str, Any] | None = None,
-        now: datetime | None = None,
-        **kwargs: Any,
-    ) -> bool:
-        """True = do not speak now. Inverse of a SPEAK decision."""
-        return self.decide(observation, now=now, **kwargs) != "SPEAK"
 
     def should_interrupt(
         self,

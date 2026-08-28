@@ -9,6 +9,9 @@
   python3 cat-chat.py "小朋友说的话"
   TANGTANG_PROFILE=play TANGTANG_SPEAKER=unknown python3 cat-chat.py "..."
 输出: 糖糖的回复（纯文本，一行）
+
+V4: 新对话路径是 core.adapters.chat_adapter.ChatAdapter（必经 PrivacyPolicy）。
+本 CLI 默认仍是 V3 拼接 prompt；TANGTANG_V4_PIPELINE=1 走新路径。不要删除本文件。
 """
 import os, sys, json, urllib.request, argparse, subprocess, re
 
@@ -216,6 +219,22 @@ def main():
 
     if not args.text.strip():
         args.text = "糖糖，我来啦"
+
+    # V3 CLI concatenates prompts from local JSON and can skip V4 PrivacyPolicy.
+    # New path: ChatAdapter / TangTangRuntime (cannot skip the privacy gate).
+    # Keep this CLI for the living-room Mac; set TANGTANG_V4_PIPELINE=1 to use V4.
+    if os.environ.get("TANGTANG_V4_PIPELINE") == "1":
+        root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        from tangtang_runtime import TangTangRuntime
+
+        result = TangTangRuntime().handle_utterance(
+            args.text, {"label": speaker_id()}
+        )
+        text = (result.action.text if result.action else "") or FALLBACK_REPLY
+        print(text)
+        return
 
     if looks_risky(args.text):
         print(SAFE_REPLY)
