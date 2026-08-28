@@ -1,56 +1,74 @@
 #!/bin/bash
 # ============================================================
-# 糖糖 V3.1 · 路径迁移脚本（crontab + launchd）
-# 将生产环境从旧目录迁移到 tangtang 仓库
-# 用法: ./migrate-paths.sh          # 预览
-#       ./migrate-paths.sh --apply  # 实际执行
+# 糖糖 · 路径迁移（crontab + launchd）
+# 旧目录仅通过 OLD_TANGTANG_HOME 传入。仓库运行时不得写死本机 cat 绝对路径。
+#
+# 用法:
+#   TANGTANG_HOME=/path/to/tangtang OLD_TANGTANG_HOME=/old/cat ./migrate-paths.sh
+#   TANGTANG_HOME=... OLD_TANGTANG_HOME=... ./migrate-paths.sh --apply
+#
+# launchd / crontab 只安装到当前用户（~/Library/LaunchAgents + 用户 crontab）。
+# 禁止 sudo / root / /Library/LaunchDaemons。
 # ============================================================
 set -u
-OLD_HOME="/Users/lv/.qclaw/workspace/cat"
-NEW_HOME="/Users/lv/.qclaw/workspace/tangtang"
+OLD_HOME="${OLD_TANGTANG_HOME:-}"
+NEW_HOME="${TANGTANG_HOME:?TANGTANG_HOME is required}"
 APPLY="${1:-}"
 echo "═══════════════════════════════════════════"
-echo "糖糖路径迁移：$OLD_HOME → $NEW_HOME"
+echo "糖糖路径迁移：\${OLD_TANGTANG_HOME} → \${TANGTANG_HOME}"
+echo "  OLD=${OLD_HOME:-'(unset)'}"
+echo "  NEW=${NEW_HOME}"
 echo "═══════════════════════════════════════════"
 
-# ---------- 1. crontab 迁移 ----------
+if [ -z "$OLD_HOME" ]; then
+  echo "  ⚠️ OLD_TANGTANG_HOME unset — skip rewrite, only show target"
+fi
+
+# ---------- 1. crontab 迁移（用户 crontab，不是 root） ----------
 echo ""
-echo "【1/2】crontab 迁移"
+echo "【1/2】crontab 迁移（crontab -l，非 sudo）"
 if crontab -l > /tmp/tangtang_cron_backup.txt 2>/dev/null; then
   echo "  ✅ 已备份当前 crontab → /tmp/tangtang_cron_backup.txt"
-  NEW_CRON=$(sed "s|$OLD_HOME|$NEW_HOME/code/cat|g" /tmp/tangtang_cron_backup.txt)
-  # 标记已废弃的一次性唤醒任务（2026-08-28 已执行完）
-  NEW_CRON=$(echo "$NEW_CRON" | sed 's|^0 7 28 8 \*|# [DEPRECATED-20260828] 0 7 28 8 *|; s|^1 7 28 8 \*|# [DEPRECATED-20260828] 1 7 28 8 *|')
-  if [ "$APPLY" = "--apply" ]; then
-    echo "$NEW_CRON" | crontab - && echo "  ✅ crontab 已迁移到新路径"
+  if [ -n "$OLD_HOME" ]; then
+    NEW_CRON=$(sed "s|$OLD_HOME|$NEW_HOME/code/cat|g" /tmp/tangtang_cron_backup.txt)
   else
-    echo "  📋 预览（--apply 生效）："
-    echo "$NEW_CRON" | grep -E "tangtang/code/cat|DEPRECATED" | head -20
+    NEW_CRON=$(cat /tmp/tangtang_cron_backup.txt)
+  fi
+  if [ "$APPLY" = "--apply" ]; then
+    echo "$NEW_CRON" | crontab - && echo "  ✅ crontab 已迁移到 TANGTANG_HOME"
+  else
+    echo "  📋 预览（--apply 生效）"
+    echo "$NEW_CRON" | grep -E "code/cat|DEPRECATED" | head -20
   fi
 else
-  echo "  ⚠️ 无法读取 crontab"
+  echo "  ⚠️ 无法读取用户 crontab"
 fi
 
-# ---------- 2. launchd 迁移 ----------
+# ---------- 2. launchd 迁移（用户 LaunchAgents，不是 LaunchDaemons） ----------
 echo ""
-echo "【2/2】launchd 迁移"
-PLIST="$HOME/Library/LaunchAgents/com.tangtang.cat-server.plist"
+echo "【2/2】launchd 迁移（~/Library/LaunchAgents）"
+PLIST="${HOME}/Library/LaunchAgents/com.tangtang.daemon.plist"
 if [ -f "$PLIST" ]; then
-  echo "  ✅ 找到生产 plist: $PLIST"
-  # 生成迁移版本（仅替换目录路径，不改其他配置）
-  sed "s|$OLD_HOME|$NEW_HOME/code/cat|g" "$PLIST" > /tmp/com.tangtang.cat-server.new.plist
-  if [ "$APPLY" = "--apply" ]; then
-    cp /tmp/com.tangtang.cat-server.new.plist "$PLIST" && echo "  ✅ plist 已迁移到新路径"
-    echo "  ℹ️ 需要重启服务: launchctl unload $PLIST && launchctl load $PLIST"
+  echo "  ✅ 找到用户 plist: $PLIST"
+  if [ -n "$OLD_HOME" ]; then
+    sed "s|$OLD_HOME|$NEW_HOME/code/cat|g" "$PLIST" > /tmp/com.tangtang.daemon.new.plist
   else
-    echo "  📋 迁移后路径预览："
-    grep -E "directory|WorkingDirectory" /tmp/com.tangtang.cat-server.new.plist
+    cp "$PLIST" /tmp/com.tangtang.daemon.new.plist
+  fi
+  if [ "$APPLY" = "--apply" ]; then
+    cp /tmp/com.tangtang.daemon.new.plist "$PLIST" && echo "  ✅ plist 已指向 TANGTANG_HOME"
+    echo "  ℹ️ 需要: launchctl unload $PLIST && launchctl load $PLIST"
+    echo "  ℹ️ 不要使用 sudo launchctl / /Library/LaunchDaemons"
+  else
+    echo "  📋 预览 WorkingDirectory："
+    grep -E "WorkingDirectory|TANGTANG" /tmp/com.tangtang.daemon.new.plist || true
   fi
 else
-  echo "  ⚠️ 生产 plist 不存在（跳过）"
+  echo "  ⚠️ 用户 plist 不存在。复制 config/com.tangtang.daemon.plist.example"
+  echo "     到 ~/Library/LaunchAgents/ 并把 __TANGTANG_HOME__ 换成 \$TANGTANG_HOME"
 fi
 
 echo ""
 echo "═══════════════════════════════════════════"
-echo "完成。运行 ./migrate-paths.sh --apply 生效"
+echo "完成。root 安装不在范围内。"
 echo "═══════════════════════════════════════════"

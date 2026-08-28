@@ -7,6 +7,7 @@ from typing import Any
 from core.interfaces import MemoryPort, PolicyPort
 from core.policy.injection import InjectionGuard
 from core.policy.privacy_policy import PrivacyPolicy
+from core.runtime.isolate import isolate
 
 _PRIVACY = frozenset({"PRIVATE", "FAMILY", "PUBLIC"})
 
@@ -45,12 +46,17 @@ class ContextBuilder:
         scope = privacy_scope or obs.get("privacy_scope") or "PRIVATE"
         if scope not in _PRIVACY:
             scope = "PRIVATE"
-        memories = self._memory.query(
-            member_id=str(member_id or ""),
-            scope=str(scope),
-            viewer_id=str(member_id) if member_id else None,
+        q = isolate(
+            lambda: self._memory.query(
+                member_id=str(member_id or ""),
+                scope=str(scope),
+                viewer_id=str(member_id) if member_id else None,
+            ),
+            fallback=[],
         )
-        decision = self._policy.decide(obs)
+        memories = q.value if isinstance(q.value, list) else []
+        d = isolate(lambda: self._policy.decide(obs), fallback="SILENT")
+        decision = d.value if isinstance(d.value, str) and d.value else "SILENT"
         family_out = dict(family or {})
         family_out.pop("private", None)
         if hasattr(event, "to_dict"):

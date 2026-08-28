@@ -110,15 +110,22 @@ class ResponseOrchestrator:
                 private_facts=(),
             )
         if self.persona is not None and not ctx.get("skip_persona"):
-            rendered = self.persona.reply_text(
-                member_id=member_id,
-                utterance=utterance,
-                scene=ctx.get("scene") if isinstance(ctx.get("scene"), str) else None,
-                context=ctx,
-            )
-            text = rendered
+            try:
+                text = self.persona.reply_text(
+                    member_id=member_id,
+                    utterance=utterance,
+                    scene=ctx.get("scene") if isinstance(ctx.get("scene"), str) else None,
+                    context=ctx,
+                )
+            except Exception:
+                text = "汪汪～"
         else:
-            text = self.responder(ctx)
+            try:
+                text = self.responder(ctx)
+            except ActionError:
+                raise
+            except Exception:
+                text = "汪汪～"
         if not isinstance(text, str):
             raise ActionError("responder must return text, not a sink callable")
         needles = self.injection.other_private_needles(ctx, member_id)

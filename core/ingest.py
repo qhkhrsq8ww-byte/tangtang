@@ -23,6 +23,7 @@ from core.policy.privacy_policy import PrivacyDecision, PrivacyPolicy
 from core.persona.profiles import PersonaRenderer
 from core.response.orchestrator import PresentationAction, ResponseOrchestrator
 from core.context.builder import ContextBuilder
+from core.runtime.isolate import isolate
 
 
 def _utc_now() -> datetime:
@@ -126,39 +127,44 @@ class PrivacyPipeline:
 
         result = IngestResult(event=event, decision=decision)
         if decision.privacy == "PRIVATE" and decision.member_id:
-            mem = self.stores.private.put(
+            put = isolate(lambda: self.stores.private.put(
                 member_id=decision.member_id,
                 utterance=utterance,
                 event_id=event.id,
-            )
-            result.stored_private = True
-            result.private_memory_id = mem.memory_id
+            ))
+            if put.ok and put.value is not None:
+                result.stored_private = True
+                result.private_memory_id = getattr(put.value, "memory_id", None)
         elif decision.allow_family_memory and decision.member_id:
-            self.stores.family.put(Memory(
+            fam = isolate(lambda: self.stores.family.put(Memory(
                 memory_id=f"fam_{event.id}",
                 member_id=decision.member_id,
                 type="utterance",
                 privacy="FAMILY",
                 data={"speech": utterance},
                 source_events=[event.id],
-            ))
-            result.stored_family = True
+            )))
+            result.stored_family = fam.ok
             if decision.allow_family_summary:
-                self.stores.summary.add(member_id=decision.member_id, summary="family-note")
-                result.stored_summary = True
+                s = isolate(lambda: self.stores.summary.add(
+                    member_id=decision.member_id, summary="family-note"
+                ))
+                result.stored_summary = s.ok
             if decision.allow_habit_store:
-                self.stores.habits.put(member_id=decision.member_id, utterance=utterance)
-                result.stored_habit = True
+                h = isolate(lambda: self.stores.habits.put(
+                    member_id=decision.member_id, utterance=utterance
+                ))
+                result.stored_habit = h.ok
             if decision.allow_parent_context:
-                self.stores.parent.put(Memory(
+                p = isolate(lambda: self.stores.parent.put(Memory(
                     memory_id=f"par_{event.id}",
                     member_id=decision.member_id,
                     type="note",
                     privacy="FAMILY",
                     data={"tag": "family-event"},
                     source_events=[event.id],
-                ))
-                result.stored_parent = True
+                )))
+                result.stored_parent = p.ok
         return result
 
     def respond(
