@@ -78,6 +78,7 @@ case "$CMD" in
     done < <(schedule_lines)
     echo
     echo "今天会响: ./cat-schedule.sh today"
+    echo "今日休息四步: ./cat.sh today    ./cat.sh today --preview"
     echo "预览文案: ./cat-schedule.sh preview"
     echo "谁在客厅: ./cat-presence.sh"
     echo "客厅试听（说一句→开窗）: ./cat-turn.sh"
@@ -196,6 +197,9 @@ case "$CMD" in
     if [ "$fail" = "0" ]; then
       echo "cat-schedule selftest ok"
       "$CAT_DIR/cat-turn.sh" selftest || exit 1
+      if [ -x "$CAT_DIR/../../tests/test-today-plan.sh" ]; then
+        "$CAT_DIR/../../tests/test-today-plan.sh" || exit 1
+      fi
       exit 0
     fi
     echo "cat-schedule selftest failed"

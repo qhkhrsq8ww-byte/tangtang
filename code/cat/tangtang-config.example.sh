@@ -16,6 +16,9 @@ export TANGTANG_SCHOOL_LEAVE="07:30"
 export TANGTANG_HOME_HANGHANG="16:00"
 export TANGTANG_HOME_QIAQIA="18:00"
 # 放假日历：仓库 data/school_calendar.txt （寒假暑假按学校通知追加）
+# 小朋友临时在家：data/rest_days.txt 写日期，或 CAT_CHILD_HOME=1 / ./cat.sh today --home
+# 不是每周五都休息。./cat.sh today 会当作今天在家，不关爷爷奶奶提醒，不改开学闹铃。
+# 云上自测不按回车：CAT_NOW='2026-08-28 14:05:00' ./cat.sh today --auto --now
 
 # 英语小伴读：译林牛津。航航二年级、洽洽六年级。上学日到家后各一句。
 # 说完一句后在客厅开约 5 秒麦（见 cat-turn.sh）。其它提醒默认仍单向。
@@ -27,6 +30,8 @@ export TANGTANG_HOME_QIAQIA="18:00"
 # 客厅互动：蓝牙音箱应作为 Mac 默认音频输出（系统设置 → 声音 → 输出）。
 # 麦在客厅 Mac 旁（MAONO AU-BM10）。不要做第二只音箱。
 # 若音箱仍放在儿童房，客厅听不见糖糖回话。
+# 云上自测：CAT_NOW='2026-08-28 14:05:00' ./cat.sh today --auto --now
+#           ./cat.sh today-selftest    ./cat.sh hwcheck
 
 # 糖糖口头称呼。语音识别到家人后会改成对方的 display_name。
 export TANGTANG_CHILD_NAME="小朋友"

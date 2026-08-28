@@ -10,7 +10,13 @@
 #   ./cat.sh status           # 查看糖糖当前心情状态
 #   ./cat.sh habits [成员]    # 查看五口之家习惯摘要（不投屏）
 #   ./cat.sh preview          # 打印今日语音提醒文案（不发声）
-#   ./cat.sh today            # 今天会响哪些
+#   ./cat.sh today            # 今日休息四步（问糖糖→学英语→锻炼→休息）
+#   ./cat.sh today --preview  # 只看四句话，不开麦不发声
+#   ./cat.sh today --auto --now   # 无人值守，注入下午钟，不按回车
+#   ./cat.sh today-selftest   # 云上自测四步 + 听窗夹具
+#   ./cat.sh today-report     # 账本标签摘要（无原话）
+#   ./cat.sh hwcheck          # 软硬件自检（Linux 跳过实声）
+#   ./cat.sh schedule         # 今天时刻表会响哪些
 #   ./cat.sh features         # 糖糖有哪些功能
 #   ./cat.sh alarm            # 立刻试上学闹铃（跳过日期）
 #   ./cat.sh english          # 试航航二年级英语小伴读
@@ -47,8 +53,24 @@ while [ $# -gt 0 ]; do
       exit 0
       ;;
     today)
-      "$CAT_DIR/cat-schedule.sh" today
-      exit 0
+      shift
+      exec "$CAT_DIR/cat-today.sh" "$@"
+      ;;
+    today-selftest)
+      exec "$CAT_DIR/cat-today.sh" selftest
+      ;;
+    today-report)
+      exec "$CAT_DIR/cat-today.sh" report
+      ;;
+    hwcheck)
+      exec "$CAT_DIR/cat-hwcheck.sh"
+      ;;
+    schedule)
+      shift
+      if [ $# -eq 0 ]; then
+        exec "$CAT_DIR/cat-schedule.sh" today
+      fi
+      exec "$CAT_DIR/cat-schedule.sh" "$@"
       ;;
     features)
       cat <<'EOF'
@@ -87,6 +109,13 @@ while [ $# -gt 0 ]; do
    麦是客厅 Mac 旁的 MAONO AU-BM10。音箱要设成 Mac 默认输出；若还在儿童房，客厅听不见回话。
    试：./cat.sh turn    ./cat.sh turn english hanghang
    预览不开麦：./cat.sh preview
+
+8. 今日休息四步（问糖糖 → 学英语 → 锻炼 → 休息）
+   小朋友在家时，客厅依次完成四项：打招呼听一句、译林英语一句、动一动、歇一会儿。
+   一步一句，再听窗，不连着念。默认航航玩伴；洽洽用 --who qiaqia。
+   真机下午 14/15/16/17。云上自测不按回车：./cat.sh today-selftest
+   试：./cat.sh today    ./cat.sh today --auto --now    ./cat.sh today-report
+   硬件自检：./cat.sh hwcheck
 EOF
       exit 0
       ;;

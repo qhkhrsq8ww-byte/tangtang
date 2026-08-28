@@ -28,6 +28,8 @@ FORCE=0
 FOLLOW=0
 TURN_SECS="${TANGTANG_TURN_SECONDS:-5}"
 PCM=""
+WINDOW_KIND="unknown"
+SPOKE=0
 
 cleanup_pcm() {
   if [ -n "${PCM:-}" ]; then
@@ -58,9 +60,12 @@ display_for_who() {
 }
 
 write_ledger() {
-  local result="$1" stt="$2" presence="$3" rms="$4"
+  local result="$1" stt="$2" presence="$3" rms="$4" spoke="${5:-0}"
+  local window="${WINDOW_KIND:-unknown}"
+  local persona="${TANGTANG_PROFILE:-play}"
   /usr/bin/python3 "$CAT_DIR/cat-turn.py" ledger \
-    "$EVENT" "$WHO" "$result" "$stt" "$presence" "$TURN_SECS" "$rms" >/dev/null
+    "$EVENT" "$WHO" "$result" "$stt" "$presence" "$TURN_SECS" "$rms" \
+    "$spoke" "$window" "$persona" "$result" >/dev/null
 }
 
 speak_prompt() {
@@ -80,21 +85,37 @@ speak_prompt() {
 
 record_window() {
   PCM="${TMPDIR:-/tmp}/tangtang_turn_$$.pcm"
+  WINDOW_KIND="unknown"
   if [ -n "${TANGTANG_TURN_PCM:-}" ] && [ -f "${TANGTANG_TURN_PCM}" ]; then
     cp "${TANGTANG_TURN_PCM}" "$PCM"
+    WINDOW_KIND="${TANGTANG_TURN_WINDOW:-fixture}"
+    turn_log "stub 听窗 fixture （夹具 PCM，不调用 avfoundation）"
     return 0
   fi
+  listen="${TANGTANG_TURN_LISTEN:-}"
+  case "$listen" in
+    silent|joined|tone)
+      kind="silent"
+      [ "$listen" = "silent" ] || kind="tone"
+      /usr/bin/python3 "$CAT_DIR/cat-turn.py" pcm "$kind" "$PCM" >/dev/null
+      WINDOW_KIND="stub"
+      turn_log "stub 听窗 $listen （无客厅麦/音箱，不调用 avfoundation）"
+      return 0
+      ;;
+  esac
   if [ "$(uname -s)" != "Darwin" ]; then
-    turn_log "无麦环境，不开客厅麦"
-    rm -f "$PCM"
-    PCM=""
-    return 1
+    /usr/bin/python3 "$CAT_DIR/cat-turn.py" pcm silent "$PCM" >/dev/null
+    WINDOW_KIND="stub"
+    turn_log "stub 听窗 silent （云上无客厅麦，跳过实声）"
+    return 0
   fi
   turn_log "开麦 ${TURN_SECS}s 客厅 MAONO AU-BM10"
+  WINDOW_KIND="live"
   if ! "$CAT_DIR/cat-listen.sh" "$TURN_SECS" "$PCM" >/dev/null 2>&1; then
     turn_log "客厅麦没录上"
     rm -f "$PCM"
     PCM=""
+    WINDOW_KIND="live"
     return 1
   fi
   return 0
@@ -119,6 +140,7 @@ reply_once() {
   if [ "${TANGTANG_TTS:-1}" != "0" ]; then
     "$CAT_DIR/cat-say.sh" "$reply" cute
   fi
+  SPOKE=1
 }
 
 run_turn() {
@@ -129,21 +151,24 @@ run_turn() {
   export TANGTANG_CHILD_NAME="$(display_for_who "$WHO")"
 
   if [ "$PRINT" = "1" ]; then
-    turn_log "preview 不开麦 event=$EVENT who=$WHO"
+    WINDOW_KIND="preview"
+    turn_log "preview 不开麦 event=$EVENT who=$WHO persona=$TANGTANG_PROFILE"
     return 0
   fi
 
   if [ "$FOLLOW" = "1" ] && [ "$FORCE" != "1" ]; then
     if ! tangtang_turn_event_enabled "$EVENT"; then
       turn_log "wont 此事件不开窗 event=$EVENT（默认只挂 english）"
-      write_ledger wont 0 unknown 0
+      WINDOW_KIND="skip"
+      write_ledger wont 0 unknown 0 0
       return 0
     fi
   fi
 
   if [ "$FORCE" != "1" ] && tangtang_child_at_school "$WHO"; then
     turn_log "wont 上学未归 不开麦 who=$WHO event=$EVENT time=$(tangtang_now_hm)"
-    write_ledger wont 0 unknown 0
+    WINDOW_KIND="skip"
+    write_ledger wont 0 unknown 0 0
     return 0
   fi
 
@@ -158,7 +183,7 @@ run_turn() {
   fi
 
   if ! record_window; then
-    write_ledger silent 0 "$PRESENCE" 0
+    write_ledger silent 0 "$PRESENCE" 0 0
     turn_log "silent 未录到"
     return 0
   fi
@@ -171,7 +196,7 @@ run_turn() {
 
   if [ "$LABEL" != "joined" ]; then
     turn_log "silent rms=$RMS 不追问"
-    write_ledger silent 0 "$PRESENCE" "$RMS"
+    write_ledger silent 0 "$PRESENCE" "$RMS" 0
     return 0
   fi
 
@@ -191,12 +216,12 @@ run_turn() {
 
   if [ -z "$TEXT" ]; then
     turn_log "joined rms=$RMS 无听写，不追问"
-    write_ledger joined "$DID_STT" "$PRESENCE" "$RMS"
+    write_ledger joined "$DID_STT" "$PRESENCE" "$RMS" 0
     return 0
   fi
 
   reply_once "$TEXT"
-  write_ledger joined 1 "$PRESENCE" "$RMS"
+  write_ledger joined 1 "$PRESENCE" "$RMS" 1
   return 0
 }
 
