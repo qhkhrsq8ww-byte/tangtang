@@ -1,13 +1,28 @@
 # TangTang V4 Round 1 — Architecture Review
 
 **Round:** 1 of 5 (architecture / boundary correctness only)  
-**Status:** review recorded; P0 not yet closed in this commit  
 **Do not enter Round 2.**  
-**Parent branch:** `feat/v4-family-brain-core-20260828`  
-**This branch:** `cursor/v4-round1-architecture-449b`  
-**Not merged this round:** `cursor/living-room-ready-449b` (compatibility check only)
+**Parent:** `feat/v4-family-brain-core-20260828`  
+**Branch:** `cursor/v4-round1-architecture-449b`  
+**Not merged:** `cursor/living-room-ready-449b` (compatibility check only)
 
 糖糖是比熊，口头禅「汪汪～」。不是监督机器人。
+
+---
+
+## Counts (end of Round 1)
+
+| | Count | Notes |
+| --- | --- | --- |
+| **P0** | **0** | all Round 1 architecture P0 closed |
+| **P1** | **3** | out of Round 1 fix scope; recorded below |
+| **P2** | **3** | recorded |
+| **tests/v4** | **77 PASS / 0 FAIL / 0 SKIP** | `python3 -m unittest discover -s tests/v4 -t . -v` |
+| **test-v3-family.sh** | **20 PASS / 0 FAIL** | not deleted |
+| **test-v3.1-privacy.sh** | 26 PASS; 2 env FAIL (TTS edge, launchd `plutil`) | **SKIP for this round** — Linux agent has no `edge_tts` / no `plutil`. Tests not weakened. |
+| **launchd / real TTS / real projection / mic** | **SKIP** | not applicable in Round 1 |
+
+**Round 1 P0 == 0.** Stay stopped. **Do not enter Round 2.**
 
 ---
 
@@ -15,185 +30,258 @@
 
 Inspected after `git fetch`:
 
-| Ref | `core/` | living-room cat (turn/habits/openclaw/school) | family.json names |
+| Ref | `core/` | living-room cat | family.json names |
 | --- | --- | --- | --- |
-| `main` | missing | old cat only | schema example only |
-| `cursor/living-room-ready-449b` (PR #16) | missing | **yes** | 洽洽 / 航航 |
-| `codex/v3-family-brain-integration-20260828` (PR #15) | missing | no | 姐姐 / 弟弟 + 妈妈 |
-| `fix/v3.1-privacy-paths-20260828` (PR #17) | missing | no | 姐姐 / 弟弟 + 妈妈 |
-| `feat/v4-family-brain-core-20260828` | **stub modules present** | no (cat is V3 line) | 姐姐 / 弟弟 + 妈妈 |
+| `main` | missing | old cat | schema example only |
+| `cursor/living-room-ready-449b` (PR #16) | missing | **yes** (turn/habits/openclaw/school) | 洽洽 / 航航 |
+| PR #15 V3 family brain | missing | no | 姐姐 / 弟弟 + 妈妈 |
+| PR #17 V3.1 privacy | missing | no | 姐姐 / 弟弟 + 妈妈 |
+| `feat/v4-family-brain-core-20260828` | **stub `core/` present** | V3 cat line | 姐姐 / 弟弟 + 妈妈 |
 
-**Parent = `feat/v4-family-brain-core-20260828`.** It is the only line with V4 `core/`. Living-room is another stack. Round 1 does **not** merge living-room-ready (would mix two products and risk overwriting cat-*). A later PR to `main` is still required; a later compatibility merge with living-room is out of scope for Round 1.
+**Parent = `feat/v4-family-brain-core-20260828`** because it already has the most V4 `core/` without requiring a merge that would discard or overwrite living-room cat. Living-room is another stack; Round 1 does **not** merge it. A later PR from this parent (or a stacked PR) to `main` is still required.
 
-`data/family.json` on this parent is **not** overwritten this round (still 爷爷/奶奶/爸爸/妈妈/姐姐/弟弟, ids `child_12` / `child_9` / `mom`).
+`data/family.json` was **not** overwritten this round.
 
-### Identity alias map (code only; family.json untouched)
+### Identity alias map (code only)
 
 | Observation labels | Product id (living-room) | Registry id on this parent |
 | --- | --- | --- |
-| 12岁姐姐, 姐姐, 12岁女孩, girl, 洽洽, qiaqia, child_12 | **qiaqia** | child_12 if present in members |
-| 9岁弟弟, 弟弟, 9岁男孩, boy, 航航, hanghang, child_9 | **hanghang** | child_9 if present in members |
-| 妈妈, 妈, mom, mother | **mom** | mom if present |
+| 12岁姐姐, 姐姐, 12岁女孩, girl, 洽洽, qiaqia, child_12 | **qiaqia** | `child_12` if present in injected members |
+| 9岁弟弟, 弟弟, 9岁男孩, boy, 航航, hanghang, child_9 | **hanghang** | `child_9` if present |
+| 妈妈, 妈, mom, mother | **mom** | `mom` if present |
 
-Voiceprint is **not** the primary identity path. Primary: school-hours flag + presence + optional coarse features. Projection is a **presentation sink**, never LLM-controlled.
-
----
-
-## What existed vs what Round 1 must add
-
-**Existed (stub `core/`):** `Event`, `EventBus`, `IdentityResolver`, `MemoryStore`, `ContextBuilder`, `InterruptPolicy`, `ResponseOrchestrator`. No Protocol/ABC ports. No `tests/v4/`. No payload bound. Bus does not isolate handler exceptions. ContextBuilder takes raw dicts (caller can dump PRIVATE). Identity is exact-string voice lookup. Orchestrator returns an unvalidated dict. No `should_interrupt` shim for cat-*.
-
-**Must not throw away:** `code/cat/` (cat.sh, cat-brain, quiet hours, V3.1 privacy). Living-room cat-turn/habits/openclaw/school hours stay on their branch.
+Voiceprint is **not** the primary identity path. Primary: school-hours flag + presence + optional coarse features. Projection is a **presentation sink** label, never LLM-controlled.
 
 ---
 
-## Counts (this review commit, before boundary fixes)
+## What existed vs what was added
 
-| Severity | Count | Notes |
-| --- | --- | --- |
-| **P0** | **8** | must be 0 before Round 1 can conclude; still not Round 2 |
-| **P1** | **5** | |
-| **P2** | **3** | |
-| Tests | not run in this commit | `tests/v4/` missing |
+**Existed (stub):** `core/events/event.py`, `event_bus.py`, `identity/resolver.py`, `memory/store.py`, `context/builder.py`, `policy/interrupt_policy.py`, `response/orchestrator.py`. Incomplete schema, no ports, no tests/v4, bus did not isolate exceptions, ContextBuilder took raw memory blobs.
+
+**Added / hardened:** Protocol ports (`core/interfaces.py`), Event constructors + payload bound, in-memory EventBus with clock + duplicate id + handler isolation, observation IdentityResolver + aliases, viewer-scoped MemoryStore, ContextBuilder(MemoryPort, PolicyPort) with no file I/O, InterruptPolicy.should_interrupt (no LLM), PresentationAction, `core.compat.should_interrupt`, `tests/v4/test_*.py`.
+
+**Not thrown away:** `code/cat/` (cat.sh, cat-brain cooldown `should_speak`, quiet hours, V3.1 privacy). cat-brain gained a comment + future import hint only.
 
 ---
 
 ## 1. 系统架构师
 
-### Findings
+| ID | Sev | Finding | Fix | Tests |
+| --- | --- | --- | --- | --- |
+| A-P0-1 | P0→0 | Event used `event_id`/`timestamp`; empty id allowed; no payload bound | Canonical `id, type, ts, source, member_id?, privacy, payload`; reject blank id, bad enum, >8192B payload | `test_event.py` happy/empty/illegal/unknown |
+| A-P0-2 | P0→0 | Handler exception crashed process; no clock; no duplicate id | In-memory bus, inject clock, catch+continue, skip duplicate `event_id`, never log payload | `test_event_bus.py` |
+| A-P0-3 | P0→0 | No Protocol/ABC | `EventBusPort, IdentityPort, MemoryPort, ContextPort, PolicyPort, ResponsePort` | isinstance checks in each suite |
+| A-P0-4 | P0→0 | ContextBuilder accepted raw `memories=` | Constructor requires MemoryPort + PolicyPort; no `open(` / sqlite | `test_context.py` |
+| A-P1-1 | P1→0 | No `should_interrupt` for cat-* | `core.compat.should_interrupt`; comment on `cat-brain.should_speak` (not deleted) | `test_policy.py` compat |
 
-| ID | Sev | Finding |
-| --- | --- | --- |
-| A-P0-1 | P0 | Event canonical fields are `event_id` / `event_type` / `timestamp`, not required `id` / `type` / `ts`. No payload bound. Empty `event_id` is accepted (`default_factory` still allows `event_id=""`). |
-| A-P0-2 | P0 | `EventBus.publish` calls handlers without try/except. One handler exception kills the process. No duplicate `event_id` guard. No injected clock. |
-| A-P0-3 | P0 | No Protocol/ABC for EventBus, Identity, Memory, Context, Policy, Response. |
-| A-P0-4 | P0 | `ContextBuilder` does not take MemoryStore/Policy ports. Caller passes `memories=` and `family=` blobs — PRIVATE can be stuffed in. It does **not** open files today (good), but the port boundary is missing. |
-| A-P1-1 | P1 | Subpackages lack `__init__.py`. Identity docstring treats voice as the path. No `core.compat.should_interrupt` for cat-brain. |
-| A-P2-1 | P2 | `core/__init__.py` does not export a public surface. |
+**Cycles:** MemoryStore source has no `from core.context`. Context depends only on ports in `interfaces.py`. Event does not import Identity.
 
-**Forbidden cycles:** Memory does not import Context (good). Context does not import Memory module (good, but only because it has no ports). After fix, Context may depend on **MemoryPort / PolicyPort** in `interfaces.py`; Memory must still not import Context.
-
-**LLM boundary:** InterruptPolicy is deterministic (good). ResponseOrchestrator holds an optional text `responder` (allowed) but does not emit a validated presentation action (must-solve #8).
-
-**Fix (this round):** complete Event schema + constructors; in-memory EventBus with clock + catch; Protocol ports; ContextBuilder(memory, policy) only; MemoryStore no Context import; `core.compat.should_interrupt`; comment on `cat-brain.should_speak` (do not delete / rewrite cat-*).
-
-**Tests:** `tests/v4/test_event.py`, `test_event_bus.py`, import-cycle assertions in memory/context tests.
+**Forbidden:** Memory → Context → Memory — absent. LLM → files/DB/shell/TTS/projection — absent in core.
 
 ---
 
 ## 2. 隐私与儿童安全审查员
 
-### Findings
+| ID | Sev | Finding | Fix | Tests |
+| --- | --- | --- | --- | --- |
+| P-P0-1 | P0→0 | `query(member_id=child_9, scope=PRIVATE)` with no viewer leaked | `viewer_id` required for PRIVATE; mismatch → `[]` | `test_memory.py` cross-child denied |
+| P-P0-2 | P0→0 | Caller could stuff PRIVATE into ContextBuilder | Builder queries MemoryPort with `viewer_id=who.member_id`; FAMILY/PUBLIC drop PRIVATE | `test_context.py` + privacy matrix |
+| P-P1-1 | P1→0 | Unbounded PRIVATE payload | Event payload max 8192 bytes | `test_event.py` huge payload |
+| P-P2-1 | P2 | Disk/log/cat-vp data-flow | **Round 2.** Bus error path logs `event_id`+`type` only | handler exception test |
 
-| ID | Sev | Finding |
-| --- | --- | --- |
-| P-P0-1 | P0 | `MemoryStore.query(member_id=..., scope="PRIVATE")` has no `viewer_id`. Any caller who knows another child’s id can read that child’s PRIVATE. Boundary fix: require viewer; PRIVATE only if viewer == member. |
-| P-P0-2 | P0 | ContextBuilder privacy filter is a post-hoc list filter on caller-supplied memories. FAMILY scope currently drops PRIVATE (good) but PUBLIC scope of PRIVATE list is only as honest as the caller. |
-| P-P1-1 | P1 | PRIVATE Event requires `member_id` (good). Payload is not bounded — a PRIVATE transcript could be huge. |
-| P-P2-1 | P2 | Deep data-flow (disk, logs, cat-vp, habits) is **Round 2**. Do not expand this round except log-payload isolation on the new bus. |
-
-**Fix:** viewer-scoped MemoryPort; ContextBuilder queries the port with `viewer_id=who.member_id`; Event payload max bytes; EventBus must **not** log payload / speech on handler errors.
-
-**Tests:** PRIVATE/FAMILY/PUBLIC matrix; cross-member PRIVATE denied; huge payload rejected.
+PRIVATE / FAMILY / PUBLIC are the only privacy enums. PRIVATE events require `member_id`.
 
 ---
 
 ## 3. AI / 对话架构师
 
-### Findings
+| ID | Sev | Finding | Fix | Tests |
+| --- | --- | --- | --- | --- |
+| I-P0-1 | P0→0 | Orchestrator returned a loose dict; sinks unenforced | `PresentationAction`; responder must return `str`; SPEAK sink is the label `voice` (not a call) | `test_response.py` |
+| I-P1-1 | P1→0 | Identity was `resolve(str)` voice lookup | `resolve(observation)`; Event does not embed resolver | `test_identity.py` |
+| I-P1-2 | P1→0 | Policy had no school-hours input | Observation flags only; no calendar file open | `test_policy.py` |
 
-| ID | Sev | Finding |
-| --- | --- | --- |
-| I-P0-1 | P0 | ResponseOrchestrator returns a loose dict. No validated action. Nothing stops a future responder from returning sink callables. TTS/projection are not called today (good) but the contract is unenforced. |
-| I-P1-1 | P1 | IdentityResolver.resolve(str) is not observation-based. Event does not embed the resolver (good — keep it that way). |
-| I-P1-2 | P1 | Policy has no school-hours / presence inputs (those must be observation flags, not LLM, and not file I/O inside Policy). |
-
-**Fix:** `PresentationAction` with allowed decisions only; orchestrator never accepts tts/projection callables; IdentityResolver.resolve(observation) → member_id; InterruptPolicy reads observation flags only.
-
-**Tests:** `test_response.py`, `test_identity.py`, `test_policy.py`; source scan that orchestrator/policy do not import TTS/projection/LLM.
+LLM must not decide privacy, permissions, quiet hours, shell, TTS, or projection. InterruptPolicy and EventBus are deterministic code.
 
 ---
 
 ## 4. 家庭产品经理
 
-### Findings
+| ID | Sev | Finding | Fix | Tests |
+| --- | --- | --- | --- | --- |
+| F-P1-1 | P1 (open) | Parent family.json is 姐姐/弟弟, living-room is 洽洽/航航 | **Did not overwrite family.json.** Alias table in IdentityResolver. 糖糖 remains 比熊 汪汪～, not a supervisor (quiet/school → SILENT) | alias tests; policy quiet/school |
+| F-P2-1 | P2 (open) | Rest-day / English / habits live on living-room-ready | Compatibility check only; no merge | SKIP product merge |
 
-| ID | Sev | Finding |
-| --- | --- | --- |
-| F-P1-1 | P1 | This parent’s family.json is 姐姐/弟弟, not 洽洽/航航. **Do not overwrite names.** Alias in IdentityResolver only. 糖糖是比熊汪汪～, not a supervisor — InterruptPolicy must default to less speech (quiet hours, school hours, active conversation → SILENT/DELAY/LOG_ONLY). |
-| F-P2-1 | P2 | Product scenes (rest-day four steps, English buddy, habit growth) live on living-room-ready. Round 1 does not port them. |
-
-**Fix:** document + alias map; policy `should_interrupt` for later cat-* ; no family.json edit.
-
-**Tests:** alias 12岁姐姐 → registry child_12 or product qiaqia; unknown person → None; empty observation → None.
+Remaining **P1:** living-room cat stack is not on this branch. Later merge to main / living-room is a separate PR.
 
 ---
 
 ## 5. macOS / IoT 工程师
 
-### Findings
+| ID | Sev | Finding | Fix | Tests |
+| --- | --- | --- | --- | --- |
+| M-P1-1 | P1 (open) | launchd plist exists; this Linux agent has no `plutil` | Unchanged this round | **SKIP** launchd |
+| M-P2-1 | P2 (open) | TTS/projection are device sinks | Orchestrator emits labels only | **SKIP** real TTS/projection/mic; unit source scan PASS |
 
-| ID | Sev | Finding |
-| --- | --- | --- |
-| M-P1-1 | P1 | launchd plist exists on this parent (`config/com.tangtang.daemon.plist.example`). Round 1 does not change launchd/audio/TTS binaries. |
-| M-P2-1 | P2 | Projection/TTS are presentation sinks. Orchestrator must emit actions, not call `cat-tts` / screen. |
-
-**Tests:** **SKIP** launchd / real TTS / real projection / real microphone — not applicable this round. Unit tests must inject clock and use in-memory bus (no I/O).
+Existing `tests/test-v3.1-privacy.sh` TTS edge FAIL = `No module named 'edge_tts'`. launchd FAIL = `plutil` missing. Pre-existing environment; Round 1 did not touch those files.
 
 ---
 
 ## 6. 测试 / QA
 
-### Findings
+| ID | Sev | Finding | Fix | Tests |
+| --- | --- | --- | --- | --- |
+| Q-P0-1 | P0→0 | No `tests/v4/` | Seven files + `tests/v4/run.py` (unittest, no pytest) | 77 PASS |
+| Q-P1-1 | P1→0 | Bus not clock-injectable | `EventBus(clock=...)` | `test_event_bus.py` |
 
-| ID | Sev | Finding |
-| --- | --- | --- |
-| Q-P0-1 | P0 | No `tests/v4/test_*.py`. Stub core is untested. Existing `tests/test-v3-family.sh` and `tests/test-v3.1-privacy.sh` must stay and still run. |
-| Q-P1-1 | P1 | EventBus cannot inject clock; unit tests would be time-flaky if Event defaulted `now()`. |
-
-**Fix:** add the seven files; tiny unittest runner (pytest not required). Cover happy / empty / illegal / unknown / privacy enum / handler exception / duplicate id.
-
-**Tests:** see command section after fixes. This review commit: not run yet.
+Coverage required: happy, empty, illegal, unknown, PRIVATE/FAMILY/PUBLIC, handler exception, duplicate `event_id` — all present.
 
 ---
 
 ## 7. 安全工程师
 
-### Findings
-
-| ID | Sev | Finding |
-| --- | --- | --- |
-| S-P0-1 | P0 | Handler exceptions currently propagate (crash). After adding logs, logging `event.payload` would leak child speech — forbid in the bus error path. |
-| S-P1-1 | P1 | Identity must not treat voiceprint as sufficient identity (spoof / school-hours bypass). |
-| S-P2-1 | P2 | No Kafka/Redis/Postgres/K8s/vector DB — keep Python + JSON. Do not add those. |
-
-**Fix:** isolate exceptions; error records carry `event_id` + `type` only; voiceprint-only observation → unknown.
+| ID | Sev | Finding | Fix | Tests |
+| --- | --- | --- | --- | --- |
+| S-P0-1 | P0→0 | Handler exceptions propagated; logging payload would leak speech | Catch `Exception`, continue; error text is `event_id` + `type` only | `test_event_bus.py` secret-child-words not in sink |
+| S-P1-1 | P1 (open) | `code/cat/cat-vp.py` still exists on V3 runtime | Core IdentityResolver treats voiceprint-only as unknown. Wiring cat-vp off the primary path is Round 2+ | `test_identity.py` voiceprint-only → None |
+| S-P2-1 | P2 | No Kafka/Redis/Postgres/K8s/vector DB | Python + in-memory JSON-shaped records only | n/a |
 
 ---
 
-## Compatibility check (living-room-ready, not merged)
+## Remaining after Round 1 (not P0)
 
-Living-room `code/cat/cat-brain.py::should_speak` also consults habits + cat-turn gates. This parent’s `should_speak` is cooldown only. Round 1 adds `core.compat.should_interrupt` wrapping `InterruptPolicy` so cat-* **may later** call it without deleting cat-brain. A one-line comment is added on `should_speak`; behavior of cat-brain is unchanged.
+**P1 (3)**
+
+1. Living-room cat (turn/habits/openclaw/school hours, names 洽洽/航航) not merged — later PR.
+2. V3 `cat-vp` / `cat-chat` speaker path still exists beside core; core is correct, runtime wiring is later.
+3. Deep privacy data-flow (disk, habits logs, path migration) is **Round 2** by plan.
+
+**P2 (3)**
+
+1. Product scenes (rest-day four steps, English buddy) stay on living-room-ready.
+2. Presentation layer that actually plays TTS / projection is not this round.
+3. launchd install on a real Mac is Round 4 reliability.
 
 ---
 
-## Fixes in this review commit
+## Compat shim
 
-None (findings only). Following commits: `fix(v4): harden event boundary` and related boundary commits, then tests, then this document’s test transcript + P0==0 conclusion.
+```python
+from core.compat import should_interrupt
+if should_interrupt(observation):
+    # skip proactive speech
+    ...
+```
+
+`code/cat/cat-brain.py::should_speak` is unchanged cooldown logic. It is **not** deleted. A comment points at the shim for later.
 
 ---
 
-## Tests (pending)
+## Tests — actual output
+
+Command:
+
+```bash
+python3 -m unittest discover -s tests/v4 -t . -v
+```
+
+Equivalent: `python3 tests/v4/run.py`
 
 ```
-PASS / FAIL / SKIP: not run in the review commit
-Command: python3 -m unittest discover -s tests/v4 -t . -v
+test_empty_who_and_event (tests.v4.test_context.TestContextEmptyUnknown.test_empty_who_and_event) ... ok
+test_unknown_member_no_rows (tests.v4.test_context.TestContextEmptyUnknown.test_unknown_member_no_rows) ... ok
+test_family_scope_drops_private (tests.v4.test_context.TestContextHappy.test_family_scope_drops_private) ... ok
+test_private_scope_loads_via_port (tests.v4.test_context.TestContextHappy.test_private_scope_loads_via_port) ... ok
+test_public_scope (tests.v4.test_context.TestContextHappy.test_public_scope) ... ok
+test_recent_bound (tests.v4.test_context.TestContextHappy.test_recent_bound) ... ok
+test_constructor_requires_ports (tests.v4.test_context.TestContextNoDirectIO.test_constructor_requires_ports) ... ok
+test_source_has_no_open_or_db (tests.v4.test_context.TestContextNoDirectIO.test_source_has_no_open_or_db) ... ok
+test_empty_member_id_public_ok (tests.v4.test_event.TestEventEmpty.test_empty_member_id_public_ok) ... ok
+test_empty_payload_ok (tests.v4.test_event.TestEventEmpty.test_empty_payload_ok) ... ok
+test_create_public_minimal (tests.v4.test_event.TestEventHappy.test_create_public_minimal) ... ok
+test_from_dict_canonical_fields (tests.v4.test_event.TestEventHappy.test_from_dict_canonical_fields) ... ok
+test_privacy_enum_all_three (tests.v4.test_event.TestEventHappy.test_privacy_enum_all_three) ... ok
+test_bad_privacy_enum (tests.v4.test_event.TestEventIllegal.test_bad_privacy_enum) ... ok
+test_blank_id (tests.v4.test_event.TestEventIllegal.test_blank_id) ... ok
+test_huge_payload (tests.v4.test_event.TestEventIllegal.test_huge_payload) ... ok
+test_missing_id_from_dict (tests.v4.test_event.TestEventIllegal.test_missing_id_from_dict) ... ok
+test_missing_type (tests.v4.test_event.TestEventIllegal.test_missing_type) ... ok
+test_non_mapping_payload (tests.v4.test_event.TestEventIllegal.test_non_mapping_payload) ... ok
+test_non_serializable_payload (tests.v4.test_event.TestEventIllegal.test_non_serializable_payload) ... ok
+test_payload_not_mutated_after_create (tests.v4.test_event.TestEventIllegal.test_payload_not_mutated_after_create) ... ok
+test_private_without_member (tests.v4.test_event.TestEventIllegal.test_private_without_member) ... ok
+test_event_module_does_not_import_identity (tests.v4.test_event.TestEventNoResolverEmbed.test_event_module_does_not_import_identity) ... ok
+test_unknown_type_is_allowed_as_data (tests.v4.test_event.TestEventUnknown.test_unknown_type_is_allowed_as_data) ... ok
+test_bus_source_has_no_file_io (tests.v4.test_event_bus.TestEventBusClockNoIO.test_bus_source_has_no_file_io) ... ok
+test_injected_clock (tests.v4.test_event_bus.TestEventBusClockNoIO.test_injected_clock) ... ok
+test_empty_subscribe_type_illegal (tests.v4.test_event_bus.TestEventBusEmpty.test_empty_subscribe_type_illegal) ... ok
+test_unknown_type_no_handlers (tests.v4.test_event_bus.TestEventBusEmpty.test_unknown_type_no_handlers) ... ok
+test_handler_exception_does_not_crash_and_continues (tests.v4.test_event_bus.TestEventBusHandlerException.test_handler_exception_does_not_crash_and_continues) ... ok
+test_process_survives (tests.v4.test_event_bus.TestEventBusHandlerException.test_process_survives) ... ok
+test_subscribe_and_publish (tests.v4.test_event_bus.TestEventBusHappy.test_subscribe_and_publish) ... ok
+test_wildcard_and_typed (tests.v4.test_event_bus.TestEventBusHappy.test_wildcard_and_typed) ... ok
+test_duplicate_event_id_not_redelivered (tests.v4.test_event_bus.TestEventBusIllegalAndDuplicate.test_duplicate_event_id_not_redelivered) ... ok
+test_non_event_rejected (tests.v4.test_event_bus.TestEventBusIllegalAndDuplicate.test_non_event_rejected) ... ok
+test_resolver_source_has_no_event_import (tests.v4.test_identity.TestIdentityDecoupledFromEvent.test_resolver_source_has_no_event_import) ... ok
+test_empty_none (tests.v4.test_identity.TestIdentityEmptyUnknown.test_empty_none) ... ok
+test_unknown (tests.v4.test_identity.TestIdentityEmptyUnknown.test_unknown) ... ok
+test_brother_alias (tests.v4.test_identity.TestIdentityHappy.test_brother_alias) ... ok
+test_mom_present (tests.v4.test_identity.TestIdentityHappy.test_mom_present) ... ok
+test_presence_beats_label (tests.v4.test_identity.TestIdentityHappy.test_presence_beats_label) ... ok
+test_registry_id (tests.v4.test_identity.TestIdentityHappy.test_registry_id) ... ok
+test_sister_alias_maps_to_registry_not_overwrite (tests.v4.test_identity.TestIdentityHappy.test_sister_alias_maps_to_registry_not_overwrite) ... ok
+test_empty_members_uses_product_ids (tests.v4.test_identity.TestIdentityProductWithoutRegistry.test_empty_members_uses_product_ids) ... ok
+test_school_hours_child_home_ok (tests.v4.test_identity.TestIdentityVoiceprintNotPrimary.test_school_hours_child_home_ok) ... ok
+test_school_hours_child_not_home (tests.v4.test_identity.TestIdentityVoiceprintNotPrimary.test_school_hours_child_not_home) ... ok
+test_voiceprint_only_unknown (tests.v4.test_identity.TestIdentityVoiceprintNotPrimary.test_voiceprint_only_unknown) ... ok
+test_empty_member_id (tests.v4.test_memory.TestMemoryEmptyUnknown.test_empty_member_id) ... ok
+test_empty_store (tests.v4.test_memory.TestMemoryEmptyUnknown.test_empty_store) ... ok
+test_unknown_member (tests.v4.test_memory.TestMemoryEmptyUnknown.test_unknown_member) ... ok
+test_family_excludes_private (tests.v4.test_memory.TestMemoryHappy.test_family_excludes_private) ... ok
+test_private_self (tests.v4.test_memory.TestMemoryHappy.test_private_self) ... ok
+test_public_only (tests.v4.test_memory.TestMemoryHappy.test_public_only) ... ok
+test_bad_privacy_on_put (tests.v4.test_memory.TestMemoryIllegalAndLeak.test_bad_privacy_on_put) ... ok
+test_bad_scope_on_query (tests.v4.test_memory.TestMemoryIllegalAndLeak.test_bad_scope_on_query) ... ok
+test_cross_child_private_denied (tests.v4.test_memory.TestMemoryIllegalAndLeak.test_cross_child_private_denied) ... ok
+test_missing_ids_illegal (tests.v4.test_memory.TestMemoryIllegalAndLeak.test_missing_ids_illegal) ... ok
+test_source_independent (tests.v4.test_memory.TestMemoryNoContextImport.test_source_independent) ... ok
+test_empty_observation_daytime (tests.v4.test_policy.TestPolicyEmptyUnknown.test_empty_observation_daytime) ... ok
+test_unknown_flags_ignored (tests.v4.test_policy.TestPolicyEmptyUnknown.test_unknown_flags_ignored) ... ok
+test_daytime_speak (tests.v4.test_policy.TestPolicyHappy.test_daytime_speak) ... ok
+test_emergency_overrides_quiet (tests.v4.test_policy.TestPolicyHappy.test_emergency_overrides_quiet) ... ok
+test_compat_should_interrupt (tests.v4.test_policy.TestPolicyNoLLMAndCompat.test_compat_should_interrupt) ... ok
+test_source_has_no_llm (tests.v4.test_policy.TestPolicyNoLLMAndCompat.test_source_has_no_llm) ... ok
+test_active_conversation_silent (tests.v4.test_policy.TestPolicyQuietAndSchool.test_active_conversation_silent) ... ok
+test_interactive_bypasses_quiet (tests.v4.test_policy.TestPolicyQuietAndSchool.test_interactive_bypasses_quiet) ... ok
+test_low_importance_log_only (tests.v4.test_policy.TestPolicyQuietAndSchool.test_low_importance_log_only) ... ok
+test_quiet_hours_silent (tests.v4.test_policy.TestPolicyQuietAndSchool.test_quiet_hours_silent) ... ok
+test_recently_interrupted_delay (tests.v4.test_policy.TestPolicyQuietAndSchool.test_recently_interrupted_delay) ... ok
+test_school_hours_child_not_home (tests.v4.test_policy.TestPolicyQuietAndSchool.test_school_hours_child_not_home) ... ok
+test_delay_and_log_only (tests.v4.test_response.TestResponseEmptyUnknownIllegal.test_delay_and_log_only) ... ok
+test_empty_context (tests.v4.test_response.TestResponseEmptyUnknownIllegal.test_empty_context) ... ok
+test_non_speak_cannot_carry_text_on_action (tests.v4.test_response.TestResponseEmptyUnknownIllegal.test_non_speak_cannot_carry_text_on_action) ... ok
+test_responder_must_return_str (tests.v4.test_response.TestResponseEmptyUnknownIllegal.test_responder_must_return_str) ... ok
+test_unknown_decision_illegal (tests.v4.test_response.TestResponseEmptyUnknownIllegal.test_unknown_decision_illegal) ... ok
+test_silent_empty_text (tests.v4.test_response.TestResponseHappy.test_silent_empty_text) ... ok
+test_speak_emits_voice_sink_label_not_call (tests.v4.test_response.TestResponseHappy.test_speak_emits_voice_sink_label_not_call) ... ok
+test_source_does_not_call_tts_or_projection (tests.v4.test_response.TestResponseNoSinks.test_source_does_not_call_tts_or_projection) ... ok
+
+----------------------------------------------------------------------
+Ran 77 tests in 0.003s
+
+OK
 ```
+
+Regression (not deleted): `bash tests/test-v3-family.sh` → `RESULT PASS=20 FAIL=0`.
 
 ---
 
-## Conclusion (review snapshot)
+## Conclusion
 
-Round 1 **P0 == 8 (not 0)**. Stay on Round 1. **Do not enter Round 2.**
+Round 1 architecture boundaries are in place: Event cannot be illegally constructed, EventBus is testable and fault-isolated, Identity is decoupled, Memory does not import Context, ContextBuilder does not open files, InterruptPolicy has no LLM, ResponseOrchestrator does not call TTS/projection.
 
-After boundary fixes, this document will be updated with actual test output and a P0==0 statement or a stay-and-fix statement.
+**Round 1 P0 == 0.**
+
+**Do not enter Round 2.** Deep privacy data-flow, living-room merge, and Mac launchd/TTS remain later rounds.
+
+A later PR to `main` is required because this branch is stacked on `feat/v4-family-brain-core-20260828`, not on `main`.
