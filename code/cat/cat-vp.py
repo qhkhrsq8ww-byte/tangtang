@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """糖糖 · 本地声纹识别 + 家庭习惯记录
 
-重要：声纹库和习惯库均为本地隐私数据，禁止提交 Git。
+重要：声纹库和习惯库只存在客厅 Mac Air 本机硬盘，禁止提交 Git，也不写路由器盘。
 用法：
   建档: ./cat-vp.py enroll <名字> <pcm文件...>
   识别: ./cat-vp.py identify <pcm文件>
@@ -17,7 +17,12 @@ import json, os, sys, math, subprocess
 from datetime import datetime
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-VP_FILE = os.path.join(BASE, "cat-voiceprints.json")
+if BASE not in sys.path:
+    sys.path.insert(0, BASE)
+from tangtang_paths import data_dir  # noqa: E402
+
+DATA_DIR = data_dir()
+VP_FILE = os.path.join(DATA_DIR, "cat-voiceprints.json")
 FEATURE_SH = os.path.join(BASE, "cat-vp-feature.sh")
 THRESHOLD = float(os.environ.get("TANGTANG_VOICE_THRESHOLD", "0.995"))
 
@@ -50,6 +55,7 @@ def load_json(path, default):
         return default
 
 def save_json(path, data):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

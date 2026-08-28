@@ -7,7 +7,7 @@
 - 习惯库回答「这个人今天/最近发生了什么」
 - unknown 不绑定到任何成员
 - 儿童原话默认可进本机私有记录，但不进入家庭共享摘要
-- 习惯流水不入库（cat-habits.json）
+- 习惯流水只写本机硬盘，不入库、不写路由器盘（cat-habits.json）
 
 用法:
   ./cat-family.py members
@@ -23,7 +23,11 @@ from collections import Counter
 from datetime import datetime, timedelta
 
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
+if CAT_DIR not in sys.path:
+    sys.path.insert(0, CAT_DIR)
+from tangtang_paths import data_dir  # noqa: E402
+
+DATA_DIR = data_dir()
 REPO_DATA = os.path.abspath(os.path.join(CAT_DIR, "..", "..", "data"))
 HABIT_FILE = os.path.join(DATA_DIR, "cat-habits.json")
 MAX_EVENTS = 3000

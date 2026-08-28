@@ -38,12 +38,11 @@ case "$CMD" in
     while read -r min hour event arg; do
       [ -n "$event" ] || continue
       tmp=$(mktemp -d)
-      export TANGTANG_DATA_DIR="$tmp"
       if [ -n "${arg:-}" ]; then
-        text=$("$CAT_DIR/cat-remind.sh" --print "$event" "$arg")
+        text=$(TANGTANG_DATA_DIR="$tmp" "$CAT_DIR/cat-remind.sh" --print "$event" "$arg")
         printf '%02d:%02d  %s %s\n  %s\n' "$hour" "$min" "$event" "$arg" "${text:-（这次不说）}"
       else
-        text=$("$CAT_DIR/cat-remind.sh" --print "$event")
+        text=$(TANGTANG_DATA_DIR="$tmp" "$CAT_DIR/cat-remind.sh" --print "$event")
         printf '%02d:%02d  %s\n  %s\n' "$hour" "$min" "$event" "${text:-（这次不说）}"
       fi
       rm -rf "$tmp"
@@ -52,6 +51,7 @@ case "$CMD" in
   crontab)
     echo "# 糖糖语音提醒 · 先 crontab -l 备份，再粘贴"
     echo "# 播前检测洽洽/航航手机；没人则静音跳过"
+    echo "# 记忆写在本机硬盘，不写路由器盘：\$HOME/Library/Application Support/Tangtang"
     echo "MAILTO=\"\""
     echo "SHELL=/bin/bash"
     echo "PATH=/usr/bin:/bin:/usr/local/bin"

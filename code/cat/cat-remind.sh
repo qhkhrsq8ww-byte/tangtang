@@ -31,7 +31,7 @@ log_skip() {
   local reason="$1"
   local ts
   ts=$(date '+%Y-%m-%d %H:%M:%S')
-  printf '%s\tSKIP\t%s\t%s\t%s\n' "$ts" "$EVENT" "${ARG:-}" "$reason" >> "$CAT_DIR/cat-remind-log.txt"
+  printf '%s\tSKIP\t%s\t%s\t%s\n' "$ts" "$EVENT" "${ARG:-}" "$reason" >> "$TANGTANG_REMIND_LOG"
   echo "[糖糖] $reason" >&2
 }
 
@@ -69,6 +69,6 @@ fi
 
 if [ -n "$out" ]; then
   ts=$(date '+%Y-%m-%d %H:%M:%S')
-  printf '%s\t%s\t%s\t%s\t%s\n' "$ts" "$EVENT" "${ARG:-}" "${TANGTANG_PRESENT_KIDS:-}" "$out" >> "$CAT_DIR/cat-remind-log.txt"
+  printf '%s\t%s\t%s\t%s\t%s\n' "$ts" "$EVENT" "${ARG:-}" "${TANGTANG_PRESENT_KIDS:-}" "$out" >> "$TANGTANG_REMIND_LOG"
 fi
 exit 0

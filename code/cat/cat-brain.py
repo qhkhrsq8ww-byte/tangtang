@@ -19,7 +19,11 @@
 import json, os, sys, random, datetime
 
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
+if CAT_DIR not in sys.path:
+    sys.path.insert(0, CAT_DIR)
+from tangtang_paths import data_dir  # noqa: E402
+
+DATA_DIR = data_dir()
 STATE_FILE = os.path.join(DATA_DIR, "cat-state.json")
 MEMORY_FILE = os.path.join(DATA_DIR, "cat-memory.json")
 
