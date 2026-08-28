@@ -1,44 +1,38 @@
 #!/usr/bin/env python3
-"""Resolve a family member to a stable TangTang persona.
+"""Resolve a family member to a stable TangTang persona + privacy permissions.
 
 Usage:
   python3 tangtang-profile.py --speaker child_9
   python3 tangtang-profile.py --speaker "爷爷"
 
 Output is shell-friendly KEY=VALUE lines when --shell is used.
+Persona 与隐私权限（self_private / family_summary）统一由 family.json 驱动，
+由 tangtang-privacy.py 提供解析与存储策略，避免重复实现。
 """
 import argparse, json, os
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-FAMILY_FILE = os.path.join(ROOT, "data", "family.json")
+# 复用隐私层解析（同一 family.json、同一成员匹配逻辑）
+import importlib.util
+_PRIV_SPEC = importlib.util.spec_from_file_location(
+    "tangtang_privacy", os.path.join(os.path.dirname(os.path.abspath(__file__)), "tangtang-privacy.py"))
+_PRIV = importlib.util.module_from_spec(_PRIV_SPEC)
+_PRIV_SPEC.loader.exec_module(_PRIV)
 
 DEFAULT = {"member_id": "unknown", "display_name": "小朋友", "profile": "play", "relation": "unknown"}
 
 
-def load_family():
-    try:
-        with open(FAMILY_FILE, encoding="utf-8") as f:
-            data = json.load(f)
-        return data.get("members", [])
-    except Exception:
-        return []
-
-
 def resolve(speaker):
-    speaker = (speaker or "unknown").strip()
-    if speaker in ("", "unknown", "访客"):
-        return dict(DEFAULT)
-    for m in load_family():
-        values = {str(m.get("member_id", "")), str(m.get("display_name", "")), str(m.get("relation", ""))}
-        values.update(str(x) for x in m.get("aliases", []))
-        if speaker in values:
-            return {
-                "member_id": m.get("member_id", "unknown"),
-                "display_name": m.get("display_name", "小朋友"),
-                "profile": m.get("profile", "play"),
-                "relation": m.get("relation", "unknown"),
-            }
-    return dict(DEFAULT)
+    """返回成员基础信息 + permissions + storage 策略。"""
+    member = _PRIV.resolve_member(speaker)
+    policy = _PRIV.policy_for(speaker)
+    return {
+        "member_id": member.get("member_id", "unknown"),
+        "display_name": member.get("display_name", "小朋友"),
+        "profile": member.get("profile", "play"),
+        "relation": member.get("relation", "unknown"),
+        "permissions": member.get("permissions", {}),
+        "storage": policy["storage"],
+    }
 
 
 def main():
@@ -49,9 +43,10 @@ def main():
     r = resolve(args.speaker)
     if args.shell:
         for k, v in r.items():
-            print(f"TANGTANG_{k.upper()}={json.dumps(str(v), ensure_ascii=False)}")
+            print(f"TANGTANG_{k.upper()}={json.dumps(v, ensure_ascii=False)}")
     else:
         print(json.dumps(r, ensure_ascii=False))
+
 
 if __name__ == "__main__":
     main()
