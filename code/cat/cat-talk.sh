@@ -33,6 +33,11 @@ if [ "${TANGTANG_TTS:-1}" = "0" ]; then
   exit 0
 fi
 
+if [ "${TANGTANG_TTS}" = "dry" ] || [ "$(uname -s)" != "Darwin" ]; then
+  echo "[tts-dry] $text"
+  exit 0
+fi
+
 speak_with_fallback() {
   local rate="$1"
   local pitch="$2"

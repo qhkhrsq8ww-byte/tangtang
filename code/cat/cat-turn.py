@@ -14,7 +14,7 @@ import tempfile
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CAT_DIR not in sys.path:
     sys.path.insert(0, CAT_DIR)
-from tangtang_paths import data_dir  # noqa: E402
+from tangtang_paths import data_dir, now_dt  # noqa: E402
 
 LEDGER_NAME = "cat-turn-ledger.json"
 MAX_TURNS = 400
@@ -108,26 +108,27 @@ def one_sentence(text, limit=80):
     return s
 
 
-def append_turn(event, who, result, stt, presence, seconds, rms, root=None, ts=None):
+def append_turn(event, who, result, stt, presence, seconds, rms, root=None, ts=None,
+                window=None, persona=None, spoke=None, scene=None):
     result = result if result in ("joined", "silent", "wont") else "wont"
     presence = presence if presence in ("home", "away", "unknown") else "unknown"
     if ts is None:
-        from datetime import datetime
-        fake_day = (os.environ.get("TANGTANG_FAKE_TODAY") or "").strip()
-        fake_time = (os.environ.get("TANGTANG_FAKE_TIME") or "").strip()
-        if fake_day and fake_time:
-            ts = "%sT%s:00" % (fake_day, fake_time)
-        else:
-            ts = datetime.now().isoformat(timespec="seconds")
+        ts = now_dt().isoformat(timespec="seconds")
+    who = who or ""
     row = {
         "ts": ts,
         "event": event or "turn",
-        "who": who or "",
+        "who": who,
+        "audience": who,
+        "persona": (persona or "").strip() or "",
         "result": result,
+        "scene": scene or result,
         "stt": bool(stt),
+        "spoke": bool(spoke) if spoke is not None else False,
         "presence": presence,
         "seconds": int(seconds or 0),
         "rms": int(rms or 0),
+        "window": window or "unknown",
     }
     for k in FORBIDDEN_KEYS:
         row.pop(k, None)
@@ -138,7 +139,10 @@ def append_turn(event, who, result, stt, presence, seconds, rms, root=None, ts=N
     turns.append(row)
     data["turns"] = turns[-MAX_TURNS:]
     save_json(path, data)
-    json.loads(open(path, encoding="utf-8").read())
+    last = json.loads(open(path, encoding="utf-8").read())["turns"][-1]
+    for bad in FORBIDDEN_KEYS:
+        if bad in last:
+            raise AssertionError("ledger leaked %s" % bad)
     return row
 
 
@@ -173,6 +177,10 @@ def _selftest():
     data = json.loads(open(path, encoding="utf-8").read())
     assert data["turns"][-1]["result"] == "silent"
     assert "text" not in data["turns"][-1]
+    assert data["turns"][-1].get("window") == "unknown"
+    os.environ["CAT_NOW"] = "2026-08-28 14:05:00"
+    assert now_dt().strftime("%Y-%m-%d %H:%M") == "2026-08-28 14:05"
+    os.environ.pop("CAT_NOW", None)
     print("cat-turn.py selftest ok")
     print("silent", rms_s, lab_s)
     print("tone", rms_t, lab_t)
@@ -202,7 +210,7 @@ def main():
         print(canned_reply(sys.argv[2] if len(sys.argv) > 2 else "play"))
         return
     if cmd == "ledger":
-        # ledger <event> <who> <result> <stt 0|1> <presence> <seconds> <rms>
+        # ledger <event> <who> <result> <stt 0|1> <presence> <seconds> <rms> [spoke] [window] [persona] [scene]
         event = sys.argv[2] if len(sys.argv) > 2 else "turn"
         who = sys.argv[3] if len(sys.argv) > 3 else ""
         result = sys.argv[4] if len(sys.argv) > 4 else "wont"
@@ -210,10 +218,23 @@ def main():
         presence = sys.argv[6] if len(sys.argv) > 6 else "unknown"
         seconds = sys.argv[7] if len(sys.argv) > 7 else "0"
         rms = sys.argv[8] if len(sys.argv) > 8 else "0"
+        spoke = None
+        window = None
+        persona = None
+        scene = None
+        if len(sys.argv) > 9:
+            spoke = sys.argv[9] in ("1", "true", "yes")
+        if len(sys.argv) > 10:
+            window = sys.argv[10]
+        if len(sys.argv) > 11:
+            persona = sys.argv[11]
+        if len(sys.argv) > 12:
+            scene = sys.argv[12]
         row = append_turn(
             event=event, who=who, result=result,
             stt=stt_raw in ("1", "true", "yes"),
             presence=presence, seconds=seconds, rms=rms,
+            spoke=spoke, window=window, persona=persona, scene=scene,
         )
         print(row["result"])
         return
