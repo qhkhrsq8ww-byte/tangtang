@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from core.adapters.animation import AnimationAction, AnimationController
+from core.adapters.chat_adapter import ChatAdapter, ChatTurn
 from core.adapters.event_store import JsonlEventStore
 from core.adapters.family_loader import load_members
 from core.adapters.observation import Observation
@@ -72,6 +73,7 @@ class TangTangRuntime:
         stt: Callable[[Any], str] | None = None,
         logger: SafeLogger | None = None,
         offline: bool = False,
+        llm: Callable[[Mapping[str, Any]], str] | None = None,
     ) -> None:
         roster = dict(members) if members is not None else load_members()
         self.members = roster
@@ -86,6 +88,12 @@ class TangTangRuntime:
         self.bus = bus or EventBus()
         self.events = events or JsonlEventStore()
         self.stt = stt
+        self._llm = None if offline else llm
+        self.chat = ChatAdapter(
+            pipeline=self.pipeline,
+            members=roster,
+            llm=self._llm,
+        )
         self.presentation = PresentationRuntime(
             tts=self.tts.speaker,
             stt=self.stt,
@@ -209,7 +217,9 @@ class TangTangRuntime:
             obs_map.pop("member_id", None)
 
         if transcript:
-            return self._speak_path(transcript, obs_map, audio=audio, extra_errors=errors)
+            return self.handle_utterance(
+                transcript, obs_map, audio=audio, extra_errors=errors
+            )
 
         event = Event.create(
             type="voice.observed",
@@ -255,18 +265,29 @@ class TangTangRuntime:
             publish=pub,
         )
 
-    def _speak_path(
+    def handle_utterance(
         self,
         utterance: str,
-        observation: Mapping[str, Any],
+        observation: Mapping[str, Any] | None = None,
         *,
         audio: Any = None,
         extra_errors: list[str] | None = None,
+        viewer_id: str | None = None,
     ) -> RuntimeResult:
+        """STT/text → Identity → Event → PrivacyPolicy → Memory → Context → LLM → TTS."""
         errors = list(extra_errors or [])
-        ingested = isolate(lambda: self.pipeline.ingest(utterance, observation))
-        if not ingested.ok or ingested.value is None:
-            errors.append(f"ingest:{ingested.error_type}")
+        obs = dict(observation or {})
+        member_id = self._identify(obs) or obs.get("member_id")
+        if member_id:
+            obs["member_id"] = member_id
+            obs.setdefault("label", member_id)
+        else:
+            obs.pop("member_id", None)
+        turned = isolate(
+            lambda: self.chat.turn(utterance, obs, viewer_id=viewer_id)
+        )
+        if not turned.ok or not isinstance(turned.value, ChatTurn):
+            errors.append(f"chat:{turned.error_type}")
             event = Event.create(
                 type="utterance",
                 source="mic",
@@ -275,23 +296,28 @@ class TangTangRuntime:
             )
             pub = self._commit_event(event)
             action = PresentationAction(
-                decision="SILENT", text="", action="idle", member_id=None, sink="none"
+                decision="SPEAK",
+                text=FALLBACK,
+                action="reply",
+                member_id=None,
+                sink="voice",
             )
             delivery, frames = self._deliver(event, action, audio=audio)
             return RuntimeResult(
                 event=event,
                 member_id=None,
                 privacy="PUBLIC",
-                decision="SILENT",
+                decision=action.decision,
                 action=action,
                 delivery=delivery,
-                observation=dict(observation),
+                observation=obs,
                 event_kept=True,
-                errors=errors,
+                errors=errors + delivery.errors,
                 animation=frames,
                 publish=pub,
             )
-        result = ingested.value
+        turn = turned.value
+        result = turn.ingest
         pub = self._commit_event(result.event)
         if pub.duplicate:
             return RuntimeResult(
@@ -307,54 +333,16 @@ class TangTangRuntime:
                     sink="none",
                 ),
                 delivery=DeliveryResult(event_id=result.event.id, event_kept=True),
-                observation=dict(observation),
+                observation=obs,
                 duplicate=True,
                 event_kept=True,
                 ingest=result,
                 private_memory_id=result.private_memory_id,
+                context=turn.context,
                 publish=pub,
                 errors=errors,
             )
-        who = {"member_id": result.decision.member_id}
-        ctx_res = isolate(
-            lambda: self.pipeline.builder.build(
-                who=who,
-                event=result.event,
-                observation={**dict(observation), "utterance": utterance},
-                privacy_scope=result.decision.privacy,
-            ),
-            fallback={},
-        )
-        context = ctx_res.value if isinstance(ctx_res.value, dict) else {}
-        context["utterance"] = utterance
-        context["scene"] = observation.get("scene")
-        if self.pipeline.injection.is_injection(utterance):
-            context["injection"] = True
-            action = self.pipeline.orchestrator.run(
-                decision="SPEAK", context=context, action="refuse"
-            )
-        else:
-            decision = isolate(
-                lambda: self.pipeline.interrupt.decide(observation),
-                fallback="SILENT",
-            )
-            gate = decision.value if decision.ok and isinstance(decision.value, str) else "SILENT"
-            spoken = isolate(
-                lambda: self.pipeline.orchestrator.run(
-                    decision=gate, context=context, action="reply"
-                )
-            )
-            if not spoken.ok or spoken.value is None:
-                errors.append(f"respond:{spoken.error_type}")
-                action = PresentationAction(
-                    decision="SPEAK" if gate == "SPEAK" else gate,
-                    text=FALLBACK if gate == "SPEAK" else "",
-                    action="reply",
-                    member_id=result.decision.member_id,
-                    sink="voice" if gate == "SPEAK" else "none",
-                )
-            else:
-                action = spoken.value
+        action = turn.action
         delivery, frames = self._deliver(result.event, action, audio=audio)
         return RuntimeResult(
             event=result.event,
@@ -363,12 +351,24 @@ class TangTangRuntime:
             decision=action.decision,
             action=action,
             delivery=delivery,
-            observation=dict(observation),
+            observation=obs,
             event_kept=delivery.event_kept,
             ingest=result,
             private_memory_id=result.private_memory_id,
-            context=context,
+            context=turn.context,
             animation=frames,
             errors=errors + delivery.errors,
             publish=pub,
+        )
+
+    def _speak_path(
+        self,
+        utterance: str,
+        observation: Mapping[str, Any],
+        *,
+        audio: Any = None,
+        extra_errors: list[str] | None = None,
+    ) -> RuntimeResult:
+        return self.handle_utterance(
+            utterance, observation, audio=audio, extra_errors=extra_errors
         )

@@ -14,11 +14,12 @@ from __future__ import annotations
 
 import importlib.util
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from core.adapters.family_loader import load_members
-from core.ingest import PrivacyPipeline
+from core.ingest import IngestResult, PrivacyPipeline
 from core.policy.injection import InjectionGuard
 from core.response.orchestrator import PresentationAction
 from core.runtime.isolate import isolate
@@ -66,6 +67,13 @@ def _filtered_prompt(context: Mapping[str, Any]) -> str:
     return "\n".join(parts)
 
 
+@dataclass
+class ChatTurn:
+    action: PresentationAction
+    ingest: IngestResult
+    context: dict[str, Any] = field(default_factory=dict)
+
+
 class ChatAdapter:
     """Speech → PrivacyPipeline. Optional LLM sees filtered context only."""
 
@@ -88,13 +96,13 @@ class ChatAdapter:
         self._looks_risky = looks_risky or risky
         self._injection = InjectionGuard()
 
-    def reply(
+    def turn(
         self,
         utterance: str,
         observation: Mapping[str, Any] | None = None,
         *,
         viewer_id: str | None = None,
-    ) -> PresentationAction:
+    ) -> ChatTurn:
         """New path. PrivacyPolicy runs inside ingest before Event / Memory / LLM."""
         obs = dict(observation or {})
         text = utterance or str(obs.get("utterance") or obs.get("speech") or "")
@@ -115,7 +123,11 @@ class ChatAdapter:
                 "injection": True,
                 "private_facts": [],
             }
-            return self.pipeline.orchestrator.run(decision="SPEAK", context=ctx, action="refuse")
+            return ChatTurn(
+                action=self.pipeline.orchestrator.run(decision="SPEAK", context=ctx, action="refuse"),
+                ingest=ingested,
+                context=ctx,
+            )
         scope = ingested.decision.privacy
         family_snapshot: dict[str, Any] = {}
         if ingested.decision.allow_family_summary:
@@ -153,7 +165,18 @@ class ChatAdapter:
             original = self.pipeline.orchestrator.responder
             self.pipeline.orchestrator.responder = lambda _c, t=text_out: t
             try:
-                return self.pipeline.orchestrator.run(decision=decision, context=ctx, action="reply")
+                action = self.pipeline.orchestrator.run(decision=decision, context=ctx, action="reply")
             finally:
                 self.pipeline.orchestrator.responder = original
-        return self.pipeline.orchestrator.run(decision=decision, context=ctx, action="reply")
+            return ChatTurn(action=action, ingest=ingested, context=ctx)
+        action = self.pipeline.orchestrator.run(decision=decision, context=ctx, action="reply")
+        return ChatTurn(action=action, ingest=ingested, context=ctx)
+
+    def reply(
+        self,
+        utterance: str,
+        observation: Mapping[str, Any] | None = None,
+        *,
+        viewer_id: str | None = None,
+    ) -> PresentationAction:
+        return self.turn(utterance, observation, viewer_id=viewer_id).action

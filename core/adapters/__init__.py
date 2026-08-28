@@ -11,7 +11,7 @@ from core.adapters.animation import (
     AnimationAction,
     AnimationController,
 )
-from core.adapters.chat_adapter import ChatAdapter
+from core.adapters.chat_adapter import ChatAdapter, ChatTurn
 from core.adapters.event_store import JsonlEventStore
 from core.adapters.family_loader import load_family_document, load_members
 from core.adapters.living_room_adapter import (
@@ -28,6 +28,7 @@ __all__ = [
     "AnimationAction",
     "AnimationController",
     "ChatAdapter",
+    "ChatTurn",
     "JsonlEventStore",
     "LIVING_ROOM_EVENT_TYPES",
     "LivingRoomAdapter",
