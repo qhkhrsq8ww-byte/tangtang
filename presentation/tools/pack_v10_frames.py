@@ -193,12 +193,12 @@ def crop_subjects(keyed: Image.Image, expand: int = 8) -> list[Image.Image]:
             gx0 = max(0, x0 - expand)
         else:
             prev_x1 = best[i - 1][2]
-            gx0 = max(0, (prev_x1 + x0) // 2)
+            gx0 = max(0, (prev_x1 + x0) // 2 + 2)
         if i == len(best) - 1:
             gx1 = min(w, x1 + 1 + expand)
         else:
             next_x0 = best[i + 1][0]
-            gx1 = min(w, (x1 + next_x0) // 2 + 1)
+            gx1 = min(w, (x1 + next_x0) // 2 - 1)
         gy0 = max(0, y0 - expand)
         gy1 = min(h, y1 + 1 + expand)
         if gx1 - gx0 < 8 or gy1 - gy0 < 8:
@@ -257,9 +257,10 @@ def slice_strip(src: Path, count: int, extra: Path | None = None) -> list[Image.
     raw = Image.open(src).convert("RGBA")
     keyed = key_and_despill(raw)
     crops = crop_subjects(keyed)
-    frames = [fit_square(c, 512) for c in crops]
+    frames = [fit_square(c, 512, margin=0.12) for c in crops]
     if extra is not None and extra.is_file() and len(frames) < count:
-        frames.append(process_still(extra))
+        extra_im = key_and_despill(Image.open(extra))
+        frames.append(fit_square(extra_im, 512, margin=0.12))
     if len(frames) > count:
         frames = frames[:count]
     # Equal-width cells wrap on touching strips. Only use them if blob
