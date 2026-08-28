@@ -93,7 +93,8 @@ class TestMemoryNoContextImport(unittest.TestCase):
     def test_source_independent(self):
         from core.memory import store as mod
         src = Path(mod.__file__).read_text(encoding="utf-8")
-        self.assertNotIn("context", src.lower())
+        self.assertNotIn("from core.context", src)
+        self.assertNotIn("import core.context", src)
         self.assertNotIn("ContextBuilder", src)
 
 

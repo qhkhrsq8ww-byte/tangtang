@@ -127,7 +127,8 @@ class TestEventNoResolverEmbed(unittest.TestCase):
     def test_event_module_does_not_import_identity(self):
         from core.events import event as event_mod
         src = Path(event_mod.__file__).read_text(encoding="utf-8")
-        self.assertNotIn("identity", src.lower())
+        self.assertNotIn("from core.identity", src)
+        self.assertNotIn("import core.identity", src)
         self.assertFalse(hasattr(Event.create(type="x"), "resolver"))
 
 

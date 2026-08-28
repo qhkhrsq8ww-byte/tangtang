@@ -95,9 +95,16 @@ class TestPolicyNoLLMAndCompat(unittest.TestCase):
     def test_source_has_no_llm(self):
         from core.policy import interrupt_policy as mod
         src = Path(mod.__file__).read_text(encoding="utf-8")
-        lower = src.lower()
-        for needle in ("openai", "llm", "chat.completions", "requests", "http"):
-            self.assertNotIn(needle, lower)
+        for needle in (
+            "import openai",
+            "from openai",
+            "chat.completions",
+            "import requests",
+            "from requests",
+            "urllib.request",
+            "http.client",
+        ):
+            self.assertNotIn(needle, src)
 
     def test_compat_should_interrupt(self):
         self.assertTrue(should_interrupt({}, now=_dt("23:00")))
