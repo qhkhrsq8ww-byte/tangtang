@@ -96,11 +96,9 @@ class TangTangRuntime:
             members=roster,
             llm=self._llm,
         )
-        self.presentation = PresentationRuntime(
-            tts=self.tts.speaker,
-            stt=self.stt,
-            projection=self.projection.projector,
-        )
+        # Sinks run through adapters. Do not also bind the same callables on
+        # PresentationRuntime or TTS/projection would fire twice.
+        self.presentation = PresentationRuntime(stt=self.stt)
 
     def _identify(self, observation: Mapping[str, Any]) -> str | None:
         resolved = isolate(lambda: self.identity.resolve(observation), fallback=None)
@@ -301,6 +299,7 @@ class TangTangRuntime:
             obs.setdefault("label", member_id)
         else:
             obs.pop("member_id", None)
+        obs.setdefault("interactive", True)
         turned = isolate(
             lambda: self.chat.turn(utterance, obs, viewer_id=viewer_id)
         )

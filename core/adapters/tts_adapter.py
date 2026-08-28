@@ -1,4 +1,4 @@
-"""TTS sink adapter. Core never calls a vendor speak() / say binary.
+"""TTS sink adapter. Core never calls a vendor speak binary.
 
 Failures are recorded on DeliveryResult. The Event stays kept.
 """

@@ -130,10 +130,12 @@ class InterruptPolicy:
         # Empty living room: never chat into the dark.
         if scene == "away" or (presence_home is False and not interactive):
             return "SILENT"
-        if not interactive and self.is_quiet_hours(when):
-            return "SILENT"
         if obs.get("recently_interrupted"):
             return "DELAY"
+        if obs.get("importance") == "low":
+            return "LOG_ONLY"
+        if not interactive and self.is_quiet_hours(when):
+            return "SILENT"
         if scene in PROACTIVE_SCENES:
             member = str(obs.get("member_id") or obs.get("audience") or "*")
             key = (member, scene)
@@ -142,8 +144,6 @@ class InterruptPolicy:
             decision = "SPEAK"
             self._mark_spoke(key, when)
             return decision
-        if obs.get("importance") == "low":
-            return "LOG_ONLY"
         return "SPEAK"
 
     def should_interrupt(

@@ -105,6 +105,7 @@ class ChatAdapter:
     ) -> ChatTurn:
         """New path. PrivacyPolicy runs inside ingest before Event / Memory / LLM."""
         obs = dict(observation or {})
+        obs.setdefault("interactive", True)
         text = utterance or str(obs.get("utterance") or obs.get("speech") or "")
         if self._looks_risky is not None:
             risky = isolate(lambda: bool(self._looks_risky(text)), fallback=False)
