@@ -12,6 +12,9 @@
 #   ./cat.sh preview          # 打印今日语音提醒文案（不发声）
 #   ./cat.sh today            # 今日休息四步（问糖糖→学英语→锻炼→休息）
 #   ./cat.sh today --preview  # 只看四句话，不开麦不发声
+#   ./cat.sh openclaw --preview
+#   ./cat.sh openclaw --now --submit   # 四步自测并提交 GitHub 报告
+#   ./cat.sh openclaw-report
 #   ./cat.sh schedule         # 今天时刻表会响哪些
 #   ./cat.sh features         # 糖糖有哪些功能
 #   ./cat.sh alarm            # 立刻试上学闹铃（跳过日期）
@@ -51,6 +54,14 @@ while [ $# -gt 0 ]; do
     today)
       shift
       exec "$CAT_DIR/cat-today.sh" "$@"
+      ;;
+    openclaw)
+      shift
+      exec "$CAT_DIR/cat-openclaw.sh" "$@"
+      ;;
+    openclaw-report)
+      shift
+      exec "$CAT_DIR/cat-openclaw.sh" --report-only "$@"
       ;;
     schedule)
       shift
@@ -101,6 +112,12 @@ while [ $# -gt 0 ]; do
    小朋友在家时，客厅依次完成四项：打招呼听一句、译林英语一句、动一动、歇一会儿。
    一步一句，再听窗，不连着念。默认航航玩伴；洽洽用 --who qiaqia。
    试：./cat.sh today    ./cat.sh today hanghang    ./cat.sh today --preview
+
+9. OpenClaw 田间报告（只含标签，不含小朋友原话）
+   客厅 2013 Mac 跑四步，写成 reports/openclaw/日期.json 并推 GitHub。
+   ./cat.sh openclaw --preview
+   ./cat.sh openclaw --now --submit
+   ./cat.sh openclaw-report
 EOF
       exit 0
       ;;
