@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/qhkhrsq8ww-byte/tangtang/reports/openclaw/schema.json",
+  "title": "OpenClaw field report",
+  "description": "Labels only. No STT, no child quotes, no audio paths, no phone numbers. schema_version 1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "host",
+    "git_head",
+    "branch",
+    "who",
+    "rest_day",
+    "hwcheck",
+    "steps",
+    "counts",
+    "failures"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "generated_at": { "type": "string", "minLength": 10 },
+    "host": { "type": "string", "enum": ["Darwin", "Linux", "Windows", "unknown"] },
+    "git_head": { "type": "string" },
+    "branch": { "type": "string" },
+    "who": { "type": "string", "enum": ["hanghang", "qiaqia"] },
+    "rest_day": { "type": "boolean" },
+    "hwcheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os",
+        "sox",
+        "ffmpeg",
+        "say",
+        "avfoundation_mic",
+        "default_output",
+        "record_ok",
+        "notes"
+      ],
+      "properties": {
+        "os": { "type": "string" },
+        "sox": { "type": "boolean" },
+        "ffmpeg": { "type": "boolean" },
+        "say": { "type": "boolean" },
+        "avfoundation_mic": { "type": "boolean" },
+        "default_output": { "type": "string", "maxLength": 80 },
+        "record_ok": { "type": "boolean" },
+        "notes": { "type": "string", "maxLength": 120 }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "scheduled_hour",
+          "ran_at",
+          "spoke",
+          "window_opened",
+          "scene",
+          "persona",
+          "reply_spoke"
+        ],
+        "properties": {
+          "id": { "type": "string", "enum": ["ask", "english", "move", "rest"] },
+          "scheduled_hour": { "type": "integer", "minimum": 0, "maximum": 23 },
+          "ran_at": { "type": "string" },
+          "spoke": { "type": "boolean" },
+          "window_opened": { "type": "boolean" },
+          "scene": {
+            "type": "string",
+            "enum": ["joined", "oppose", "silent", "defer", "wont", "unclear", "skip"]
+          },
+          "persona": { "type": "string", "enum": ["play", "friend", "elder"] },
+          "reply_spoke": { "type": "boolean" }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["joined", "oppose", "silent", "defer", "wont", "unclear", "skip"],
+      "properties": {
+        "joined": { "type": "integer", "minimum": 0 },
+        "oppose": { "type": "integer", "minimum": 0 },
+        "silent": { "type": "integer", "minimum": 0 },
+        "defer": { "type": "integer", "minimum": 0 },
+        "wont": { "type": "integer", "minimum": 0 },
+        "unclear": { "type": "integer", "minimum": 0 },
+        "skip": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "stderr"],
+        "properties": {
+          "command": { "type": "string", "maxLength": 80 },
+          "stderr": { "type": "string", "maxLength": 200 }
+        }
+      }
+    }
+  }
+}

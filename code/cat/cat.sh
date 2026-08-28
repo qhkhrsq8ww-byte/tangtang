@@ -10,7 +10,14 @@
 #   ./cat.sh status           # 查看糖糖当前心情状态
 #   ./cat.sh habits [成员]    # 习惯摘要（客厅 Mac，不记小朋友原话）
 #   ./cat.sh preview          # 打印今日语音提醒文案（不发声）
-#   ./cat.sh today            # 今天会响哪些
+#   ./cat.sh today            # 今日休息四步（问糖糖→学英语→锻炼→休息）
+#   ./cat.sh today --preview  # 只看四句话，不开麦不发声
+#   ./cat.sh today-report     # 账本标签摘要（无原话）
+#   ./cat.sh hwcheck          # 软硬件自检（Linux 跳过实声）
+#   ./cat.sh openclaw --preview
+#   ./cat.sh openclaw --now --submit   # 四步自测并提交 GitHub 报告
+#   ./cat.sh openclaw-report
+#   ./cat.sh schedule         # 今天时刻表会响哪些
 #   ./cat.sh features         # 糖糖有哪些功能
 #   ./cat.sh alarm            # 立刻试上学闹铃（跳过日期）
 #   ./cat.sh english          # 试航航二年级英语小伴读
@@ -51,8 +58,31 @@ while [ $# -gt 0 ]; do
       exit 0
       ;;
     today)
-      "$CAT_DIR/cat-schedule.sh" today
-      exit 0
+      shift
+      exec "$CAT_DIR/cat-today.sh" "$@"
+      ;;
+    openclaw)
+      shift
+      exec "$CAT_DIR/cat-openclaw.sh" "$@"
+      ;;
+    openclaw-report)
+      shift
+      exec "$CAT_DIR/cat-openclaw.sh" --report-only "$@"
+      ;;
+    hwcheck)
+      shift
+      exec /usr/bin/python3 "$CAT_DIR/cat-openclaw-report.py" hwcheck "$@"
+      ;;
+    today-report)
+      shift
+      exec /usr/bin/python3 "$CAT_DIR/cat-turn.py" today-report "$@"
+      ;;
+    schedule)
+      shift
+      if [ $# -eq 0 ]; then
+        exec "$CAT_DIR/cat-schedule.sh" today
+      fi
+      exec "$CAT_DIR/cat-schedule.sh" "$@"
       ;;
     features)
       cat <<'EOF'
@@ -95,6 +125,19 @@ while [ $# -gt 0 ]; do
    麦是客厅 Mac 旁的 MAONO AU-BM10。音箱要设成 Mac 默认输出；若还在儿童房，客厅听不见回话。
    试：./cat.sh turn    ./cat.sh turn english hanghang
    预览反应（不开麦）：./cat.sh reactions    ./cat.sh turn --print
+
+8. 今日休息四步（问糖糖 → 学英语 → 锻炼 → 休息）
+   小朋友在家时，客厅依次完成四项：打招呼听一句、译林英语一句、动一动、歇一会儿。
+   一步一句，再听窗，不连着念。默认航航玩伴；洽洽用 --who qiaqia。
+   试：./cat.sh today    ./cat.sh today hanghang    ./cat.sh today --preview
+   标签摘要（无原话）：./cat.sh today-report
+
+9. OpenClaw 田间报告（只含标签，不含小朋友原话）
+   客厅 2013 Mac 跑四步，写成 reports/openclaw/日期.json 并推 GitHub。
+   ./cat.sh openclaw --preview
+   ./cat.sh openclaw --now --submit
+   ./cat.sh openclaw-report
+   自检：./cat.sh hwcheck
 EOF
       exit 0
       ;;

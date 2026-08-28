@@ -32,6 +32,7 @@ RESULTS = (
 )
 COOL_RESULTS = ("silent", "oppose")
 SYSTEM_RESULTS = RESULTS
+TODAY_REPORT_EVENTS = ("ask", "english", "move", "rest")
 
 DEFAULT_SPEAK = {
     "joined": True,
@@ -428,6 +429,38 @@ def _day_of(ts):
     return s[:10] if len(s) >= 10 else today_str()
 
 
+def today_report(who="hanghang", day=None, root=None, events=None):
+    """只打标签，不打儿童原话。"""
+    day = day or today_str()
+    who = normalize_who(who) or "hanghang"
+    events = events or TODAY_REPORT_EVENTS
+    data = load_ledger(root)
+    last = {}
+    for row in data.get("turns") or []:
+        if not isinstance(row, dict):
+            continue
+        if _day_of(row.get("ts")) != day:
+            continue
+        row_who = normalize_who(row.get("who") or "")
+        if row_who and row_who != who:
+            continue
+        ev = (row.get("event") or "").strip()
+        if not ev:
+            continue
+        lab = row.get("result") or "skip"
+        if lab not in SYSTEM_RESULTS:
+            lab = "skip"
+        last[ev] = lab
+    lines = [
+        "=== today-report ===",
+        "%s %s" % (day, who),
+    ]
+    for ev in events:
+        lines.append("%s\t%s" % (ev, last.get(ev, "skip")))
+    lines.append("=== today-report end ===")
+    return "\n".join(lines)
+
+
 def turns_today(who, event, root=None, day=None):
     day = day or today_str()
     who = normalize_who(who)
@@ -695,6 +728,21 @@ def _selftest():
     ok_h2, _, _ = gate_status("english", "hanghang", root=tmp, day="2026-09-02")
     assert ok_h2
 
+    os.environ["TANGTANG_FAKE_TODAY"] = "2026-09-01"
+    append_turn(
+        event="ask", who="hanghang", result="joined",
+        stt=False, presence="home", seconds=5, rms=400, root=tmp,
+        ts="2026-09-01T10:00:00",
+    )
+    rep = today_report("hanghang", day="2026-09-01", root=tmp)
+    assert "=== today-report ===" in rep
+    assert "hanghang" in rep
+    assert "ask\tjoined" in rep
+    assert "english\tsilent" in rep
+    assert "move\tskip" in rep
+    assert "transcript" not in rep and "utterance" not in rep
+    assert "姐姐" not in rep and "弟弟" not in rep
+
     prev = preview_scenes("english", "hanghang")
     assert "配合" in prev and "反对" in prev and "不开麦" in prev
     assert "正确" not in prev
@@ -773,6 +821,11 @@ def main():
         who = sys.argv[3] if len(sys.argv) > 3 else "hanghang"
         sys.stdout.write(preview_scenes(event, who))
         return
+    if cmd in ("today-report", "report"):
+        who = sys.argv[2] if len(sys.argv) > 2 else "hanghang"
+        day = sys.argv[3] if len(sys.argv) > 3 else None
+        print(today_report(who=who, day=day))
+        return
     if cmd == "ledger":
         event = sys.argv[2] if len(sys.argv) > 2 else "turn"
         who = sys.argv[3] if len(sys.argv) > 3 else ""
@@ -795,7 +848,7 @@ def main():
         return
     print(
         "用法: energy | pcm | sentence | canned | classify | decide | "
-        "reply | gate | preview | ledger | selftest",
+        "reply | gate | preview | today-report | ledger | selftest",
         file=sys.stderr,
     )
     sys.exit(1)
