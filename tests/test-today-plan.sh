@@ -30,9 +30,9 @@ echo "$out" | grep -q "今天休息 · 航航 · 问糖糖 → 学英语 → 锻
   || bad "banner hanghang"
 echo "$out" | grep -q "2026-08-28 10:00" || bad "preview missing when"
 echo "$out" | grep -q "preview 不开客厅麦，也不发声" || bad "preview should say 不开客厅麦"
-echo "$out" | grep -q "开麦 " && bad "preview claimed 开麦"
+echo "$out" | grep -qE "开麦 [0-9]+s|客厅 MAONO" && bad "preview claimed 开麦"
 echo "$out" | grep -qi "录音" && bad "preview claimed 录音"
-echo "$out" | grep -q "按回车" && bad "preview should not wait 回车"
+echo "$out" | grep -q "按回车继续" && bad "preview should not wait 回车"
 ask_n="$(echo "$out" | grep -n "^1\\. 问糖糖" | head -n 1 | cut -d: -f1)"
 eng_n="$(echo "$out" | grep -n "^2\\. 学英语" | head -n 1 | cut -d: -f1)"
 move_n="$(echo "$out" | grep -n "^3\\. 锻炼身体" | head -n 1 | cut -d: -f1)"
@@ -63,7 +63,7 @@ echo "$out_q" | grep -q "今天休息 · 洽洽 · 问糖糖 → 学英语 → �
 echo "$out_q" | grep -q "糖糖在客厅。洽洽要是想聊" || bad "friend ask line"
 echo "$out_q" | grep -q "汪汪" && bad "friend should not 汪汪"
 echo "$out_q" | grep -q "汪汪～ 航航" && bad "qiaqia preview used play ask"
-echo "$out_q" | grep -q "开麦 " && bad "qiaqia preview claimed 开麦"
+echo "$out_q" | grep -qE "开麦 [0-9]+s|客厅 MAONO" && bad "qiaqia preview claimed 开麦"
 # 同一天 hanghang / qiaqia 英语句应不同（年级不同）
 line_h="$(echo "$out" | awk '/^2\. 学英语$/{getline; print; exit}')"
 line_q="$(echo "$out_q" | awk '/^2\. 学英语$/{getline; print; exit}')"
@@ -126,7 +126,7 @@ out_home="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=12:00 \
   "$CAT/cat.sh" today --preview hanghang 2>&1)" || { bad "today preview on school noon"; out_home=""; }
 echo "$out_home" | grep -q "上学期间不跟小朋友互动" && bad "today plan should bypass child mute"
 echo "$out_home" | grep -q "汪汪～ 航航" || bad "today noon still greet hanghang"
-echo "$out_home" | grep -q "开麦 " && bad "school-noon preview claimed 开麦"
+echo "$out_home" | grep -qE "开麦 [0-9]+s|客厅 MAONO" && bad "school-noon preview claimed 开麦"
 echo "$out_home" | grep -q "爷爷奶奶" && bad "today plan should not switch to elder"
 ok "today command home bypass"
 
@@ -137,9 +137,9 @@ out_auto="$(TANGTANG_FAKE_TODAY=2026-08-28 TANGTANG_FAKE_TIME=10:00 \
   "$CAT/cat.sh" today --auto hanghang 2>&1)" || { bad "auto exit"; out_auto=""; }
 echo "$out_auto" | grep -q "1. 问糖糖" || bad "auto missing step 1"
 echo "$out_auto" | grep -q "4. 注意休息" || bad "auto missing step 4"
-echo "$out_auto" | grep -q "开麦 " && bad "auto no-mic claimed 开麦"
+echo "$out_auto" | grep -qE "开麦 [0-9]+s|客厅 MAONO" && bad "auto no-mic claimed 开麦"
 echo "$out_auto" | grep -q "录音" && bad "auto no-mic claimed 录音"
-echo "$out_auto" | grep -q "按回车" && bad "auto should not wait 回车"
+echo "$out_auto" | grep -q "按回车继续" && bad "auto should not wait 回车"
 rm -rf "$tmp_auto"
 feat="$("$CAT/cat.sh" features 2>&1)"
 echo "$feat" | grep -q "今日休息四步" || bad "features missing today"

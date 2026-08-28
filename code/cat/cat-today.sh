@@ -110,7 +110,7 @@ if [ "$SELFTEST" = "1" ]; then
   export TANGTANG_FIXTURE=1
   export TANGTANG_TURN_STT=0
   export TANGTANG_TURN_GAP=0
-  if [ "$(uname -s)" != "Darwin" ]; then
+  if [ "$(uname -s)" != "Darwin" ] && [ "${TANGTANG_TTS:-1}" != "0" ]; then
     export TANGTANG_TTS=dry
   fi
 elif [ "$AUTO" = "1" ] && [ "$NOW_FLAG" = "1" ]; then
@@ -319,13 +319,13 @@ fi
 
 print_banner
 if [ "$PREVIEW" = "1" ]; then
-  echo "preview 不开麦 不发声"
+  echo "preview 不开客厅麦，也不发声"
 fi
 if [ "$SELFTEST" = "1" ]; then
-  echo "selftest 无人值守 · 听窗夹具 silent/joined · 不按回车"
+  echo "selftest 无人值守 · 听窗夹具 silent/joined · 无需回车"
 fi
 if [ "$AUTO" = "1" ] && [ "$PREVIEW" != "1" ]; then
-  echo "auto 不按回车 · 步间隔 ${GAP}s"
+  echo "auto 无需回车 · 步间隔 ${GAP}s"
 fi
 
 step_n=0

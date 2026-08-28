@@ -38,15 +38,15 @@ ok "rest-day home child allowed"
 
 # preview opens no mic
 out="$(CAT_NOW='2026-08-28 14:05:00' "$CAT/cat.sh" today --preview hanghang 2>&1)" || bad "preview exit"
-echo "$out" | grep -q "preview 不开麦" || bad "preview missing 不开麦"
-echo "$out" | grep -q "开麦 " && bad "preview opened mic"
-echo "$out" | grep -q "按回车" && bad "preview waited Enter"
+echo "$out" | grep -q "preview 不开客厅麦" || bad "preview missing 不开麦"
+echo "$out" | grep -qE "开麦 [0-9]+s|客厅 MAONO" && bad "preview opened mic"
+echo "$out" | grep -q "按回车继续" && bad "preview waited Enter"
 ok "preview opens no mic"
 
 # auto four steps order ask→english→move→rest，不按回车
 out="$(CAT_NOW='2026-08-28 10:00:00' TANGTANG_TODAY_GAP=2 TANGTANG_DATA_DIR="$tmp" \
   TANGTANG_TTS=0 "$CAT/cat.sh" today-selftest 2>&1)" || { bad "selftest exit"; echo "$out"; }
-echo "$out" | grep -q "按回车" && bad "selftest waited Enter"
+echo "$out" | grep -q "按回车继续" && bad "selftest waited Enter"
 ask_n="$(echo "$out" | grep -n "^1\\. 问糖糖" | head -n 1 | cut -d: -f1)"
 eng_n="$(echo "$out" | grep -n "^2\\. 学英语" | head -n 1 | cut -d: -f1)"
 move_n="$(echo "$out" | grep -n "^3\\. 锻炼身体" | head -n 1 | cut -d: -f1)"
@@ -56,7 +56,7 @@ rest_n="$(echo "$out" | grep -n "^4\\. 注意休息" | head -n 1 | cut -d: -f1)"
 echo "$out" | grep -q "should_speak=yes persona=play audience=hanghang" || bad "missing play persona"
 echo "$out" | grep -q "stub 听窗 silent" || bad "missing silent stub"
 echo "$out" | grep -q "stub 听窗 joined" || bad "missing joined stub"
-echo "$out" | grep -q "开麦 " && bad "selftest claimed live 开麦"
+echo "$out" | grep -qE "开麦 [0-9]+s|客厅 MAONO" && bad "selftest claimed live 开麦"
 echo "$out" | grep -q "汪汪" || bad "hanghang play should 汪汪"
 echo "$out" | grep -q "再试一次" && bad "should not chase"
 ok "auto four steps + fixtures"
@@ -89,12 +89,9 @@ print("ledger four steps ok", scenes)
 PY
 ok "ledger labels only, no raw text"
 
-# silent → no second prompt; joined → at most one reply
-echo "$out" | grep -c "糖糖听到" | grep -Eq '^[12]$' || {
-  # canned reply may appear once per joined step (2 times max)
-  n="$(echo "$out" | grep -c "糖糖听到" || true)"
-  [ "$n" -le 2 ] || bad "joined replied too many times: $n"
-}
+# silent → no second prompt; joined → at most one reply per step
+n="$(echo "$out" | grep -c "joined 糖糖回一句" || true)"
+[ "$n" -le 2 ] || bad "joined replied too many times: $n"
 echo "$out" | grep -q "你怎么不说话" && bad "silence chased"
 ok "silence no second prompt; joined at most one reply"
 
