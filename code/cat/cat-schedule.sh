@@ -29,7 +29,9 @@ case "$CMD" in
     done < <(schedule_lines)
     echo
     echo "预览文案: ./cat-schedule.sh preview"
+    echo "谁在客厅: ./cat-presence.sh"
     echo "装到 Mac: ./cat-schedule.sh crontab  → 粘进 crontab -e"
+    echo "试播(跳过在场): ./cat-schedule.sh fire --force pet_walk"
     ;;
   preview)
     export TANGTANG_REMIND_PROFILE="${TANGTANG_REMIND_PROFILE:-friend}"
@@ -49,6 +51,8 @@ case "$CMD" in
     ;;
   crontab)
     echo "# 糖糖语音提醒 · 先 crontab -l 备份，再粘贴"
+    echo "# 播前检测洽洽/航航手机；没人则静音跳过"
+    echo "MAILTO=\"\""
     echo "SHELL=/bin/bash"
     echo "PATH=/usr/bin:/bin:/usr/local/bin"
     echo "TANGTANG_REMIND_PROFILE=friend"
@@ -64,13 +68,16 @@ case "$CMD" in
   fire)
     shift
     if [ -z "${1:-}" ]; then
-      echo "用法: ./cat-schedule.sh fire <事件> [参数]"
+      echo "用法: ./cat-schedule.sh fire [--force] <事件> [参数]"
       exit 1
     fi
     exec "$CAT_DIR/cat-remind.sh" "$@"
     ;;
+  presence)
+    exec "$CAT_DIR/cat-presence.sh"
+    ;;
   *)
-    echo "用法: list | preview | crontab | fire <事件>"
+    echo "用法: list | preview | crontab | presence | fire [--force] <事件>"
     exit 1
     ;;
 esac

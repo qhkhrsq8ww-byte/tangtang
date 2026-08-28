@@ -11,8 +11,54 @@ fi
 : "${TANGTANG_CHILD_NAME:=小朋友}"
 : "${TANGTANG_PROJECTOR_IP:=192.168.31.104}"
 : "${TANGTANG_AIRPLAY_PORT:=61949}"
+: "${TANGTANG_REQUIRE_PRESENCE:=1}"
 export TANGTANG_PROFILE TANGTANG_CHILD_NAME
 export TANGTANG_PROJECTOR_IP TANGTANG_AIRPLAY_PORT
+export TANGTANG_REQUIRE_PRESENCE
+export TANGTANG_HOST_QIAQIA TANGTANG_HOST_HANGHANG
+
+# 手机是否在客厅网段（Mac 在客厅）。ICMP 不通时再看 ARP，兼容 iPhone 省电不回 ping。
+tangtang_host_on_lan() {
+  local host="$1"
+  [ -n "$host" ] || return 1
+  if [ "$(uname -s)" = "Darwin" ]; then
+    ping -c 1 -t 1 "$host" >/dev/null 2>&1 && return 0
+  else
+    ping -c 1 -W 1 "$host" >/dev/null 2>&1 && return 0
+  fi
+  if command -v arp >/dev/null 2>&1; then
+    if arp -an 2>/dev/null | grep -F "($host)" | grep -vi incomplete | grep -Eq '([0-9a-fA-F]{1,2}:){5}'; then
+      return 0
+    fi
+    if arp -n "$host" 2>/dev/null | grep -vi incomplete | grep -Eq '([0-9a-fA-F]{1,2}:){5}'; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# 打印在场小朋友名字（空格分隔）。0=有人 1=没人 2=没配置手机 IP
+tangtang_kids_present() {
+  local names=()
+  local ip
+  ip="${TANGTANG_HOST_QIAQIA:-}"
+  if [ -n "$ip" ] && tangtang_host_on_lan "$ip"; then
+    names+=("洽洽")
+  fi
+  ip="${TANGTANG_HOST_HANGHANG:-}"
+  if [ -n "$ip" ] && tangtang_host_on_lan "$ip"; then
+    names+=("航航")
+  fi
+  if [ ${#names[@]} -gt 0 ]; then
+    printf '%s\n' "${names[*]}"
+    return 0
+  fi
+  if [ -z "${TANGTANG_HOST_QIAQIA:-}" ] && [ -z "${TANGTANG_HOST_HANGHANG:-}" ]; then
+    return 2
+  fi
+  printf '\n'
+  return 1
+}
 
 tangtang_ffmpeg() {
   if [ -x "$CAT_DIR/bin/ffmpeg" ]; then
