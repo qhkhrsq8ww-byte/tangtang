@@ -3,6 +3,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key><string>com.tangtang.daemon</string>
+  <!-- 部署时替换 __TANGTANG_HOME__ 为仓库绝对路径，例如 /Users/lv/.qclaw/workspace/tangtang -->
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
