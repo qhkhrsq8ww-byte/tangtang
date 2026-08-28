@@ -56,6 +56,6 @@
   ],
   "behavior_event_types": [
     "wake", "sleep", "meal", "water", "exercise", "screen",
-    "study", "work", "outdoor", "home", "chore", "conversation", "mood_signal"
+    "study", "work", "outdoor", "home", "away", "chore", "conversation", "mood_signal"
   ]
 }

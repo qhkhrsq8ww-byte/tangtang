@@ -17,12 +17,19 @@ fi
 : "${TANGTANG_SCHOOL_LEAVE:=07:30}"
 : "${TANGTANG_HOME_HANGHANG:=16:00}"
 : "${TANGTANG_HOME_QIAQIA:=18:00}"
+: "${TANGTANG_TURN_EVENTS:=english}"
+: "${TANGTANG_TURN_SECONDS:=5}"
+: "${TANGTANG_TURN_RMS:=300}"
+: "${TANGTANG_TURN_GAP:=0.5}"
+: "${TANGTANG_TURN_ALL:=0}"
 export TANGTANG_PROFILE TANGTANG_CHILD_NAME
 export TANGTANG_PROJECTOR_IP TANGTANG_AIRPLAY_PORT
 export TANGTANG_REQUIRE_PRESENCE
 export TANGTANG_HOST_QIAQIA TANGTANG_HOST_HANGHANG
 export TANGTANG_SCHOOL_START TANGTANG_ALARM_DOW
 export TANGTANG_SCHOOL_LEAVE TANGTANG_HOME_HANGHANG TANGTANG_HOME_QIAQIA
+export TANGTANG_TURN_EVENTS TANGTANG_TURN_SECONDS TANGTANG_TURN_RMS
+export TANGTANG_TURN_GAP TANGTANG_TURN_ALL
 
 # 记忆只写本机硬盘（Mac Air: ~/Library/Application Support/Tangtang）
 # 现在不要指向路由器 Samba。未设置时由 tangtang_paths.py 解析并迁移旧文件。
@@ -323,6 +330,8 @@ tangtang_ffmpeg() {
   fi
 }
 
+# 客厅互动：蓝牙音箱应作为 Mac 默认输出，回话才能在客厅听见。
+# 不要做第二只音箱。若音箱仍在儿童房，客厅听不见糖糖回话。
 # 播放音频；按真实秒数超时，避免 sleep 0.3 却 +3 导致约 12 秒被掐断
 tangtang_play_audio() {
   local f="$1"
@@ -361,4 +370,87 @@ tangtang_ensure_stage() {
 
 tangtang_projector_on() {
   nc -z -w 3 "$TANGTANG_PROJECTOR_IP" "$TANGTANG_AIRPLAY_PORT" 2>/dev/null
+}
+
+# 时刻表默认只给 english 开客厅录音窗；其它提醒仍单向。TANGTANG_TURN_ALL=1 才全部开窗。
+tangtang_turn_event_enabled() {
+  local event="$1"
+  [ -n "$event" ] || return 1
+  if [ "${TANGTANG_TURN_ALL:-0}" = "1" ]; then
+    return 0
+  fi
+  local allow=",${TANGTANG_TURN_EVENTS:-english},"
+  case "$allow" in
+    *",$event,"*) return 0 ;;
+  esac
+  return 1
+}
+
+tangtang_turn_who() {
+  local event="${1:-}"
+  local arg="${2:-}"
+  case "$event" in
+    english)
+      case "$arg" in
+        qiaqia|洽洽|6|grade6) printf '%s\n' "qiaqia" ;;
+        *) printf '%s\n' "hanghang" ;;
+      esac
+      return 0
+      ;;
+  esac
+  case "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}" in
+    qiaqia|洽洽) printf '%s\n' "qiaqia"; return 0 ;;
+    hanghang|航航) printf '%s\n' "hanghang"; return 0 ;;
+  esac
+  if ! tangtang_child_at_school hanghang; then
+    printf '%s\n' "hanghang"
+    return 0
+  fi
+  if ! tangtang_child_at_school qiaqia; then
+    printf '%s\n' "qiaqia"
+    return 0
+  fi
+  printf '%s\n' "hanghang"
+}
+
+# 用客厅 Wi‑Fi/ARP 记一笔在场（home/away）。只在回合/提醒时调用，不要 24 小时 ping。
+# 打印 home|away|unknown；0=在网 1=不在网 2=没配 IP
+tangtang_note_member_presence() {
+  local who="$1"
+  local ip="" mid=""
+  case "$who" in
+    hanghang|航航) ip="${TANGTANG_HOST_HANGHANG:-}"; mid="hanghang" ;;
+    qiaqia|洽洽) ip="${TANGTANG_HOST_QIAQIA:-}"; mid="qiaqia" ;;
+    *) printf '%s\n' "unknown"; return 2 ;;
+  esac
+  if [ -z "$ip" ]; then
+    printf '%s\n' "unknown"
+    return 2
+  fi
+  if tangtang_host_on_lan "$ip"; then
+    /usr/bin/python3 "$CAT_DIR/cat-family.py" log "$mid" home wifi >/dev/null 2>&1 || true
+    printf '%s\n' "home"
+    return 0
+  fi
+  /usr/bin/python3 "$CAT_DIR/cat-family.py" log "$mid" away wifi >/dev/null 2>&1 || true
+  printf '%s\n' "away"
+  return 1
+}
+
+tangtang_note_presence_for_event() {
+  local event="${1:-}" arg="${2:-}"
+  case "$event" in
+    english|turn)
+      tangtang_note_member_presence "$(tangtang_turn_who "$event" "$arg")"
+      ;;
+    *)
+      if [ -n "${TANGTANG_HOST_HANGHANG:-}" ]; then
+        tangtang_note_member_presence hanghang >/dev/null || true
+      fi
+      if [ -n "${TANGTANG_HOST_QIAQIA:-}" ]; then
+        tangtang_note_member_presence qiaqia >/dev/null || true
+      fi
+      printf '%s\n' "unknown"
+      ;;
+  esac
 }
