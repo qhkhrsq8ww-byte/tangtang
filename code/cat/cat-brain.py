@@ -12,6 +12,7 @@
   greet / wake / sleep / rest / meal [lunch|dinner] / home / random
   pat / say "<文字>" / status / play / homework / tidy / exercise
   emotion / weather / water / pet_walk / pet_water / pet_food / pet_groom
+  alarm [school]
 输出:
   一行：话术<TAB>情绪标签<TAB>画面对应状态
   话术为空表示这次不说话（冷却或 random 静默）
@@ -30,6 +31,7 @@ MEMORY_FILE = os.path.join(DATA_DIR, "cat-memory.json")
 EVENT_STATE = {
     "greet": "welcome", "home": "welcome", "welcome": "welcome",
     "wake": "wakeup",
+    "alarm": "wakeup",
     "sleep": "sleeping", "sleepy": "sleepy",
     "rest": "caring", "emotion": "caring", "weather": "caring", "water": "caring",
     "play": "happy", "exercise": "running", "walking": "walking", "running": "running",
@@ -45,6 +47,7 @@ EVENT_STATE = {
 EVENT_SCENE = {
     "rest": "phone_break",
     "wake": "wake",
+    "alarm": "alarm",
     "sleep": "sleep",
     "meal": "meal",
     "homework": "homework",
@@ -65,6 +68,7 @@ COOLDOWN_MINUTES = {
     "rest": 30, "play": 45, "exercise": 45, "water": 60,
     "homework": 40, "tidy": 40, "weather": 180,
     "meal": 90, "wake": 240, "sleep": 180, "emotion": 60,
+    "alarm": 20,
     "random": 20, "home": 120,
     "pet_walk": 90, "pet_water": 90, "pet_food": 180, "pet_groom": 240,
 }
@@ -88,6 +92,10 @@ REPLY = {
               "汪汪～ 新的一天！糖糖已经准备好陪你啦！",
               "还想躺一会儿呀？那糖糖再陪你30秒～",
               "起床成功！糖糖给你一个早安击掌！"],
+    },
+    "alarm": {
+        "_": ["六点半了，该起床上学了。起来后看一眼糖糖的水，你们也清醒一下。",
+              "汪汪～ 上学啦。糖糖叫你起床，起来给糖糖倒点水，你也喝一口。"],
     },
     "sleep": {
         "_": ["糖糖困啦……今天玩得开心吗？我们一起准备睡觉吧。",
@@ -417,7 +425,7 @@ def main():
 
     if event in ("greet", "pat", "home"):
         state = interact(state, memory, event)
-    elif event in ("wake", "sleep", "rest", "meal", "say", "play",
+    elif event in ("wake", "alarm", "sleep", "rest", "meal", "say", "play",
                    "homework", "tidy", "exercise", "emotion", "weather", "water",
                    "pet_walk", "pet_water", "pet_food", "pet_groom"):
         state = interact(state, memory, "care")

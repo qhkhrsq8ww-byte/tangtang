@@ -1,5 +1,5 @@
 {
-  "version": "2.1",
+  "version": "2.2",
   "principle": "用糖糖自己的口吻：照顾小狗和小朋友健康放在同一句；先共情，给选择，不命令",
   "profiles": {
     "play": {"age": 9, "grade": "小学三年级", "role": "玩伴+小教练+小任务搭档"},
@@ -22,6 +22,8 @@
     {"id":"emotion_friend","scene":"emotion","scene_name":"情绪陪伴","profile":"friend","text":"不想说也没关系。糖糖在。","animation":"caring"},
     {"id":"wake_play","scene":"wake","scene_name":"起床","profile":"play","text":"糖糖醒啦！起来给糖糖倒点水，你也喝一口，新的一天开始。","animation":"wake"},
     {"id":"wake_friend","scene":"wake","scene_name":"起床","profile":"friend","text":"早安。糖糖醒了。起来后记得看看糖糖的水，你也慢慢清醒。","animation":"wake"},
+    {"id":"alarm_play","scene":"alarm","scene_name":"上学闹铃","profile":"play","text":"汪汪～ 六点半啦！今天要上学，糖糖叫你起床。起来给糖糖倒点水，你也喝一口。","animation":"wake"},
+    {"id":"alarm_friend","scene":"alarm","scene_name":"上学闹铃","profile":"friend","text":"洽洽、航航，六点半了。该起床上学了。起来后看一眼糖糖的水，你们也清醒一下。","animation":"wake"},
     {"id":"weather_play","scene":"weather","scene_name":"天气提醒","profile":"play","text":"出门带伞或外套，糖糖的牵引绳也拿上～","animation":"welcome"},
     {"id":"weather_friend","scene":"weather","scene_name":"天气提醒","profile":"friend","text":"出门看一下天气。伞，还有糖糖的牵引绳。","animation":"thinking"},
     {"id":"water_play","scene":"water","scene_name":"喝水","profile":"play","text":"糖糖口渴啦！给糖糖加点水，你也喝一口，身体棒棒。","animation":"happy"},

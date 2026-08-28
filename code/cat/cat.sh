@@ -10,6 +10,9 @@
 #   ./cat.sh status           # 查看糖糖当前心情状态
 #   ./cat.sh habits [成员]    # 查看五口之家习惯摘要（不投屏）
 #   ./cat.sh preview          # 打印今日语音提醒文案（不发声）
+#   ./cat.sh today            # 今天会响哪些
+#   ./cat.sh features         # 糖糖有哪些功能
+#   ./cat.sh alarm            # 立刻试上学闹铃（跳过日期）
 #   ./cat.sh presence         # 看洽洽/航航是否在客厅网段
 #   ./cat.sh data             # 看记忆文件写在本机哪
 #   ./cat.sh chat "想聊的"     # 云端真对话
@@ -39,6 +42,41 @@ while [ $# -gt 0 ]; do
     preview)
       "$CAT_DIR/cat-schedule.sh" preview
       exit 0
+      ;;
+    today)
+      "$CAT_DIR/cat-schedule.sh" today
+      exit 0
+      ;;
+    features)
+      cat <<'EOF'
+糖糖现在有这些功能（客厅 Mac Air 出声，先不上投影）
+
+1. 说话陪伴
+   比熊糖糖口吻。航航用玩伴（play），洽洽用朋友（friend）。
+   ./cat.sh "想说的话"    ./cat.sh chat "聊几句"
+
+2. 认人与习惯
+   声纹只回答「是谁」；习惯按爷爷/奶奶/爸爸/洽洽/航航分开记。
+   儿童原话不进家庭共享。  ./cat.sh habits
+
+3. 定时语音提醒
+   喝水、吃饭、休息、照顾糖糖（加水/出门/吃饭/梳毛）。
+   播前看洽洽航航手机在不在家网。没人则不说。
+   ./cat.sh preview
+
+4. 上学闹铃
+   2026-09-01 起，工作日 06:30 铃+说话；周六日休息。
+   卧室也要听到，不看出门检测。开学前 07:30 仍用普通早安。
+   试听：./cat.sh alarm
+
+5. 本机记性
+   状态/习惯/声纹/对话只写 Mac Air 硬盘，不写路由器盘。
+   ./cat.sh data
+EOF
+      exit 0
+      ;;
+    alarm)
+      exec "$CAT_DIR/cat-schedule.sh" fire --force alarm school
       ;;
     presence)
       exec "$CAT_DIR/cat-presence.sh"

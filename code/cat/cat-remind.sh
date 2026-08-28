@@ -4,8 +4,10 @@
 # 用法:
 #   ./cat-remind.sh pet_walk
 #   ./cat-remind.sh meal lunch
+#   ./cat-remind.sh alarm school     # 上学闹铃（工作日 6:30，不看出门）
 #   ./cat-remind.sh --print water     # 只打印文案，不做在场检测、不 TTS
 #   ./cat-remind.sh --force pet_walk  # 跳过在场检测，强制出声
+#   ./cat-remind.sh --force alarm school
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
@@ -27,6 +29,14 @@ ARG="${2:-}"
 # 房间喇叭默认 friend；若只检测到航航则改 play
 export TANGTANG_PROFILE="${TANGTANG_REMIND_PROFILE:-friend}"
 
+# 上学闹铃：卧室也要听到，默认不看出门；9月1日起工作日才响
+if [ "$EVENT" = "alarm" ]; then
+  : "${TANGTANG_FROM:=${TANGTANG_SCHOOL_START:-2026-09-01}}"
+  if [ "${TANGTANG_ALARM_REQUIRE_PRESENCE:-0}" != "1" ]; then
+    TANGTANG_REQUIRE_PRESENCE=0
+  fi
+fi
+
 log_skip() {
   local reason="$1"
   local ts
@@ -34,6 +44,17 @@ log_skip() {
   printf '%s\tSKIP\t%s\t%s\t%s\n' "$ts" "$EVENT" "${ARG:-}" "$reason" >> "$TANGTANG_REMIND_LOG"
   echo "[糖糖] $reason" >&2
 }
+
+if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ]; then
+  if ! tangtang_date_in_window "${TANGTANG_FROM:-}" "${TANGTANG_UNTIL:-}"; then
+    log_skip "今天不在提醒日期内，这次不说"
+    exit 0
+  fi
+  if [ "$EVENT" = "alarm" ] && ! tangtang_dow_match "${TANGTANG_ALARM_DOW:-1-5}"; then
+    log_skip "周六周日休息，不上学闹铃"
+    exit 0
+  fi
+fi
 
 if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ] && [ "${TANGTANG_REQUIRE_PRESENCE:-1}" = "1" ]; then
   present="$(tangtang_kids_present)"
@@ -52,6 +73,10 @@ if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ] && [ "${TANGTANG_REQUIRE_PRESENCE:
   else
     export TANGTANG_PROFILE="${TANGTANG_REMIND_PROFILE:-friend}"
   fi
+fi
+
+if [ "$PRINT" != "1" ] && [ "$EVENT" = "alarm" ]; then
+  tangtang_alarm_chime
 fi
 
 if [ -n "$ARG" ]; then
