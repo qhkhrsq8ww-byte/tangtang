@@ -29,8 +29,8 @@ WHO="hanghang"
 CMD="run"
 # --now 步间间隔：未设则 3–8 秒。测试可 TANGTANG_OPENCLAW_GAP=0
 GAP="${TANGTANG_OPENCLAW_GAP:-}"
-# 等到整点的上限（秒）。超过则现在做，不睡整夜。
-WAIT_CAP="${TANGTANG_OPENCLAW_WAIT_CAP:-7200}"
+# 等到整点的上限（秒）。超过则现在做，不睡整夜。默认 4 小时，上午开工仍能等到 14:00。
+WAIT_CAP="${TANGTANG_OPENCLAW_WAIT_CAP:-14400}"
 MIC_DEV="${TANGTANG_MIC_AVFOUNDATION:-:2}"
 
 usage() {
