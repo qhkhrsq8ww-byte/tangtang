@@ -1,0 +1,67 @@
+{
+  "version": "1.0",
+  "note": "示例配置，不放真实姓名、声纹或家庭隐私数据",
+  "family_id": "family_demo",
+  "members": [
+    {
+      "member_id": "member_001",
+      "display_name": "爷爷",
+      "relation": "grandfather",
+      "age": null,
+      "profile": "elder",
+      "voiceprint_ref": "local://voiceprints/member_001",
+      "permissions": {
+        "self_private": true,
+        "family_summary": true
+      },
+      "preferences": {
+        "preferred_greeting": "爷爷"
+      }
+    },
+    {
+      "member_id": "member_002",
+      "display_name": "奶奶",
+      "relation": "grandmother",
+      "age": null,
+      "profile": "elder",
+      "voiceprint_ref": "local://voiceprints/member_002",
+      "permissions": {
+        "self_private": true,
+        "family_summary": true
+      },
+      "preferences": {
+        "preferred_greeting": "奶奶"
+      }
+    },
+    {
+      "member_id": "child_001",
+      "display_name": "孩子A",
+      "relation": "child",
+      "age": 9,
+      "profile": "play",
+      "voiceprint_ref": "local://voiceprints/child_001",
+      "permissions": {
+        "self_private": true,
+        "family_summary": false
+      },
+      "preferences": {}
+    },
+    {
+      "member_id": "child_002",
+      "display_name": "孩子B",
+      "relation": "child",
+      "age": 12,
+      "profile": "friend",
+      "voiceprint_ref": "local://voiceprints/child_002",
+      "permissions": {
+        "self_private": true,
+        "family_summary": false
+      },
+      "preferences": {}
+    }
+  ],
+  "behavior_event_types": [
+    "wake", "sleep", "meal", "water", "exercise", "screen",
+    "study", "work", "outdoor", "home", "chore", "conversation", "mood_signal"
+  ]
+}
