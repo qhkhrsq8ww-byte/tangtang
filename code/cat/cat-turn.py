@@ -259,7 +259,11 @@ def keyword_label(text, kw=None):
 def _react():
     import importlib.util
     path = os.path.join(CAT_DIR, "cat-react.py")
+    if not os.path.isfile(path):
+        return None
     spec = importlib.util.spec_from_file_location("cat_react_mod", path)
+    if not spec or not spec.loader:
+        return None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -283,20 +287,53 @@ def _rms_for(energy, rms):
 
 
 def classify(energy, stt_status, text="", rms=0, profile="play", who="hanghang", event="english"):
-    """energy: silent|voiced|quiet；分类以 data/child_reactions.json 为准。"""
+    """energy: silent|voiced|quiet。优先走 cat-react.py；没有则用关键词薄适配。"""
     react = _react()
-    spec = react.load_spec()
-    val, timeout = _rms_for(energy, rms)
-    raw = (text or "").strip()
+    if react is not None:
+        try:
+            spec = react.load_spec()
+            val, timeout = _rms_for(energy, rms)
+            raw = (text or "").strip()
+            stt = (stt_status or "off").strip().lower()
+            if raw.startswith("[STT") or stt == "fail":
+                raw = ""
+            d = react.classify(
+                spec, text=raw, rms=val, timeout=timeout,
+                persona=profile or profile_for_who(who),
+                event=event, audience=normalize_who(who) or who or "hanghang",
+            )
+            scene = d.get("scene") if isinstance(d, dict) else d
+            if scene:
+                return scene
+        except Exception:
+            pass
+    e = (energy or "silent").strip().lower()
     stt = (stt_status or "off").strip().lower()
+    raw = (text or "").strip()
     if raw.startswith("[STT") or stt == "fail":
-        raw = ""
-    d = react.classify(
-        spec, text=raw, rms=val, timeout=timeout,
-        persona=profile or profile_for_who(who),
-        event=event, audience=normalize_who(who) or who or "hanghang",
-    )
-    return d["scene"]
+        if e in ("silent", "timeout"):
+            return "silent"
+        return "unclear"
+    if e in ("silent", "timeout"):
+        return "silent"
+    kw = keywords()
+    compact = _strip_scratch(raw, kw.get("scratch") or [])
+    lab = keyword_label(raw, kw)
+    if lab:
+        return lab
+    if raw and not compact:
+        return "silent"
+    if not raw:
+        if e in ("quiet", "low"):
+            return "unclear"
+        if e in ("voiced", "joined", "tone"):
+            return "joined_soft"
+        return "silent"
+    if e in ("quiet", "low"):
+        return "unclear"
+    if e in ("voiced", "joined", "tone"):
+        return "joined"
+    return "silent"
 
 
 def _sibling_tokens(who):
