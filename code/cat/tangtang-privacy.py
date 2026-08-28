@@ -49,7 +49,7 @@ def load_family():
 
 
 def resolve_member(speaker):
-    """返回含 permissions 的完整成员描述。"""
+    """返回含 permissions 的完整成员描述（基础字段，供 profile 层使用）。"""
     speaker = (speaker or "unknown").strip()
     if speaker in ("", "unknown", "访客"):
         return dict(DEFAULT)
@@ -90,10 +90,13 @@ def storage_policy(member):
 
 
 def policy_for(speaker):
-    """对外统一接口：返回给定说话人的完整策略决策。"""
+    """对外统一接口：返回给定说话人的完整策略决策。
+
+    包含基础字段（member_id/display_name/profile/relation/permissions）
+    与 storage 决策字段（storage/allow_raw_text/allow_family_summary/allow_parent_context）。
+    """
     member = resolve_member(speaker)
     policy = storage_policy(member)
-    # 只有 PUBLIC 级别保留原话；PRIVATE/FAMILY 原话在存储层清空
     allow_raw = policy == PUBLIC
     return {
         "member_id": member["member_id"],
@@ -155,8 +158,9 @@ def main():
     args = ap.parse_args()
     p = policy_for(args.speaker)
     if args.shell:
-        for k, v in p.items():
-            print(f"TANGTANG_{k.upper()}={json.dumps(v, ensure_ascii=False)}")
+        # 兼容 tangtang-profile.py --shell 输出格式
+        for k in ["member_id", "display_name", "profile", "relation", "permissions", "storage"]:
+            print(f"TANGTANG_{k.upper()}={json.dumps(p[k], ensure_ascii=False)}")
     else:
         print(json.dumps(p, ensure_ascii=False))
 
