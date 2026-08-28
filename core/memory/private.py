@@ -54,6 +54,8 @@ class PrivateMemory:
         mid = str(member_id or "").strip()
         if not mid:
             raise MemoryError("member_id is required")
+        if self._persist or self._home is not None:
+            sanitize_member_id(mid)
         decision = self._privacy.classify(member_id=mid, utterance=utterance)
         if decision.privacy != "PRIVATE":
             raise MemoryError("refusing non-PRIVATE write to PrivateMemory")
