@@ -2,6 +2,7 @@
 # ============================================================
 # 糖糖定时触发（走智能大脑，带冷却；只决策一次）
 # 用法: ./cat-remind.sh <事件> [参数]
+#   健康+照顾糖糖: water / exercise / pet_walk / pet_water / pet_food / pet_groom
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh

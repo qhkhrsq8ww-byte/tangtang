@@ -11,7 +11,7 @@
 事件:
   greet / wake / sleep / rest / meal [lunch|dinner] / home / random
   pat / say "<文字>" / status / play / homework / tidy / exercise
-  emotion / weather / water
+  emotion / weather / water / pet_walk / pet_water / pet_food / pet_groom
 输出:
   一行：话术<TAB>情绪标签<TAB>画面对应状态
   话术为空表示这次不说话（冷却或 random 静默）
@@ -29,6 +29,7 @@ EVENT_STATE = {
     "sleep": "sleeping", "sleepy": "sleepy",
     "rest": "caring", "emotion": "caring", "weather": "caring", "water": "caring",
     "play": "happy", "exercise": "running", "walking": "walking", "running": "running",
+    "pet_walk": "walking", "pet_water": "caring", "pet_food": "happy", "pet_groom": "caring",
     "meal": "happy", "pat": "happy",
     "homework": "thinking", "tidy": "thinking", "thinking": "thinking",
     "curious": "curious",
@@ -49,6 +50,10 @@ EVENT_SCENE = {
     "emotion": "emotion",
     "weather": "weather",
     "water": "water",
+    "pet_walk": "pet_walk",
+    "pet_water": "pet_water",
+    "pet_food": "pet_food",
+    "pet_groom": "pet_groom",
 }
 
 # 主动提醒冷却（分钟）。点名/摸摸/指定说不冷却。
@@ -57,6 +62,7 @@ COOLDOWN_MINUTES = {
     "homework": 40, "tidy": 40, "weather": 180,
     "meal": 90, "wake": 240, "sleep": 180, "emotion": 60,
     "random": 20, "home": 120,
+    "pet_walk": 90, "pet_water": 90, "pet_food": 180, "pet_groom": 240,
 }
 USER_EVENTS = {"greet", "pat", "say", "status"}
 
@@ -85,11 +91,8 @@ REPLY = {
               "该睡觉啦，糖糖也要闭眼休息啦，做个好梦～"],
     },
     "rest": {
-        "_": ["这个游戏是不是很好玩？糖糖发现我们已经玩了一会儿啦。",
-              "眼睛要休息一下啦。来，糖糖挑战你：站起来30秒！",
-              "不想休息也没关系，糖糖再提醒一次，你自己决定～",
-              "刚才说好的休息时间到啦。糖糖先起来活动一下，你跟我来！",
-              "看屏幕好久啦，起来活动活动，让眼睛和身体都休息一下～ 糖糖陪你！"],
+        "_": ["糖糖腿都坐麻啦。陪糖糖站起来一下，你眼睛也歇歇？",
+              "看屏幕好久啦。糖糖先起来转转，你要不要跟来？"],
     },
     "meal": {
         "lunch":  ["开饭啦！糖糖的肚子已经开始咕噜咕噜了。",
@@ -116,11 +119,8 @@ REPLY = {
         "low":    ["汪汪……糖糖躲在小角落里，来摸摸头就会好起来啦。"],
     },
     "play": {
-        "_": ["出去玩嘛出去玩嘛，外面的太阳都在等你啦～",
-             "别宅着啦，出去跑跑跳跳多开心，糖糖陪你去～",
-             "糖糖运动任务！今天一起走100步？糖糖先出发啦！",
-             "出去玩嘛～ 出去玩嘛～ 腿都等不及要跑步啦～",
-             "挑战开始！跳10下！任务完成！今天的身体电量充满一点啦！"],
+        "_": ["糖糖想出门转转，你带糖糖去？你也跑两步～",
+             "出去走走嘛，糖糖陪你，太阳也在等。"],
     },
     "homework": {
         "_": ["糖糖任务来了！先挑战最简单的一题！",
@@ -133,9 +133,8 @@ REPLY = {
               "哇！好多东西回家啦！糖糖给你鼓掌～"],
     },
     "exercise": {
-        "_": ["糖糖运动任务！今天一起走100步？",
-              "糖糖先出发啦！挑战开始！跳10下！",
-              "任务完成！今天的身体电量充满一点啦！"],
+        "_": ["糖糖想出门转转。你带糖糖走两圈，你也活动一下？",
+              "糖糖先走起来啦，你要不要一起来？"],
     },
     "emotion": {
         "_": ["糖糖发现你今天好像不太开心。如果你愿意，可以告诉糖糖～",
@@ -147,8 +146,21 @@ REPLY = {
               "好像要下雨，糖糖提醒你带雨伞～"],
     },
     "water": {
-        "_": ["糖糖口渴啦！喝几口水，补充能量！",
-              "来喝水啦，咕嘟咕嘟，身体棒棒～"],
+        "_": ["糖糖口渴啦！给糖糖加点水，你也喝一口～",
+              "来喝水啦，糖糖陪你咕嘟咕嘟～"],
+    },
+    "pet_walk": {
+        "_": ["糖糖想出门转转。你带糖糖走一圈，你也活动一下？",
+              "糖糖腿等不及了，出去走走好不好？"],
+    },
+    "pet_water": {
+        "_": ["糖糖的水是不是快没了？加一点，你也喝一口。"],
+    },
+    "pet_food": {
+        "_": ["糖糖该吃饭了。你方便的话喂一下，你也记得吃饭。"],
+    },
+    "pet_groom": {
+        "_": ["糖糖毛有点乱。有空轻轻梳两下就好。"],
     },
 }
 
@@ -402,7 +414,8 @@ def main():
     if event in ("greet", "pat", "home"):
         state = interact(state, memory, event)
     elif event in ("wake", "sleep", "rest", "meal", "say", "play",
-                   "homework", "tidy", "exercise", "emotion", "weather", "water"):
+                   "homework", "tidy", "exercise", "emotion", "weather", "water",
+                   "pet_walk", "pet_water", "pet_food", "pet_groom"):
         state = interact(state, memory, "care")
 
     text, label = compose(state, memory, event, arg)
