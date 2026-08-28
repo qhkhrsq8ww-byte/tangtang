@@ -301,6 +301,9 @@ def interact(state, memory, kind):
     return state
 
 
+# V4 Round 1: core.compat.should_interrupt is the future policy port.
+# This cooldown gate stays. Do not delete. cat-* may later also consult:
+#   from core.compat import should_interrupt
 def should_speak(state, event):
     if event in USER_EVENTS:
         return True
