@@ -18,6 +18,8 @@ export TANGTANG_HOME_QIAQIA="18:00"
 # 放假日历：仓库 data/school_calendar.txt （寒假暑假按学校通知追加）
 # 小朋友临时在家：data/rest_days.txt 写日期，或 CAT_CHILD_HOME=1 / ./cat.sh today --home
 # 不是每周五都休息。./cat.sh today 会当作今天在家，不关爷爷奶奶提醒，不改开学闹铃。
+# OpenClaw 下午实测：./cat.sh openclaw（--preview / --now）。音箱=系统默认输出且放客厅。
+# 麦 MAONO AU-BM10，ffmpeg avfoundation :2。先 ./cat.sh hwcheck。
 
 # 英语小伴读：译林牛津。航航二年级、洽洽六年级。上学日到家后各一句。
 # 说完一句后在客厅开约 5 秒麦（见 cat-turn.sh）。其它提醒默认仍单向。

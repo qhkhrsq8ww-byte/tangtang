@@ -12,6 +12,11 @@
 #   ./cat.sh preview          # 打印今日语音提醒文案（不发声）
 #   ./cat.sh today            # 今日休息四步（问糖糖→学英语→锻炼→休息）
 #   ./cat.sh today --preview  # 只看四句话，不开麦不发声
+#   ./cat.sh openclaw         # OpenClaw：下午 14/15/16/17 依次（没到点等到整点）
+#   ./cat.sh openclaw --now   # 已是下午、一次跑完四步
+#   ./cat.sh openclaw --preview
+#   ./cat.sh hwcheck          # 客厅麦/音箱自检
+#   ./cat.sh today-report     # 只打账本标签
 #   ./cat.sh schedule         # 今天时刻表会响哪些
 #   ./cat.sh features         # 糖糖有哪些功能
 #   ./cat.sh alarm            # 立刻试上学闹铃（跳过日期）
@@ -51,6 +56,18 @@ while [ $# -gt 0 ]; do
     today)
       shift
       exec "$CAT_DIR/cat-today.sh" "$@"
+      ;;
+    openclaw)
+      shift
+      exec "$CAT_DIR/openclaw-today.sh" "$@"
+      ;;
+    hwcheck)
+      shift
+      exec "$CAT_DIR/openclaw-today.sh" hwcheck "$@"
+      ;;
+    today-report)
+      shift
+      exec "$CAT_DIR/openclaw-today.sh" today-report "$@"
       ;;
     schedule)
       shift
@@ -101,6 +118,14 @@ while [ $# -gt 0 ]; do
    小朋友在家时，客厅依次完成四项：打招呼听一句、译林英语一句、动一动、歇一会儿。
    一步一句，再听窗，不连着念。默认航航玩伴；洽洽用 --who qiaqia。
    试：./cat.sh today    ./cat.sh today hanghang    ./cat.sh today --preview
+
+9. OpenClaw 客厅下午实测（2013 MacBook Air）
+   休息日 · 航航 · 14:00问糖糖 → 15:00英语 → 16:00锻炼 → 17:00休息
+   先 hwcheck，再一步一句一听窗。沉默不追问。账本只写标签。
+   ./cat.sh openclaw --preview
+   ./cat.sh openclaw --now          # 已是下午、一次跑完
+   ./cat.sh openclaw                # 没到点等到那个整点
+   ./cat.sh hwcheck    ./cat.sh today-report
 EOF
       exit 0
       ;;
