@@ -20,6 +20,7 @@ MEMORY_FILES = (
     "cat-voiceprints.json",
     "cat-chat-history.json",
     "cat-remind-log.txt",
+    "cat-turn-ledger.json",
 )
 
 

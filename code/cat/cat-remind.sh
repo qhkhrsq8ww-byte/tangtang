@@ -156,4 +156,13 @@ if [ -n "$out" ]; then
   ts=$(date '+%Y-%m-%d %H:%M:%S')
   printf '%s\t%s\t%s\t%s\t%s\n' "$ts" "$EVENT" "${ARG:-}" "${TANGTANG_PRESENT_KIDS:-}" "$out" >> "$TANGTANG_REMIND_LOG"
 fi
+
+# 出声完成（cat-talk 已等 afplay）后再决定是否开客厅窗。--print 不会走到这里。
+# 默认只给 english 开窗；其它提醒单向，除非 TANGTANG_TURN_ALL=1。
+# 没真正出声（冷却空话）就不开麦。
+if tangtang_turn_event_enabled "$EVENT" && [ -n "$out" ]; then
+  "$CAT_DIR/cat-turn.sh" --follow "$EVENT" "${ARG:-}"
+else
+  tangtang_note_presence_for_event "$EVENT" "$ARG" >/dev/null || true
+fi
 exit 0

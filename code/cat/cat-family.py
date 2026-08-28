@@ -35,7 +35,7 @@ PROFILES = ("play", "friend", "adult", "elder")
 
 EVENT_TYPES = (
     "wake", "sleep", "meal", "water", "exercise", "screen",
-    "study", "work", "outdoor", "home", "chore", "conversation", "mood_signal",
+    "study", "work", "outdoor", "home", "away", "chore", "conversation", "mood_signal",
 )
 
 CLASSIFY_RULES = (
@@ -244,7 +244,7 @@ def _member_label(member_id):
 TYPE_LABEL = {
     "wake": "起床", "sleep": "睡觉", "meal": "吃饭", "water": "喝水",
     "exercise": "运动", "screen": "屏幕", "study": "学习", "work": "工作",
-    "outdoor": "外出", "home": "回家", "chore": "家务",
+    "outdoor": "外出", "home": "回家", "away": "不在家", "chore": "家务",
     "conversation": "说话", "mood_signal": "情绪",
 }
 
@@ -400,7 +400,10 @@ def main():
     elif cmd == "log":
         who = sys.argv[2] if len(sys.argv) > 2 else "unknown"
         event_type = sys.argv[3] if len(sys.argv) > 3 else "conversation"
-        e = observe(who, "", source="manual", event_type=event_type)
+        source = sys.argv[4] if len(sys.argv) > 4 else "manual"
+        if source not in ("manual", "wifi", "voice", "presence"):
+            source = "manual"
+        e = observe(who, "", source=source, event_type=event_type)
         print(f"✅ {e['timestamp']} {_member_label(e['member_id'])} {TYPE_LABEL.get(e['type'], e['type'])}")
     elif cmd == "today":
         today()

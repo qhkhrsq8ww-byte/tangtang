@@ -15,6 +15,7 @@
 #   ./cat.sh alarm            # 立刻试上学闹铃（跳过日期）
 #   ./cat.sh english          # 试航航二年级英语小伴读
 #   ./cat.sh english qiaqia   # 试洽洽六年级英语小伴读
+#   ./cat.sh turn             # 客厅试听：说一句 → 录音窗 → 回或不回
 #   ./cat.sh presence         # 看洽洽/航航是否在客厅网段
 #   ./cat.sh data             # 看记忆文件写在本机哪
 #   ./cat.sh chat "想聊的"     # 云端真对话
@@ -80,6 +81,12 @@ while [ $# -gt 0 ]; do
    航航小学二年级，洽洽小学六年级。英语偏弱：中英夹一句，给选择，不督学。
    上学日航航 16:20、洽洽 19:10；周末放假休息。
    试听：./cat.sh english    ./cat.sh english qiaqia
+
+7. 客厅语音小回合（只在客厅）
+   英语小伴读说完一句、等音箱播完，再开约 5 秒麦。有人应就听一句，糖糖最多回一句；没人应就算了，不追问。
+   麦是客厅 Mac 旁的 MAONO AU-BM10。音箱要设成 Mac 默认输出；若还在儿童房，客厅听不见回话。
+   试：./cat.sh turn    ./cat.sh turn english hanghang
+   预览不开麦：./cat.sh preview
 EOF
       exit 0
       ;;
@@ -91,13 +98,17 @@ EOF
       who="${1:-hanghang}"
       exec "$CAT_DIR/cat-schedule.sh" fire --force english "$who"
       ;;
+    turn)
+      shift
+      exec "$CAT_DIR/cat-turn.sh" "$@"
+      ;;
     presence)
       exec "$CAT_DIR/cat-presence.sh"
       ;;
     data)
       echo "记忆目录（Mac Air 本机硬盘，不写路由器）"
       echo "$TANGTANG_DATA_DIR"
-      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|voiceprints|chat-history|remind-log)' || true
+      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|voiceprints|chat-history|remind-log|turn-ledger)' || true
       exit 0
       ;;
     chat) CHAT_REQ=1; shift;;

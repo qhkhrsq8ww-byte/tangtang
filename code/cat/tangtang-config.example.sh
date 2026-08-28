@@ -18,7 +18,15 @@ export TANGTANG_HOME_QIAQIA="18:00"
 # 放假日历：仓库 data/school_calendar.txt （寒假暑假按学校通知追加）
 
 # 英语小伴读：译林牛津。航航二年级、洽洽六年级。上学日到家后各一句。
+# 说完一句后在客厅开约 5 秒麦（见 cat-turn.sh）。其它提醒默认仍单向。
 # export TANGTANG_ENGLISH_FILE="/absolute/path/to/english_jiangsu.json"
+# export TANGTANG_TURN_EVENTS="english"
+# export TANGTANG_TURN_SECONDS="5"
+# 若希望喝水/吃饭等提醒也开窗（不建议）：export TANGTANG_TURN_ALL=1
+
+# 客厅互动：蓝牙音箱应作为 Mac 默认音频输出（系统设置 → 声音 → 输出）。
+# 麦在客厅 Mac 旁（MAONO AU-BM10）。不要做第二只音箱。
+# 若音箱仍放在儿童房，客厅听不见糖糖回话。
 
 # 糖糖口头称呼。语音识别到家人后会改成对方的 display_name。
 export TANGTANG_CHILD_NAME="小朋友"

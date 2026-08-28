@@ -80,6 +80,7 @@ case "$CMD" in
     echo "今天会响: ./cat-schedule.sh today"
     echo "预览文案: ./cat-schedule.sh preview"
     echo "谁在客厅: ./cat-presence.sh"
+    echo "客厅试听（说一句→开窗）: ./cat-turn.sh"
     echo "装到 Mac: ./cat-schedule.sh crontab  → 粘进 crontab -e"
     echo "试闹铃(跳过日期/在场): ./cat-schedule.sh fire --force alarm school"
     ;;
@@ -124,6 +125,7 @@ case "$CMD" in
     echo "# 糖糖语音提醒 · 先 crontab -l 备份，再粘贴"
     echo "# 上学闹铃：上学日 06:30（放假/周末不响；调休上课日也响）"
     echo "# 白天小朋友上学时只跟爷爷奶奶说；航航16:00到、洽洽18:00到才跟小朋友互动"
+    echo "# 英语小伴读说完后，客厅开短窗听一句（麦在客厅 Mac 旁；音箱须是 Mac 默认输出）"
     echo "# 其它提醒播前检测洽洽/航航手机；没人则静音跳过"
     echo "# 记忆写在本机硬盘，不写路由器盘：\$HOME/Library/Application Support/Tangtang"
     echo "MAILTO=\"\""
@@ -131,6 +133,7 @@ case "$CMD" in
     echo "PATH=/usr/bin:/bin:/usr/local/bin"
     echo "TANGTANG_REMIND_PROFILE=friend"
     echo "TANGTANG_SCHOOL_START=2026-09-01"
+    echo "TANGTANG_TURN_EVENTS=english"
     while read -r line; do
       [ -n "$line" ] || continue
       tangtang_parse_schedule_line "$line"
@@ -192,6 +195,7 @@ case "$CMD" in
     tangtang_is_school_day || { echo "fail Oct10 makeup school"; fail=1; }
     if [ "$fail" = "0" ]; then
       echo "cat-schedule selftest ok"
+      "$CAT_DIR/cat-turn.sh" selftest || exit 1
       exit 0
     fi
     echo "cat-schedule selftest failed"
