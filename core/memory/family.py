@@ -142,6 +142,44 @@ class FamilySummary(_GatedStore):
         self.put(mem)
         return mem
 
+    def add_structured(
+        self,
+        *,
+        member_id: str,
+        mood: str | None = None,
+        interaction_count: int = 0,
+        privacy: str = "FAMILY",
+    ) -> Memory:
+        """{mood, interaction_count} only. put() still rejects PRIVATE / child raw."""
+        mem = Memory(
+            memory_id=f"sum_{uuid4().hex}",
+            member_id=member_id,
+            type="summary",
+            privacy=privacy,
+            data={
+                "mood": mood,
+                "interaction_count": int(interaction_count),
+            },
+        )
+        self.put(mem)
+        return mem
+
+    def snapshot(self) -> list[dict[str, Any]]:
+        """Structured family view. Children and PRIVATE rows are omitted."""
+        rows: list[dict[str, Any]] = []
+        for mem in self._store._items.values():
+            if mem.privacy == "PRIVATE" or self._privacy.is_child(mem.member_id):
+                continue
+            raw = raw_utterance_from(mem.data)
+            if raw:
+                continue
+            rows.append({
+                "member_id": mem.member_id,
+                "mood": mem.data.get("mood"),
+                "interaction_count": mem.data.get("interaction_count", 1),
+            })
+        return rows
+
 
 class ParentContext(_GatedStore):
     destination = DEST_PARENT_CONTEXT
