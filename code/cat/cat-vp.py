@@ -16,9 +16,17 @@
 import json, os, sys, math, subprocess
 from datetime import datetime, timedelta
 
+# 隐私策略层（存储层拦截：PRIVATE 成员原话禁止落盘）
+import importlib.util
+_PRIV_SPEC = importlib.util.spec_from_file_location(
+    "tangtang_privacy", os.path.join(os.path.dirname(os.path.abspath(__file__)), "tangtang-privacy.py"))
+_PRIV = importlib.util.module_from_spec(_PRIV_SPEC)
+_PRIV_SPEC.loader.exec_module(_PRIV)
+
 BASE = os.path.dirname(os.path.abspath(__file__))
-VP_FILE = os.path.join(BASE, "cat-voiceprints.json")
-HABIT_FILE = os.path.join(BASE, "cat-habits.json")
+DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", BASE)
+VP_FILE = os.path.join(DATA_DIR, "cat-voiceprints.json")
+HABIT_FILE = os.path.join(DATA_DIR, "cat-habits.json")
 FEATURE_SH = os.path.join(BASE, "cat-vp-feature.sh")
 THRESHOLD = float(os.environ.get("TANGTANG_VOICE_THRESHOLD", "0.995"))
 
@@ -98,30 +106,42 @@ def load_habits():
 def save_habits(h):
     save_json(HABIT_FILE,h)
 
-def log(name,text=""):
-    h=load_habits(); now=datetime.now()
-    entry={"name":name,"text":text,"time":now.strftime("%Y-%m-%d %H:%M:%S"),"hour":now.hour,"weekday":now.strftime("%A")}
-    h.setdefault("logs",[]).append(entry)
-    m=h.setdefault("members",{}).setdefault(name,{"total":0,"by_hour":{},"days":[],"last":None})
-    m["total"]+=1
-    hour=str(now.hour); m["by_hour"][hour]=m["by_hour"].get(hour,0)+1
-    day=now.strftime("%Y-%m-%d")
+def log(name, text=""):
+    h = load_habits(); now = datetime.now()
+    # 存储层拦截：先解析说话人的隐私策略，再决定是否保留原话
+    policy = _PRIV.policy_for(name)
+    stored_text = _PRIV.scrub_text(text, policy["storage"])
+    entry = {
+        "name": name,
+        "text": stored_text,
+        "time": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "hour": now.hour,
+        "weekday": now.strftime("%A"),
+        "storage": policy["storage"],
+    }
+    h.setdefault("logs", []).append(entry)
+    m = h.setdefault("members", {}).setdefault(name, {"total": 0, "by_hour": {}, "days": [], "last": None})
+    m["total"] += 1
+    hour = str(now.hour); m["by_hour"][hour] = m["by_hour"].get(hour, 0) + 1
+    day = now.strftime("%Y-%m-%d")
     if day not in m["days"]: m["days"].append(day)
-    m["last"]=entry["time"]
-    save_habits(h); return entry
+    m["last"] = entry["time"]
+    save_habits(h)
+    return entry
 
 def summary(days=7):
-    h=load_habits(); cutoff=(datetime.now()-timedelta(days=days)).strftime("%Y-%m-%d")
-    logs=[e for e in h.get("logs",[]) if e.get("time","")[:10]>=cutoff]
+    h = load_habits(); cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    logs = [e for e in h.get("logs", []) if e.get("time", "")[:10] >= cutoff]
     print(f"📊 最近 {days} 天互动总结（共 {len(logs)} 次）\n")
     if not logs: print("暂无数据，先和糖糖说说话吧～"); return
-    by_name={}
-    for e in logs: by_name.setdefault(e.get("name","unknown"),[]).append(e)
-    for name,entries in by_name.items():
+    by_name = {}
+    for e in logs: by_name.setdefault(e.get("name", "unknown"), []).append(e)
+    for name, entries in by_name.items():
         print(f"👤 {name}: {len(entries)} 次互动")
-        active=sorted(set(e.get("hour",0) for e in entries))
-        if active: print("   活跃时段: "+", ".join(f"{h}点" for h in active))
-        texts=[e.get("text") for e in entries if e.get("text")]
+        active = sorted(set(e.get("hour", 0) for e in entries))
+        if active: print("   活跃时段: " + ", ".join(f"{h}点" for h in active))
+        # 家庭摘要层过滤：PRIVATE 成员原话不展示
+        texts = [e.get("text") for e in entries if e.get("text")]
         if texts: print(f"   最近说的: {texts[-3:]}")
         print()
 
