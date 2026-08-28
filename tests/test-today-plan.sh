@@ -29,7 +29,7 @@ out="$(TANGTANG_FAKE_TODAY=2026-08-28 TANGTANG_FAKE_TIME=10:00 \
 echo "$out" | grep -q "今天休息 · 航航 · 问糖糖 → 学英语 → 锻炼 → 休息" \
   || bad "banner hanghang"
 echo "$out" | grep -q "2026-08-28 10:00" || bad "preview missing when"
-echo "$out" | grep -q "preview 不开麦 不发声" || bad "preview should say 不开麦"
+echo "$out" | grep -q "preview 不开客厅麦，也不发声" || bad "preview should say 不开客厅麦"
 echo "$out" | grep -q "开麦 " && bad "preview claimed 开麦"
 echo "$out" | grep -qi "录音" && bad "preview claimed 录音"
 echo "$out" | grep -q "按回车" && bad "preview should not wait 回车"

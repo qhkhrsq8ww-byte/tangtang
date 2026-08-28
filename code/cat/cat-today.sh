@@ -197,7 +197,7 @@ fi
 
 print_banner
 if [ "$PREVIEW" = "1" ]; then
-  echo "preview 不开麦 不发声"
+  echo "preview 不开客厅麦，也不发声"
 fi
 
 step_n=0
