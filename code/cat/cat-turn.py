@@ -19,10 +19,19 @@ from tangtang_paths import data_dir  # noqa: E402
 LEDGER_NAME = "cat-turn-ledger.json"
 MAX_TURNS = 400
 FORBIDDEN_KEYS = ("text", "transcript", "utterance", "pcm", "words", "say")
+LEDGER_RESULTS = (
+    "joined", "joined_soft", "silent", "oppose", "defer", "wont",
+    "unclear", "skip", "stop",
+)
+OPENCLAW_EVENTS = ("ask", "english", "move", "rest")
 
 
 def ledger_path(root=None):
     return os.path.join(root or data_dir(), LEDGER_NAME)
+
+
+def load_ledger(root=None):
+    return load_json(ledger_path(root), {"version": 1, "turns": []})
 
 
 def load_json(path, default):
@@ -108,8 +117,28 @@ def one_sentence(text, limit=80):
     return s
 
 
+def today_str():
+    fake = (os.environ.get("TANGTANG_FAKE_TODAY") or "").strip()
+    if fake:
+        return fake
+    from datetime import datetime
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+def _day_of(ts):
+    s = (ts or "").strip()
+    return s[:10] if len(s) >= 10 else today_str()
+
+
+def normalize_ledger_result(result):
+    r = (result or "").strip()
+    if r in LEDGER_RESULTS:
+        return r
+    return "skip"
+
+
 def append_turn(event, who, result, stt, presence, seconds, rms, root=None, ts=None):
-    result = result if result in ("joined", "silent", "wont") else "wont"
+    result = normalize_ledger_result(result)
     presence = presence if presence in ("home", "away", "unknown") else "unknown"
     if ts is None:
         from datetime import datetime
@@ -140,6 +169,36 @@ def append_turn(event, who, result, stt, presence, seconds, rms, root=None, ts=N
     save_json(path, data)
     json.loads(open(path, encoding="utf-8").read())
     return row
+
+
+def today_report(who="hanghang", day=None, root=None, events=None):
+    """只打标签，不打儿童原话。"""
+    day = day or today_str()
+    who = (who or "hanghang").strip() or "hanghang"
+    events = events or OPENCLAW_EVENTS
+    data = load_ledger(root)
+    last = {}
+    for row in data.get("turns") or []:
+        if not isinstance(row, dict):
+            continue
+        if _day_of(row.get("ts")) != day:
+            continue
+        row_who = (row.get("who") or "").strip()
+        if row_who and row_who != who:
+            continue
+        ev = (row.get("event") or "").strip()
+        if not ev:
+            continue
+        lab = normalize_ledger_result(row.get("result"))
+        last[ev] = lab
+    lines = [
+        "=== today-report ===",
+        "%s %s" % (day, who),
+    ]
+    for ev in events:
+        lines.append("%s\t%s" % (ev, last.get(ev, "skip")))
+    lines.append("=== today-report end ===")
+    return "\n".join(lines)
 
 
 def canned_reply(profile="play"):
@@ -173,6 +232,31 @@ def _selftest():
     data = json.loads(open(path, encoding="utf-8").read())
     assert data["turns"][-1]["result"] == "silent"
     assert "text" not in data["turns"][-1]
+    oppose = append_turn(
+        event="ask", who="hanghang", result="oppose",
+        stt=False, presence="home", seconds=5, rms=0, root=tmp,
+        ts="2026-08-28T14:00:00",
+    )
+    assert oppose["result"] == "oppose"
+    skip = append_turn(
+        event="move", who="hanghang", result="skip",
+        stt=False, presence="unknown", seconds=0, rms=0, root=tmp,
+        ts="2026-08-28T16:00:00",
+    )
+    assert skip["result"] == "skip"
+    bogus = append_turn(
+        event="rest", who="hanghang", result="child-said-hello",
+        stt=False, presence="unknown", seconds=0, rms=0, root=tmp,
+        ts="2026-08-28T17:00:00",
+    )
+    assert bogus["result"] == "skip"
+    assert "text" not in bogus and "transcript" not in bogus
+    os.environ["TANGTANG_FAKE_TODAY"] = "2026-08-28"
+    os.environ["TANGTANG_DATA_DIR"] = tmp
+    rep = today_report("hanghang", day="2026-08-28", root=tmp)
+    assert "ask\toppose" in rep
+    assert "move\tskip" in rep
+    assert "hello" not in rep
     print("cat-turn.py selftest ok")
     print("silent", rms_s, lab_s)
     print("tone", rms_t, lab_t)
@@ -217,7 +301,15 @@ def main():
         )
         print(row["result"])
         return
-    print("用法: energy | pcm | sentence | canned | ledger | selftest", file=sys.stderr)
+    if cmd in ("report", "today-report"):
+        who = sys.argv[2] if len(sys.argv) > 2 else "hanghang"
+        day = sys.argv[3] if len(sys.argv) > 3 else None
+        print(today_report(who=who, day=day))
+        return
+    print(
+        "用法: energy | pcm | sentence | canned | ledger | report | selftest",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 
