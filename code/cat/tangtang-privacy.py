@@ -23,6 +23,7 @@
 """
 import json
 import os
+import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 FAMILY_FILE = os.path.join(ROOT, "data", "family.json")
@@ -48,9 +49,31 @@ def load_family():
         return []
 
 
+def _canonical_speaker(speaker):
+    """Map living-room aliases (hanghang/qiaqia) onto family.json ids without renaming."""
+    if not speaker:
+        return speaker
+    try:
+        if ROOT not in sys.path:
+            sys.path.insert(0, ROOT)
+        from core.identity.resolver import IdentityResolver
+
+        members = {}
+        for row in load_family():
+            mid = row.get("member_id")
+            if mid:
+                members[str(mid)] = row
+        resolved = IdentityResolver(members).resolve({"label": speaker})
+        if resolved:
+            return resolved
+    except Exception:
+        pass
+    return speaker
+
+
 def resolve_member(speaker):
     """返回含 permissions 的完整成员描述（基础字段，供 profile 层使用）。"""
-    speaker = (speaker or "unknown").strip()
+    speaker = _canonical_speaker((speaker or "unknown").strip())
     if speaker in ("", "unknown", "访客"):
         return dict(DEFAULT)
     for m in load_family():

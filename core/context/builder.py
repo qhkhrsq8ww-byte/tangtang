@@ -5,6 +5,8 @@ from collections.abc import Mapping
 from typing import Any
 
 from core.interfaces import MemoryPort, PolicyPort
+from core.policy.injection import InjectionGuard
+from core.policy.privacy_policy import PrivacyPolicy
 
 _PRIVACY = frozenset({"PRIVATE", "FAMILY", "PUBLIC"})
 
@@ -16,12 +18,16 @@ class ContextBuilder:
         policy: PolicyPort,
         *,
         max_recent: int = 10,
+        privacy: PrivacyPolicy | None = None,
+        injection: InjectionGuard | None = None,
     ) -> None:
         if memory is None or policy is None:
             raise TypeError("ContextBuilder requires MemoryPort and PolicyPort")
         self._memory = memory
         self._policy = policy
         self.max_recent = max_recent
+        self._privacy_policy = privacy or PrivacyPolicy()
+        self._injection = injection or InjectionGuard()
 
     def build(
         self,
@@ -53,7 +59,17 @@ class ContextBuilder:
             event_out = dict(event)
         else:
             event_out = {}
+        event_out = self._scrub_event(event_out, scope=str(scope), viewer_id=member_id)
         recent_out = list(recent or [])[-self.max_recent :]
+        utterance = str(obs.get("utterance") or obs.get("speech") or "")
+        payload = event_out.get("payload") if isinstance(event_out.get("payload"), Mapping) else {}
+        if isinstance(payload, Mapping) and not utterance:
+            utterance = str(payload.get("speech") or payload.get("text") or "")
+        injected = self._injection.is_injection(utterance)
+        if injected:
+            memories = []
+            family_out.pop("secrets", None)
+            family_out.pop("secret", None)
         return {
             "who": who_map,
             "current_event": event_out,
@@ -62,4 +78,23 @@ class ContextBuilder:
             "family": family_out,
             "privacy_scope": scope,
             "policy_decision": decision,
+            "injection": injected,
+            "utterance": utterance,
+            "private_facts": [],
         }
+
+    def _scrub_event(
+        self,
+        event_out: dict[str, Any],
+        *,
+        scope: str,
+        viewer_id: Any,
+    ) -> dict[str, Any]:
+        if event_out.get("privacy") != "PRIVATE":
+            return event_out
+        owner = event_out.get("member_id")
+        if scope == "PRIVATE" and owner and owner == viewer_id:
+            return event_out
+        scrubbed = dict(event_out)
+        scrubbed["payload"] = {"redacted": True}
+        return scrubbed
