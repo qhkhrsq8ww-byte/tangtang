@@ -2,7 +2,10 @@
 # 糖糖 · 声纹特征提取（ffmpeg 频段能量，无需 numpy）
 # 用法: ./cat-vp-feature.sh <pcm文件>  →  输出 8 维特征向量（JSON 单行）
 # 特征: 低频300/中频700/中高频1500/高频3000 能量 + RMS + Peak + LRA + 过零率
-FF=/Users/lv/.qclaw/workspace/cat/bin/ffmpeg
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=cat-lib.sh
+. "$SCRIPT_DIR/cat-lib.sh"
+FF="$(tangtang_ffmpeg)"
 PCM="${1:?用法: cat-vp-feature.sh <pcm文件>}"
 [ -f "$PCM" ] || { echo "{\"error\":\"文件不存在: $PCM\"}"; exit 1; }
 

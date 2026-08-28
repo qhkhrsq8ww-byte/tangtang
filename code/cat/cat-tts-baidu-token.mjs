@@ -5,12 +5,12 @@
 //   pit: 1~9 音调, 默认 7（偏高更萌）
 // 依赖: 百度 TTS 已开通（和 ASR 同一应用），token 用 API key 换取
 import fs from 'node:fs';
-import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import https from 'node:https';
-import { URL } from 'node:url';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const CAT_DIR = '/Users/lv/.qclaw/workspace/cat';
+const CAT_DIR = dirname(fileURLToPath(import.meta.url));
 const text = process.argv[2] || '汪汪～';
 const spd = process.argv[3] || '5';
 const pit = process.argv[4] || '7';
@@ -18,6 +18,9 @@ const out = '/tmp/cat_tts.mp3';
 
 // 读百度 key（cat-stt-config.sh）
 function loadKeys() {
+  const envKey = process.env.BAIDU_STT_API_KEY || '';
+  const envSecret = process.env.BAIDU_STT_SECRET_KEY || '';
+  if (envKey && envSecret) return { apiKey: envKey, secretKey: envSecret };
   try {
     const conf = fs.readFileSync(CAT_DIR + '/cat-stt-config.sh', 'utf-8');
     const apiKey = (conf.match(/BAIDU_STT_API_KEY="([^"]+)"/) || [])[1] || '';
