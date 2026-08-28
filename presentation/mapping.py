@@ -21,6 +21,9 @@ ACTION_TO_ANIM = {
     "sad": "sad",
     "walk": "walk",
     "run": "run",
+    "trot": "trot",
+    "get_up": "get_up",
+    "getup": "get_up",
     "sit": "sit",
     "sitting": "sit",
     "lie": "lie",
@@ -47,8 +50,8 @@ ACTION_TO_ANIM = {
     "歪头": "listen",
 }
 
-VIGOROUS = frozenset({"walk", "run", "happy"})
-LOOPING = frozenset({"idle", "walk", "run", "sleep"})
+VIGOROUS = frozenset({"walk", "run", "trot", "happy"})
+LOOPING = frozenset({"idle", "walk", "run", "trot", "sleep", "listen", "happy"})
 
 
 @dataclass(frozen=True)
@@ -72,9 +75,11 @@ class AnimationAction:
             "sad",
             "walk",
             "run",
+            "trot",
             "sit",
             "lie",
             "sleep",
+            "get_up",
         }:
             mapped = "idle"
         object.__setattr__(self, "name", mapped)

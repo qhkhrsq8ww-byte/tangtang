@@ -40,8 +40,8 @@
     height: auto;
     aspect-ratio: 1 / 1;
     transform: translateX(-50%);
-    object-fit: contain;
     pointer-events: none;
+    background: transparent;
   }
   .hud {
     position: absolute;
@@ -79,24 +79,39 @@
 <div class="stage-wrap">
   <div class="stage" id="stage">
     <img class="bg" id="bg" alt="" />
-    <img class="character" id="dog" alt="糖糖" />
+    <canvas class="character" id="dog" width="512" height="512" aria-label="糖糖"></canvas>
     <div class="hud" id="hud">loading…</div>
     <div class="chrome" id="chrome"></div>
   </div>
 </div>
+<script src="frame_renderer.js"></script>
 <script>
 const ASSET = "../assets/character/tangtang";
 const STATES = ["idle","listen","happy","encourage","sad","walk","run","sit","lie","sleep","blink"];
+const FADE_MS_MIN = 100;
+const FADE_MS_MAX = 200;
 let meta = null;
 let frames = [];
+let images = [];
 let idx = 0;
 let timer = null;
 let current = "idle";
+let paused = false;
+let renderer = null;
+let prevImg = null;
+let fadeUntil = 0;
+let fadeMs = 150;
+
+function query() {
+  return new URLSearchParams(location.search);
+}
 
 async function loadMeta() {
   const res = await fetch(`${ASSET}/metadata.json`);
   meta = await res.json();
   document.getElementById("bg").src = `${ASSET}/backgrounds/living_room_cream.png`;
+  const canvas = document.getElementById("dog");
+  renderer = window.TangTangFrameRenderer.create(canvas);
   const chrome = document.getElementById("chrome");
   STATES.forEach((name) => {
     const b = document.createElement("button");
@@ -104,18 +119,16 @@ async function loadMeta() {
     b.onclick = () => play(name);
     chrome.appendChild(b);
   });
-  const proj = new URLSearchParams(location.search).get("projection");
-  if (proj === "1") document.body.classList.add("projection");
-  play("idle");
-}
-
-function listedFrames(name) {
-  const spec = meta.animations[name] || meta.animations.idle;
-  const folder = spec.folder || name;
-  const count = spec.frame_count || 1;
-  const found = [];
-  // Prefer numbered frames that exist; missing ones are skipped (no crash).
-  return { spec, folder, count, found };
+  const q = query();
+  if (q.get("projection") === "1") document.body.classList.add("projection");
+  const start = STATES.includes(q.get("anim")) ? q.get("anim") : "idle";
+  await play(start);
+  const freeze = q.get("frame");
+  if (freeze != null && freeze !== "") {
+    idx = Math.max(0, Math.min(images.length - 1, parseInt(freeze, 10) || 0));
+    paused = q.get("paused") !== "0";
+    paint();
+  }
 }
 
 async function exists(url) {
@@ -123,6 +136,15 @@ async function exists(url) {
     const r = await fetch(url, { method: "HEAD" });
     return r.ok;
   } catch (e) { return false; }
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 async function play(name) {
@@ -141,22 +163,55 @@ async function play(name) {
     const fallback = `${ASSET}/idle/00.png`;
     urls.push(fallback);
   }
+  const loaded = [];
+  for (const url of urls) {
+    try { loaded.push(await loadImage(url)); } catch (e) { /* skip missing */ }
+  }
+  if (!loaded.length) return;
+  prevImg = images[idx] || prevImg;
   frames = urls;
+  images = loaded;
   idx = 0;
   current = urls[0].includes("/idle/") && name !== "idle" ? "idle" : name;
+  fadeMs = Math.max(FADE_MS_MIN, Math.min(FADE_MS_MAX, fadeMs));
+  fadeUntil = performance.now() + fadeMs;
   document.querySelectorAll(".chrome button").forEach((b) => {
     b.classList.toggle("active", b.textContent === name);
   });
-  const fps = Math.min(spec.fps || 8, name === "sleep" ? 4 : 12);
+  restartTimer();
+}
+
+function fpsNow(spec) {
+  const name = current;
+  return Math.min(spec.fps || 8, name === "sleep" ? 4 : 12);
+}
+
+function paint() {
+  const spec = (meta.animations[current] || meta.animations.idle);
+  const img = images[idx];
+  if (!img || !renderer) return;
+  const now = performance.now();
+  let fadeT = 1;
+  if (prevImg && now < fadeUntil) {
+    fadeT = 1 - (fadeUntil - now) / fadeMs;
+  }
+  renderer.draw(img, prevImg, fadeT);
+  if (fadeT >= 1) prevImg = img;
+  const fps = fpsNow(spec);
+  document.getElementById("hud").innerHTML =
+    `State ${ (spec.preferred_state || current).toUpperCase() } · ${current}<br>` +
+    `frame ${idx + 1}/${images.length} · ${fps} fps · loop ${spec.loop}<br>` +
+    `canvas 1920×1080 · character 512 · scale 1.0 · clearRect`;
+}
+
+function restartTimer() {
   if (timer) clearInterval(timer);
+  const spec = (meta.animations[current] || meta.animations.idle);
+  const fps = fpsNow(spec);
   const tick = () => {
-    const img = document.getElementById("dog");
-    img.src = frames[idx];
-    document.getElementById("hud").innerHTML =
-      `State ${ (spec.preferred_state || name).toUpperCase() } · ${name}<br>` +
-      `frame ${idx + 1}/${frames.length} · ${fps} fps · loop ${spec.loop}<br>` +
-      `canvas 1920×1080 · character 512 · scale 1.0`;
-    idx = spec.loop ? (idx + 1) % frames.length : Math.min(idx + 1, frames.length - 1);
+    if (paused || !images.length) { paint(); return; }
+    paint();
+    idx = spec.loop ? (idx + 1) % images.length : Math.min(idx + 1, images.length - 1);
   };
   tick();
   timer = setInterval(tick, Math.max(1000 / fps, 1000 / 12));

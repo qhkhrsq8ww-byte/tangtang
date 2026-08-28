@@ -119,6 +119,16 @@ class TestPngReadableAndSized(unittest.TestCase):
         self.assertGreaterEqual(len(files), 8)
         self.assertEqual([p.stem for p in files], [f"{i:02d}" for i in range(len(files))])
 
+    def test_walk_and_run_frames_are_single_subject(self) -> None:
+        for folder in ("walk", "run"):
+            files = sorted(p for p in (ASSET / folder).glob("*.png") if p.stem.isdigit())
+            self.assertGreaterEqual(len(files), 8, folder)
+            for path in files:
+                runs = _subject_column_runs(path)
+                self.assertEqual(len(runs), 1, f"{folder}/{path.name} runs={runs}")
+                width = runs[0][1] - runs[0][0] + 1
+                self.assertLessEqual(width, 500, f"{folder}/{path.name} width={width}")
+
     def test_base_five_angles_and_eight_expressions(self) -> None:
         for name in ("front", "three_quarter_left", "side_left", "back", "three_quarter_right"):
             self.assertTrue((ASSET / "base" / f"{name}.png").is_file(), name)
@@ -135,6 +145,45 @@ class TestPngReadableAndSized(unittest.TestCase):
         # Honest inventory: do not invent filler pixels to hit 368.
         self.assertLess(count, 368)
         self.assertGreater(count, 100)
+
+
+def _subject_column_runs(
+    path: Path, alpha_min: int = 40, min_col: int = 10, merge_gap: int = 18
+) -> list[tuple[int, int]]:
+    from PIL import Image
+
+    im = Image.open(path).convert("RGBA")
+    pix = im.load()
+    width, height = im.size
+    occupied = []
+    for x in range(width):
+        n = 0
+        for y in range(height):
+            if pix[x, y][3] >= alpha_min:
+                n += 1
+                if n >= min_col:
+                    break
+        occupied.append(n >= min_col)
+    raw: list[tuple[int, int]] = []
+    x = 0
+    while x < width:
+        if occupied[x]:
+            x1 = x
+            while x1 < width and occupied[x1]:
+                x1 += 1
+            raw.append((x, x1 - 1))
+            x = x1
+        else:
+            x += 1
+    if not raw:
+        return []
+    merged = [list(raw[0])]
+    for a, b in raw[1:]:
+        if a - merged[-1][1] <= merge_gap:
+            merged[-1][1] = b
+        else:
+            merged.append([a, b])
+    return [(int(a), int(b)) for a, b in merged]
 
 
 if __name__ == "__main__":

@@ -11,9 +11,11 @@ STATES = (
     "SAD",
     "WALK",
     "RUN",
+    "TROT",
     "SIT",
     "LIE",
     "SLEEP",
+    "GET_UP",
 )
 
 ANIM_TO_STATE = {
@@ -26,9 +28,27 @@ ANIM_TO_STATE = {
     "sad": "SAD",
     "walk": "WALK",
     "run": "RUN",
+    "trot": "TROT",
     "sit": "SIT",
     "lie": "LIE",
     "sleep": "SLEEP",
+    "get_up": "GET_UP",
+}
+
+# Allowed presentation transitions (100–200ms crossfade). Sleep only exits via get_up.
+TRANSITION_GRAPH = {
+    "IDLE": frozenset({"LISTEN", "HAPPY", "WALK", "TROT", "RUN", "SLEEP", "SIT", "LIE", "ENCOURAGE", "SAD", "GET_UP"}),
+    "LISTEN": frozenset({"IDLE", "HAPPY"}),
+    "HAPPY": frozenset({"IDLE", "LISTEN"}),
+    "WALK": frozenset({"RUN", "IDLE", "TROT"}),
+    "RUN": frozenset({"WALK", "IDLE"}),
+    "TROT": frozenset({"WALK", "RUN", "IDLE"}),
+    "SLEEP": frozenset({"GET_UP"}),
+    "GET_UP": frozenset({"IDLE"}),
+    "SIT": frozenset({"IDLE", "LIE", "SLEEP"}),
+    "LIE": frozenset({"IDLE", "SLEEP", "SIT", "GET_UP"}),
+    "ENCOURAGE": frozenset({"IDLE", "HAPPY"}),
+    "SAD": frozenset({"IDLE"}),
 }
 
 # Ordinary / high-frequency motions cannot wake 糖糖. Wake needs priority >= this.
@@ -66,7 +86,7 @@ class AnimationStateMachine:
             self.priority = max(self.priority, int(priority))
             return Transition(True, previous, target, "same", False)
 
-        if not force and previous == "SLEEP" and int(priority) < SLEEP_LOCK_PRIORITY:
+        if not force and previous == "SLEEP" and target != "GET_UP" and int(priority) < SLEEP_LOCK_PRIORITY:
             return Transition(False, previous, previous, "sleep_locked", False)
 
         if not interrupt and int(priority) <= self.priority:

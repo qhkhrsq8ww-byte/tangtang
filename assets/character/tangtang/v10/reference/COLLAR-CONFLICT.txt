@@ -1,0 +1,4 @@
+Visual master (总图) uses a light-blue bandana + gold bone tag.
+The 3/4 product render uses a yellow leather collar. Follow 总图.
+Runtime PNGs were generated from the master style, then background-keyed.
+Sheet crops here are provenance only — 1024x683 is too small for 512 runtime frames.

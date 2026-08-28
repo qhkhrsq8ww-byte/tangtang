@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>糖糖 V10 · Character Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bandana: #A8D5FF;
+    --bandana-dark: #5BA7E3;
+    --gold: #F5C84B;
+    --ink: #3d2b1f;
+    --paper: #FFF8F0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1b1410; color: var(--ink); font-family: -apple-system, "PingFang SC", sans-serif; }
+  .stage-wrap {
+    width: 100vw; height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #111;
+  }
+  .stage {
+    position: relative;
+    width: min(100vw, calc(100vh * 16 / 9));
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: linear-gradient(180deg, #FFF8F0 0%, #F5E6D3 100%);
+  }
+  .character {
+    position: absolute;
+    left: 50%;
+    bottom: 6%;
+    width: min(42%, 512px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    transform: translateX(-50%);
+    pointer-events: none;
+    background: transparent;
+  }
+  .hud {
+    position: absolute; left: 16px; top: 12px;
+    color: var(--ink);
+    background: rgba(255,255,255,.78);
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .chrome {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 10px 12px 14px;
+    display: flex; flex-wrap: wrap; gap: 8px;
+    background: linear-gradient(transparent, rgba(255,248,240,.92));
+  }
+  button {
+    border: 0; background: var(--bandana); color: #1b2a40;
+    border-radius: 999px; padding: 8px 14px; font-weight: 600; cursor: pointer;
+  }
+  button.active { background: var(--bandana-dark); color: #fff; }
+  .speed { font-size: 12px; align-self: center; }
+  body.projection .chrome, body.projection .hud,
+  body.phone .chrome, body.phone .hud { display: none; }
+</style>
+</head>
+<body>
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+    <canvas class="character" id="dog" width="512" height="512" aria-label="糖糖"></canvas>
+    <div class="hud" id="hud">loading…</div>
+    <div class="chrome" id="chrome"></div>
+  </div>
+</div>
+<script src="frame_renderer.js"></script>
+<script>
+const ASSET = "../assets/character/tangtang/v10";
+const BUTTONS = ["idle", "listen", "happy", "walk", "run", "trot", "sleep", "get_up"];
+const LABELS = { idle: "Idle", listen: "Listen", happy: "Happy", walk: "Walk", run: "Run", trot: "Trot", sleep: "Sleep", get_up: "Get Up" };
+const FADE_MS_MIN = 100;
+const FADE_MS_MAX = 200;
+let meta = null;
+let frames = [];
+let images = [];
+let idx = 0;
+let timer = null;
+let current = "idle";
+let looping = true;
+let speed = 1;
+let paused = false;
+let fadeMs = 150;
+let renderer = null;
+let prevImg = null;
+let fadeUntil = 0;
+
+function showDebug() {
+  const q = new URLSearchParams(location.search);
+  if (q.get("debug") === "1") return true;
+  if (q.get("projection") === "1" || q.get("phone") === "1") return false;
+  const phone = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 720;
+  return !phone;
+}
+
+function query() {
+  return new URLSearchParams(location.search);
+}
+
+async function loadMeta() {
+  const res = await fetch(`${ASSET}/manifest.json`);
+  meta = await res.json();
+  renderer = window.TangTangFrameRenderer.create(document.getElementById("dog"));
+  const chrome = document.getElementById("chrome");
+  BUTTONS.forEach((name) => {
+    const b = document.createElement("button");
+    b.textContent = LABELS[name] || name;
+    b.dataset.anim = name;
+    b.onclick = () => play(name);
+    chrome.appendChild(b);
+  });
+  const slower = document.createElement("button");
+  slower.textContent = "Speed −";
+  slower.onclick = () => { speed = Math.max(0.25, speed - 0.25); restartTimer(); hud(); };
+  chrome.appendChild(slower);
+  const faster = document.createElement("button");
+  faster.textContent = "Speed +";
+  faster.onclick = () => { speed = Math.min(2, speed + 0.25); restartTimer(); hud(); };
+  chrome.appendChild(faster);
+  const pauseBtn = document.createElement("button");
+  pauseBtn.textContent = "Pause";
+  pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "Resume" : "Pause"; };
+  chrome.appendChild(pauseBtn);
+  const q = query();
+  if (q.get("projection") === "1") document.body.classList.add("projection");
+  if (q.get("phone") === "1" || (!showDebug() && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent))) {
+    document.body.classList.add("phone");
+  }
+  if (!showDebug()) {
+    document.getElementById("hud").style.display = "none";
+  }
+  const start = BUTTONS.includes(q.get("anim")) ? q.get("anim") : "idle";
+  await play(start);
+  const freeze = q.get("frame");
+  if (freeze != null && freeze !== "") {
+    idx = Math.max(0, Math.min(images.length - 1, parseInt(freeze, 10) || 0));
+    paused = q.get("paused") !== "0";
+    paint();
+    hud();
+  }
+}
+
+async function exists(url) {
+  try {
+    const r = await fetch(url, { method: "HEAD" });
+    return r.ok;
+  } catch (e) { return false; }
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+async function play(name) {
+  const spec = (meta.animations && meta.animations[name]) || (meta.animations && meta.animations.idle) || {};
+  const files = spec.files || [];
+  const urls = [];
+  for (const rel of files) {
+    const url = `${ASSET}/${rel}`;
+    if (await exists(url)) urls.push(url);
+  }
+  if (!urls.length) {
+    const fallback = `${ASSET}/animations/idle/idle_01.png`;
+    if (await exists(fallback)) urls.push(fallback);
+  }
+  const loaded = [];
+  for (const url of urls) {
+    try { loaded.push(await loadImage(url)); } catch (e) { /* skip */ }
+  }
+  if (!loaded.length) return;
+  prevImg = images[idx] || prevImg;
+  fadeMs = Math.max(FADE_MS_MIN, Math.min(FADE_MS_MAX, fadeMs));
+  fadeUntil = performance.now() + fadeMs;
+  frames = urls;
+  images = loaded;
+  idx = 0;
+  current = name;
+  looping = spec.loop !== false;
+  paused = false;
+  document.querySelectorAll(".chrome button").forEach((b) => {
+    b.classList.toggle("active", b.dataset.anim === name);
+  });
+  restartTimer();
+  hud();
+}
+
+function fpsNow() {
+  const spec = (meta.animations && meta.animations[current]) || {};
+  const base = spec.fps || 12;
+  return Math.max(4, Math.min(30, base * speed));
+}
+
+function paint() {
+  const img = images[idx];
+  if (!img || !renderer) return;
+  const now = performance.now();
+  let fadeT = 1;
+  if (prevImg && now < fadeUntil) {
+    fadeT = 1 - (fadeUntil - now) / fadeMs;
+  }
+  renderer.draw(img, prevImg, fadeT);
+  if (fadeT >= 1) prevImg = img;
+}
+
+function restartTimer() {
+  if (timer) clearInterval(timer);
+  const tick = () => {
+    if (paused || !images.length) { paint(); hud(); return; }
+    paint();
+    hud();
+    idx = looping ? (idx + 1) % images.length : Math.min(idx + 1, images.length - 1);
+  };
+  tick();
+  timer = setInterval(tick, 1000 / fpsNow());
+}
+
+function hud() {
+  const el = document.getElementById("hud");
+  if (!showDebug()) { el.style.display = "none"; return; }
+  el.style.display = "";
+  el.innerHTML =
+    `Animation <b>${current}</b><br>` +
+    `Frame ${images.length ? (idx % images.length) + 1 : 0}/${images.length}<br>` +
+    `FPS ${fpsNow().toFixed(1)} · Loop ${looping} · Speed ${speed.toFixed(2)} · clearRect`;
+}
+
+loadMeta().catch((err) => {
+  document.getElementById("hud").textContent = "manifest missing — python3 -m http.server 8765 from repo root";
+  console.error(err);
+});
+</script>
+</body>
+</html>
