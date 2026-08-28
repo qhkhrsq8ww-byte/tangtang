@@ -1,0 +1,361 @@
+{
+  "version": 1,
+  "id": "child_reactions",
+  "dog": "糖糖",
+  "breed": "bichon",
+  "catchphrase": "汪汪～",
+  "note": "客厅短窗反应的唯一设计源。bash/python 直接 load。儿童原话不进账本。一轮最多再回一句，然后停。不追问、不加大音量、不训斥、不测验、不比较兄妹。",
+  "principles": [
+    "voice_first_living_room_only",
+    "one_extra_spoken_reply_then_stop",
+    "never_chase",
+    "never_raise_volume",
+    "never_scold",
+    "no_quiz",
+    "no_sibling_compare",
+    "no_child_transcript_in_shared_memory",
+    "silence_is_valid"
+  ],
+  "listen": {
+    "seconds": 5,
+    "energy_silent_below": 300,
+    "energy_clear_reply_at": 800,
+    "stt": "optional_baidu_inside_window_only",
+    "stt_on_silence": false,
+    "second_listen": false,
+    "volume_up": false
+  },
+  "decision_order": [
+    "timeout",
+    "stop_today",
+    "oppose",
+    "defer",
+    "wont",
+    "perfunctory",
+    "noncoop",
+    "joined",
+    "unclear",
+    "silent"
+  ],
+  "decision_order_note": "按数组从上往下，命中即停，绝不往回走。timeout 含无能量。perfunctory/noncoop 是第 6 步『配合』之前的细化：敷衍和『知道了』不当成配合。",
+  "persona": {
+    "friend": {"who": "qiaqia", "display": "洽洽", "role": "朋友"},
+    "play": {"who": "hanghang", "display": "航航", "role": "玩伴"}
+  },
+  "forbidden_reply_substrings": [
+    "但是英语很重要",
+    "你怎么不说话",
+    "再读一遍",
+    "再说一遍",
+    "你必须",
+    "再试一次",
+    "正确",
+    "打分",
+    "告状",
+    "告诉爸爸",
+    "告诉妈妈"
+  ],
+  "sibling_present": {
+    "name_other_child": false,
+    "compare": false,
+    "cooldown_only_event_audience": true,
+    "other_names": {
+      "play": ["洽洽", "姐姐", "哥哥"],
+      "friend": ["航航", "弟弟", "哥哥"]
+    }
+  },
+  "adult_interrupt": {
+    "id": "adult_interrupt",
+    "detect": {
+      "energy": "n/a",
+      "keywords": [],
+      "stt": false,
+      "timeout": false,
+      "when": "persona=elder 或 audience 是爷爷奶奶；不用声纹。吃不准就看 presence + 这条提醒的 audience。"
+    },
+    "speak_again": false,
+    "replies": {"friend": [], "play": [], "elder": []},
+    "cooldown": {"effect": "none"},
+    "ledger": "adult_interrupt"
+  },
+  "silent_class": ["silent", "timeout", "perfunctory", "noncoop"],
+  "cooldown_defaults": {
+    "oppose_skip_tomorrow_if_twice_in_days": 3,
+    "silent_consecutive_in_hours": 24,
+    "silent_consecutive_to_skip_today": 2,
+    "defer_max_retry": 1,
+    "defer_retry_same_event_later_slot_only": true
+  },
+  "scenes": {
+    "joined": {
+      "id": "joined",
+      "letter": "A",
+      "name": "配合",
+      "detect": {
+        "energy": "clear_reply_or_any_above_silent_with_joined_keywords",
+        "keywords": ["好的", "好啊", "好呀", "来了", "来啦", "我来", "一起", "可以", "行啊", "愿意", "试试", "跟你读", "我跟读", "okay", "ok", "yes", "yeah"],
+        "keywords_short": ["好", "嗯", "来", "行", "ok"],
+        "stt": "optional",
+        "timeout": false,
+        "or_rule": "rms>=energy_clear_reply_at 且尚未命中反对/推迟/不会/敷衍/不执行"
+      },
+      "speak_again": true,
+      "voice": "cute",
+      "replies": {
+        "friend": [
+          "汪汪～真好。",
+          "汪汪～糖糖听见了。",
+          "汪汪～就这样。"
+        ],
+        "play": [
+          "汪汪～{name}真好。",
+          "汪汪～你真厉害！",
+          "汪汪～糖糖好高兴。"
+        ]
+      },
+      "replies_soft": {
+        "friend": ["汪汪～", "汪汪～嗯。"],
+        "play": ["汪汪～", "汪汪～嗯。"]
+      },
+      "cooldown": {
+        "effect": "none",
+        "note": "同一天刚夸过就改用 replies_soft，不连着喊真棒。"
+      },
+      "ledger": "joined"
+    },
+    "oppose": {
+      "id": "oppose",
+      "letter": "B",
+      "name": "反对",
+      "detect": {
+        "energy": "any_above_silent",
+        "keywords": ["不要", "别说了", "讨厌", "烦", "走开", "闭嘴", "不想听", "别叫我", "够了", "不好", "不行", "滚", "别吵", "你烦", "go away", "shut up", "stop it"],
+        "stt": "optional",
+        "timeout": false
+      },
+      "speak_again": true,
+      "voice": "soft",
+      "replies": {
+        "friend": [
+          "汪汪～好，糖糖先不说了。",
+          "汪汪～嗯，那今天到这儿。",
+          "汪汪～好，糖糖去趴着。"
+        ],
+        "play": [
+          "汪汪～好吧，糖糖去喝水了。",
+          "汪汪～好，糖糖不吵你。",
+          "汪汪～糖糖先去趴着。"
+        ]
+      },
+      "cooldown": {
+        "effect": "skip_rest_of_today",
+        "if_twice_in_days": 3,
+        "also_skip_tomorrow": true,
+        "note": "轻轻让开，不是惩罚。只冷却这条提醒的 audience。"
+      },
+      "ledger": "oppose",
+      "never": ["argue", "但是英语很重要", "raise_volume"]
+    },
+    "silent": {
+      "id": "silent",
+      "letter": "C",
+      "name": "沉默",
+      "detect": {
+        "energy": "below_energy_silent_below",
+        "keywords": [],
+        "stt": false,
+        "timeout": false,
+        "note": "没说话、能量不够。合法结局，不当失败。"
+      },
+      "speak_again": false,
+      "voice": "none",
+      "replies": {"friend": [], "play": []},
+      "cooldown": {
+        "effect": "skip_rest_of_today_after_consecutive",
+        "consecutive": 2,
+        "window_hours": 24,
+        "same_event_and_child": true
+      },
+      "ledger": "silent"
+    },
+    "noncoop": {
+      "id": "noncoop",
+      "letter": "C",
+      "name": "不执行",
+      "detect": {
+        "energy": "any_above_silent",
+        "keywords": ["知道了", "知道啦", "晓得了", "晓得"],
+        "stt": "optional",
+        "timeout": false,
+        "note": "听见了但不配合。等会儿类走 defer；这类走沉默，不夸也不催。"
+      },
+      "speak_again": false,
+      "voice": "none",
+      "replies": {"friend": [], "play": []},
+      "cooldown": {
+        "effect": "skip_rest_of_today_after_consecutive",
+        "consecutive": 2,
+        "window_hours": 24,
+        "maps_to": "silent"
+      },
+      "ledger": "silent"
+    },
+    "defer": {
+      "id": "defer",
+      "letter": "D",
+      "name": "推迟",
+      "detect": {
+        "energy": "any_above_silent",
+        "keywords": ["等会儿", "待会", "一会儿", "一会", "马上", "明天再说", "待會", "等一下"],
+        "stt": "optional",
+        "timeout": false
+      },
+      "speak_again": true,
+      "voice": "soft",
+      "replies": {
+        "friend": [
+          "汪汪～那糖糖等一会儿。",
+          "汪汪～好，糖糖等你。",
+          "汪汪～嗯，不急。"
+        ],
+        "play": [
+          "汪汪～那糖糖等一会儿。",
+          "汪汪～好，糖糖先喝水。",
+          "汪汪～嗯，糖糖等你。"
+        ]
+      },
+      "cooldown": {
+        "effect": "retry_once_later_same_evening_if_slot",
+        "max_retry": 1,
+        "otherwise": "stop"
+      },
+      "ledger": "defer"
+    },
+    "wont": {
+      "id": "wont",
+      "letter": "E",
+      "name": "不会",
+      "detect": {
+        "energy": "any_above_silent",
+        "keywords": ["不会", "不知道", "听不懂", "好难", "太难", "我不会", "学不会", "i don't know", "i dont know", "too hard"],
+        "stt": "optional",
+        "timeout": false
+      },
+      "speak_again": true,
+      "voice": "cute",
+      "replies": {
+        "friend": [
+          "汪汪～没关系，糖糖陪你。",
+          "汪汪～不会也没事。",
+          "汪汪～糖糖也不会硬学。"
+        ],
+        "play": [
+          "汪汪～没关系，糖糖陪你。",
+          "汪汪～不会也没关系。",
+          "汪汪～糖糖也还没学会。"
+        ]
+      },
+      "english_helper": {
+        "template_friend": "汪汪～{hint}。跟糖糖说一句就行。",
+        "template_play": "汪汪～{hint}。跟糖糖说一句就行。",
+        "fallback_hint": "这个词糖糖也刚学",
+        "note": "只给这一句的中文意思一次，不是上课。"
+      },
+      "cooldown": {"effect": "none"},
+      "ledger": "wont"
+    },
+    "unclear": {
+      "id": "unclear",
+      "letter": "F",
+      "name": "听不清",
+      "detect": {
+        "energy": "above_silent_below_clear_or_stt_garbage",
+        "keywords": [],
+        "stt": "empty_or_garbage",
+        "timeout": false,
+        "garbage_prefixes": ["[STT", "[stt"]
+      },
+      "speak_again": "tiny",
+      "voice": "soft",
+      "replies": {
+        "friend": [],
+        "play": ["汪汪～"]
+      },
+      "cooldown": {
+        "effect": "none",
+        "note": "不当成反对，也不当成配合。不要让人家再说一遍。"
+      },
+      "ledger": "unclear"
+    },
+    "stop_today": {
+      "id": "stop_today",
+      "letter": "G",
+      "name": "今天别叫",
+      "detect": {
+        "energy": "any_above_silent",
+        "keywords": ["今天别叫我", "别提醒了", "不要叫了", "今天别喊我", "今天不要叫", "别再叫我", "别叫我了", "今天不学了", "不想学了"],
+        "stt": "optional",
+        "timeout": false
+      },
+      "speak_again": true,
+      "voice": "soft",
+      "replies": {
+        "friend": [
+          "汪汪～好，今天糖糖不叫你了。",
+          "汪汪～好，今天到这儿。",
+          "汪汪～嗯，今天不叫你了。"
+        ],
+        "play": [
+          "汪汪～好，今天糖糖不叫你了。",
+          "汪汪～好，糖糖今天不叫你啦。",
+          "汪汪～嗯，今天到这儿。"
+        ]
+      },
+      "cooldown": {"effect": "skip_rest_of_today"},
+      "ledger": "stop_today"
+    },
+    "perfunctory": {
+      "id": "perfunctory",
+      "letter": "H",
+      "name": "敷衍",
+      "detect": {
+        "energy": "above_silent_below_clear",
+        "keywords": ["嗯", "哦", "啊"],
+        "match": "only_these_particles",
+        "stt": "optional",
+        "timeout": false,
+        "note": "只有嗯/哦/啊且能量偏低。不当成配合，不夸。"
+      },
+      "speak_again": false,
+      "voice": "none",
+      "replies": {"friend": [], "play": []},
+      "cooldown": {
+        "effect": "skip_rest_of_today_after_consecutive",
+        "consecutive": 2,
+        "maps_to": "silent"
+      },
+      "ledger": "silent"
+    },
+    "timeout": {
+      "id": "timeout",
+      "letter": "I",
+      "name": "超时",
+      "detect": {
+        "energy": "none",
+        "keywords": [],
+        "stt": false,
+        "timeout": true,
+        "note": "短窗结束仍无能量。和沉默一样，不回。"
+      },
+      "speak_again": false,
+      "voice": "none",
+      "replies": {"friend": [], "play": []},
+      "cooldown": {
+        "effect": "skip_rest_of_today_after_consecutive",
+        "consecutive": 2,
+        "maps_to": "silent"
+      },
+      "ledger": "silent"
+    }
+  }
+}

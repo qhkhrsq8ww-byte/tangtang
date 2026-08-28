@@ -111,6 +111,11 @@ if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ]; then
         export TANGTANG_CHILD_NAME="航航"
         ;;
     esac
+    # 当天说过「到此为止」，或连续沉默/反对：这类先不说，不加重
+    if ! tangtang_turn_gate_open english "$(tangtang_turn_who english "${ARG:-hanghang}")"; then
+      log_skip "今天这类先不说了"
+      exit 0
+    fi
   fi
 fi
 
