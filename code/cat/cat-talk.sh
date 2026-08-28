@@ -27,6 +27,11 @@ if [ -z "$text" ]; then
 fi
 
 echo "[$state] $text" > "$MOOD_FILE"
+echo "$text"
+
+if [ "${TANGTANG_TTS:-1}" = "0" ]; then
+  exit 0
+fi
 
 speak_with_fallback() {
   local rate="$1"
