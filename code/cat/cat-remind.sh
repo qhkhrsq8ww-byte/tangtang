@@ -88,6 +88,30 @@ if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ]; then
     log_skip "今天不上学，闹铃休息"
     exit 0
   fi
+  if [ "$EVENT" = "english" ]; then
+    if ! tangtang_is_school_day; then
+      log_skip "周末/放假，英语小伴读休息"
+      exit 0
+    fi
+    case "${ARG:-hanghang}" in
+      qiaqia|洽洽|6|grade6)
+        if tangtang_child_at_school qiaqia; then
+          log_skip "洽洽还没到家，英语小伴读跳过"
+          exit 0
+        fi
+        export TANGTANG_PROFILE=friend
+        export TANGTANG_CHILD_NAME="洽洽"
+        ;;
+      *)
+        if tangtang_child_at_school hanghang; then
+          log_skip "航航还没到家，英语小伴读跳过"
+          exit 0
+        fi
+        export TANGTANG_PROFILE=play
+        export TANGTANG_CHILD_NAME="航航"
+        ;;
+    esac
+  fi
 fi
 
 # 周末/节假日：仍看出门。上学日白天对爷爷奶奶说，不要求小朋友手机。

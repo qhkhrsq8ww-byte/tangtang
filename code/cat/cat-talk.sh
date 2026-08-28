@@ -2,7 +2,7 @@
 # ============================================================
 # 糖糖 · 智能说话（接大脑 + 情绪音色）
 # 用法: ./cat-talk.sh <事件> [参数]
-#   事件含: greet/wake/alarm/sleep/rest/meal/water/exercise/play/pet_walk/pet_water/pet_food/pet_groom ...
+#   事件含: greet/wake/alarm/english/sleep/rest/meal/water/exercise/play/pet_walk/pet_water/pet_food/pet_groom ...
 # 大脑决定话术+情绪 → 按情绪选音色 → 更新画面 → 出声
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
