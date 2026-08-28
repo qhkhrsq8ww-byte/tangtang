@@ -74,13 +74,13 @@ check C-speak "$(speak_of "$s")" False
 d="$(classify hanghang play 等会儿 2000)"
 check D-scene "$(scene_of "$d")" defer
 check D-speak "$(speak_of "$d")" True
-echo "$(reply_of "$d")" | grep -q "等一会儿\|不急\|等你" || { echo "fail D reply: $d"; fail=1; }
+echo "$(reply_of "$d")" | grep -qE "等一会儿|不急|等你" || { echo "fail D reply: $d"; fail=1; }
 
 # E 不会
 w="$(classify hanghang play 不会 2000)"
 check E-scene "$(scene_of "$w")" wont
 check E-speak "$(speak_of "$w")" True
-echo "$(reply_of "$w")" | grep -q "说一句就行\|陪你\|不会也" || { echo "fail E reply: $w"; fail=1; }
+echo "$(reply_of "$w")" | grep -qE "说一句就行|陪你|不会也" || { echo "fail E reply: $w"; fail=1; }
 
 # F 听不清
 u="$(classify hanghang play "" 400)"
@@ -91,7 +91,7 @@ echo "$(reply_of "$u")" | grep -qE "再说|重复" && { echo "fail F chased"; fa
 g="$(classify hanghang play 今天别叫我 2000)"
 check G-scene "$(scene_of "$g")" stop_today
 check G-speak "$(speak_of "$g")" True
-echo "$(reply_of "$g")" | grep -q "不叫你了\|今天到这儿" || { echo "fail G reply: $g"; fail=1; }
+echo "$(reply_of "$g")" | grep -qE "不叫你了|今天到这儿" || { echo "fail G reply: $g"; fail=1; }
 
 # H 敷衍
 h="$(classify hanghang play 嗯 400)"

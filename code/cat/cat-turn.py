@@ -480,6 +480,7 @@ def append_turn(event, who, result, stt, presence, seconds, rms,
         })
         if speak is not None:
             data["turns"][-1]["speak"] = bool(speak)
+            data["turns"][-1]["spoke_again"] = bool(speak)
         for k in FORBIDDEN_KEYS:
             data["turns"][-1].pop(k, None)
         react.save_json(path, data)

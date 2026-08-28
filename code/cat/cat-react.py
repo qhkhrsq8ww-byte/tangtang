@@ -677,9 +677,12 @@ def append_decision(decision, root=None, when=None, spoke_again=None):
     data, path = load_ledger(root)
     scene = decision.get("scene") or "silent"
     ledger_label = decision.get("ledger") or scene
-    spoke = decision.get("speak_again") if spoke_again is None else bool(spoke_again)
-    if not (decision.get("reply") or "").strip():
-        spoke = False
+    if spoke_again is None:
+        spoke = bool(decision.get("speak_again"))
+        if not (decision.get("reply") or "").strip():
+            spoke = False
+    else:
+        spoke = bool(spoke_again)
     row = {
         "ts": when.isoformat(timespec="seconds"),
         "event": decision.get("event") or "turn",
