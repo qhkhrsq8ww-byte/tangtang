@@ -168,6 +168,56 @@
         "animations/get_up/get_up_07.png",
         "animations/get_up/get_up_08.png"
       ]
+    },
+    "walk": {
+      "frames": 12,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.957
+      },
+      "width": 512,
+      "height": 512,
+      "files": [
+        "animations/walk/walk_01.png",
+        "animations/walk/walk_02.png",
+        "animations/walk/walk_03.png",
+        "animations/walk/walk_04.png",
+        "animations/walk/walk_05.png",
+        "animations/walk/walk_06.png",
+        "animations/walk/walk_07.png",
+        "animations/walk/walk_08.png",
+        "animations/walk/walk_09.png",
+        "animations/walk/walk_10.png",
+        "animations/walk/walk_11.png",
+        "animations/walk/walk_12.png"
+      ]
+    },
+    "run": {
+      "frames": 12,
+      "fps": 18,
+      "loop": true,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.957
+      },
+      "width": 512,
+      "height": 512,
+      "files": [
+        "animations/run/run_01.png",
+        "animations/run/run_02.png",
+        "animations/run/run_03.png",
+        "animations/run/run_04.png",
+        "animations/run/run_05.png",
+        "animations/run/run_06.png",
+        "animations/run/run_07.png",
+        "animations/run/run_08.png",
+        "animations/run/run_09.png",
+        "animations/run/run_10.png",
+        "animations/run/run_11.png",
+        "animations/run/run_12.png"
+      ]
     }
   },
   "views": {
