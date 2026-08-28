@@ -4,12 +4,34 @@ Implementations live in sibling packages. This module must not import
 ContextBuilder or MemoryStore (avoids Memory → Context → Memory cycles).
 LLM code must not implement these ports for privacy, quiet hours, shell,
 TTS, or projection — those stay deterministic.
+
+CORE_API_VERSION is frozen at 4.x. A V5 port must bump the major and
+will be rejected by require_v4() so it cannot silently smash V4.
 """
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
+
+from core.errors import CompatibilityError
+
+CORE_API_VERSION = "4.0.0"
+CORE_API_MAJOR = 4
+
+
+def require_v4(port: object, name: str = "port") -> None:
+    """Fail closed: missing or non-4.x version cannot enter the pipeline."""
+    ver = getattr(port, "core_api_version", None)
+    if ver is None:
+        raise CompatibilityError(
+            f"{name} missing core_api_version; unversioned ports cannot replace V4"
+        )
+    major = str(ver).split(".", 1)[0]
+    if major != str(CORE_API_MAJOR):
+        raise CompatibilityError(
+            f"{name} core_api_version={ver} is not V4; V5 must not silently smash V4"
+        )
 
 
 @runtime_checkable
@@ -57,6 +79,30 @@ class PolicyPort(Protocol):
         now: datetime | None = None,
         **kwargs: Any,
     ) -> bool: ...
+
+
+@runtime_checkable
+class PrivacyPolicyPort(Protocol):
+    """Deterministic classifier. LLM must not implement this port."""
+
+    def classify(
+        self,
+        *,
+        member_id: str | None = None,
+        utterance: str | None = None,
+        observation: Mapping[str, Any] | None = None,
+    ) -> Any: ...
+
+    def allow_destination(
+        self,
+        destination: str,
+        *,
+        member_id: str | None = None,
+        utterance: str | None = None,
+        privacy: str | None = None,
+    ) -> bool: ...
+
+    def is_child(self, member_id: str | None) -> bool: ...
 
 
 @runtime_checkable

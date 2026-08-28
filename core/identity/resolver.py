@@ -35,6 +35,7 @@ def _norm(value: Any) -> str | None:
 
 
 class IdentityResolver:
+    core_api_version = "4.0.0"
     def __init__(self, members: Mapping[str, object] | None = None) -> None:
         self.members = dict(members or {})
         self._label_index: dict[str, str] = {}
@@ -88,6 +89,18 @@ class IdentityResolver:
             if rec.get("relation") == "child":
                 return True
             if rec.get("age") in (9, 12):
+                return True
+        return False
+
+    def is_child(self, member_id: str | None) -> bool:
+        """Public: hanghang / 弟弟 / child_9 (and sister aliases) are children."""
+        if not member_id:
+            return False
+        canonical = self._lookup(member_id) or member_id
+        if self._is_child(canonical) or self._is_child(member_id):
+            return True
+        for prod, group in PRODUCT_GROUPS.items():
+            if prod in CHILD_PRODUCTS and (member_id in group or canonical in group):
                 return True
         return False
 

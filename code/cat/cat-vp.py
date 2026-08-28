@@ -24,6 +24,9 @@ _PRIV = importlib.util.module_from_spec(_PRIV_SPEC)
 _PRIV_SPEC.loader.exec_module(_PRIV)
 
 BASE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(BASE, "../.."))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", BASE)
 VP_FILE = os.path.join(DATA_DIR, "cat-voiceprints.json")
 HABIT_FILE = os.path.join(DATA_DIR, "cat-habits.json")
@@ -111,6 +114,15 @@ def log(name, text=""):
     # 存储层拦截：先解析说话人的隐私策略，再决定是否保留原话
     policy = _PRIV.policy_for(name)
     stored_text = _PRIV.scrub_text(text, policy["storage"])
+    try:
+        from core.policy.privacy_policy import PrivacyPolicy
+
+        decision = PrivacyPolicy().classify(member_id=name, utterance=text)
+        if not decision.allow_habit_store or decision.is_child or decision.privacy == "PRIVATE":
+            stored_text = ""
+    except Exception:
+        if policy.get("storage") == "PRIVATE":
+            stored_text = ""
     entry = {
         "name": name,
         "text": stored_text,

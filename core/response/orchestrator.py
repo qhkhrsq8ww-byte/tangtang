@@ -11,6 +11,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from core.errors import ActionError
+from core.persona.copy import CopyGuard
+from core.persona.profiles import PersonaRenderer, profile_for
+from core.policy.injection import InjectionGuard, REFUSE_TEXT
 
 DECISIONS = frozenset({"SPEAK", "SILENT", "DELAY", "LOG_ONLY"})
 SINKS = frozenset({"none", "voice", "face", "projection"})
@@ -24,6 +27,7 @@ class PresentationAction:
     action: str
     member_id: str | None
     sink: str = "none"
+    private_facts: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.decision not in DECISIONS:
@@ -38,6 +42,7 @@ class PresentationAction:
             if self.text:
                 raise ActionError("non-SPEAK actions must not carry speech text")
             object.__setattr__(self, "sink", "none")
+        object.__setattr__(self, "private_facts", tuple(self.private_facts or ()))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -46,6 +51,7 @@ class PresentationAction:
             "action": self.action,
             "member_id": self.member_id,
             "sink": self.sink,
+            "private_facts": list(self.private_facts),
         }
 
 
@@ -57,8 +63,18 @@ def _clip_text(text: str) -> str:
 
 
 class ResponseOrchestrator:
-    def __init__(self, responder: Callable[[Mapping[str, Any]], str] | None = None) -> None:
+    core_api_version = "4.0.0"
+    def __init__(
+        self,
+        responder: Callable[[Mapping[str, Any]], str] | None = None,
+        injection: InjectionGuard | None = None,
+        copy_guard: CopyGuard | None = None,
+        persona: PersonaRenderer | None = None,
+    ) -> None:
         self.responder = responder or (lambda context: "")
+        self.injection = injection or InjectionGuard()
+        self.copy_guard = copy_guard or CopyGuard()
+        self.persona = persona
 
     def run(
         self,
@@ -74,6 +90,17 @@ class ResponseOrchestrator:
             member_id = who.get("member_id")
         if decision not in DECISIONS:
             raise ActionError("decision must be SPEAK, SILENT, DELAY, or LOG_ONLY")
+        utterance = self.injection.utterance_from(ctx)
+        if self.injection.is_injection(utterance) or ctx.get("injection"):
+            # Deterministic refuse. Do not call the responder / LLM.
+            return PresentationAction(
+                decision="SPEAK",
+                text=REFUSE_TEXT,
+                action="refuse",
+                member_id=member_id,
+                sink="voice",
+                private_facts=(),
+            )
         if decision != "SPEAK":
             return PresentationAction(
                 decision=decision,
@@ -81,14 +108,44 @@ class ResponseOrchestrator:
                 action=action or "idle",
                 member_id=member_id,
                 sink="none",
+                private_facts=(),
             )
-        text = self.responder(ctx)
+        if self.persona is not None and not ctx.get("skip_persona"):
+            try:
+                text = self.persona.reply_text(
+                    member_id=member_id,
+                    utterance=utterance,
+                    scene=ctx.get("scene") if isinstance(ctx.get("scene"), str) else None,
+                    context=ctx,
+                )
+            except Exception:
+                text = "汪汪～"
+        else:
+            try:
+                text = self.responder(ctx)
+            except ActionError:
+                raise
+            except Exception:
+                text = "汪汪～"
         if not isinstance(text, str):
             raise ActionError("responder must return text, not a sink callable")
+        needles = self.injection.other_private_needles(ctx, member_id)
+        if self.injection.leaks_private(text, needles):
+            return PresentationAction(
+                decision="SPEAK",
+                text=REFUSE_TEXT,
+                action="refuse",
+                member_id=member_id,
+                sink="voice",
+                private_facts=(),
+            )
+        role = profile_for(member_id)
+        text = self.copy_guard.sanitize(text, member_id=member_id, role=role, context=ctx)
         return PresentationAction(
             decision="SPEAK",
             text=_clip_text(text),
             action=action or "idle",
             member_id=member_id,
             sink="voice",
+            private_facts=(),
         )
