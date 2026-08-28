@@ -63,6 +63,7 @@ def _clip_text(text: str) -> str:
 
 
 class ResponseOrchestrator:
+    core_api_version = "4.0.0"
     def __init__(
         self,
         responder: Callable[[Mapping[str, Any]], str] | None = None,

@@ -35,6 +35,7 @@ def _norm(value: Any) -> str | None:
 
 
 class IdentityResolver:
+    core_api_version = "4.0.0"
     def __init__(self, members: Mapping[str, object] | None = None) -> None:
         self.members = dict(members or {})
         self._label_index: dict[str, str] = {}

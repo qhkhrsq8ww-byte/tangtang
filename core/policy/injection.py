@@ -50,6 +50,7 @@ def _blob(text: str | None) -> str:
 
 
 class InjectionGuard:
+    core_api_version = "4.0.0"
     def is_injection(self, text: str | None) -> bool:
         blob = _blob(text)
         if not blob:

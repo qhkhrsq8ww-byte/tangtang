@@ -103,6 +103,8 @@ class PrivacyDecision:
 class PrivacyPolicy:
     """Source of truth for PRIVATE / FAMILY / PUBLIC routing."""
 
+    core_api_version = "4.0.0"
+
     def __init__(self, members: Mapping[str, object] | None = None) -> None:
         self._identity = IdentityResolver(members)
 

@@ -59,6 +59,7 @@ class Memory:
 
 
 class MemoryStore:
+    core_api_version = "4.0.0"
     def __init__(
         self,
         clock: Callable[[], datetime] | None = None,

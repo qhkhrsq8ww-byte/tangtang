@@ -1,8 +1,8 @@
 """Presentation sinks. Failures never drop the already-accepted Event.
 
-LLM / TTS / STT / projection / network are optional callables. None means
-the sink is not wired (unit tests). A raised exception becomes SinkError
-on the result, with event_kept=True.
+LLM / voice / ear / screen / network are optional injected callables.
+None means the sink is not wired (unit tests). A raised exception is
+recorded on the result, with event_kept=True.
 """
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ class DeliveryResult:
 
 
 class PresentationRuntime:
-    """Does not import cat-tts / cat-screen. Sinks are injected."""
+    """Sinks are injected callables. This module does not play audio or project."""
 
     def __init__(
         self,

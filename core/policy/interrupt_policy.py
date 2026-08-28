@@ -50,6 +50,7 @@ def infer_scene(observation: Mapping[str, Any] | None) -> str | None:
 
 
 class InterruptPolicy:
+    core_api_version = "4.0.0"
     def __init__(
         self,
         quiet_start: time = time(22, 30),

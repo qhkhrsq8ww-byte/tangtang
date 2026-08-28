@@ -2,12 +2,22 @@
 
 from core.compat import should_interrupt
 from core.context.builder import ContextBuilder
-from core.errors import ActionError, EventError, MemoryError, PathError, PrivacyError, ShellError, SinkError
+from core.errors import (
+    ActionError,
+    CompatibilityError,
+    EventError,
+    MemoryError,
+    PathError,
+    PrivacyError,
+    ShellError,
+    SinkError,
+)
 from core.events.event import Event, MAX_PAYLOAD_BYTES, PRIVACY_SCOPES
 from core.events.event_bus import EventBus, InMemoryEventBus, PublishResult
 from core.identity.resolver import IdentityResolver
 from core.ingest import IngestResult, PrivacyPipeline, Stores
 from core.interfaces import (
+    CORE_API_VERSION,
     ContextPort,
     EventBusPort,
     IdentityPort,
@@ -15,6 +25,7 @@ from core.interfaces import (
     PolicyPort,
     PrivacyPolicyPort,
     ResponsePort,
+    require_v4,
 )
 from core.logging.safe import SafeLogger
 from core.memory.family import FamilyMemory, FamilySummary, HabitStore, ParentContext
@@ -29,6 +40,8 @@ from core.response.orchestrator import PresentationAction, ResponseOrchestrator
 
 __all__ = [
     "ActionError",
+    "CORE_API_VERSION",
+    "CompatibilityError",
     "ContextBuilder",
     "CopyGuard",
     "PersonaRenderer",
@@ -70,5 +83,6 @@ __all__ = [
     "SinkError",
     "Stores",
     "WALK_SUGGESTION",
+    "require_v4",
     "should_interrupt",
 ]

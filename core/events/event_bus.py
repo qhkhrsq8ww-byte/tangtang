@@ -66,6 +66,8 @@ class IsolationPlaceholder(Exception):
 class EventBus:
     """Synchronous in-memory bus. Unit tests inject `clock` and `error_sink`."""
 
+    core_api_version = "4.0.0"
+
     def __init__(
         self,
         clock: Callable[[], datetime] | None = None,

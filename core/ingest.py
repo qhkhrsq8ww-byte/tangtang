@@ -13,6 +13,7 @@ from typing import Any
 from core.errors import PrivacyError
 from core.events.event import Event
 from core.identity.resolver import IdentityResolver
+from core.interfaces import require_v4
 from core.logging.safe import SafeLogger
 from core.memory.family import FamilyMemory, FamilySummary, HabitStore, ParentContext
 from core.memory.private import PrivateMemory
@@ -70,6 +71,8 @@ class PrivacyPipeline:
     ) -> None:
         self.identity = identity or IdentityResolver(members)
         self.privacy = privacy or PrivacyPolicy(members)
+        require_v4(self.privacy, "PrivacyPolicy")
+        require_v4(self.identity, "IdentityResolver")
         self.clock = clock or _utc_now
         if stores is None:
             stores = Stores(
