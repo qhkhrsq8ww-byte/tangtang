@@ -81,6 +81,7 @@ case "$CMD" in
     echo "预览文案: ./cat-schedule.sh preview"
     echo "谁在客厅: ./cat-presence.sh"
     echo "客厅试听（说一句→开窗）: ./cat-turn.sh"
+    echo "预览各场景反应（不开麦）: ./cat-turn.sh --print"
     echo "装到 Mac: ./cat-schedule.sh crontab  → 粘进 crontab -e"
     echo "试闹铃(跳过日期/在场): ./cat-schedule.sh fire --force alarm school"
     ;;

@@ -16,6 +16,7 @@
 #   ./cat.sh english          # 试航航二年级英语小伴读
 #   ./cat.sh english qiaqia   # 试洽洽六年级英语小伴读
 #   ./cat.sh turn             # 客厅试听：说一句 → 录音窗 → 回或不回
+#   ./cat.sh reactions        # 预览各场景糖糖怎么反应（不开麦）
 #   ./cat.sh presence         # 看洽洽/航航是否在客厅网段
 #   ./cat.sh data             # 看记忆文件写在本机哪
 #   ./cat.sh chat "想聊的"     # 云端真对话
@@ -83,10 +84,12 @@ while [ $# -gt 0 ]; do
    试听：./cat.sh english    ./cat.sh english qiaqia
 
 7. 客厅语音小回合（只在客厅）
-   英语小伴读说完一句、等音箱播完，再开约 5 秒麦。有人应就听一句，糖糖最多回一句；没人应就算了，不追问。
+   英语小伴读说完一句、等音箱播完，再开约 5 秒麦。糖糖最多再回一句。
+   配合：短暖结束。反对/沉默：尊重，不追问、不加重。说「今天别叫我」则当天不再开窗。
+   连续两次没应或反对，今晚这类先不说。不比较兄妹，英语不打分。
    麦是客厅 Mac 旁的 MAONO AU-BM10。音箱要设成 Mac 默认输出；若还在儿童房，客厅听不见回话。
    试：./cat.sh turn    ./cat.sh turn english hanghang
-   预览不开麦：./cat.sh preview
+   预览反应（不开麦）：./cat.sh reactions    ./cat.sh turn --print
 EOF
       exit 0
       ;;
@@ -101,6 +104,10 @@ EOF
     turn)
       shift
       exec "$CAT_DIR/cat-turn.sh" "$@"
+      ;;
+    reactions)
+      shift
+      exec "$CAT_DIR/cat-turn.sh" --print "${1:-english}" "${2:-hanghang}"
       ;;
     presence)
       exec "$CAT_DIR/cat-presence.sh"

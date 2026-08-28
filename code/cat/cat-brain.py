@@ -343,9 +343,32 @@ def interact(state, memory, kind):
     return state
 
 
+def _turn_gate_ok(event, arg=""):
+    """客厅短窗账本：当天 stop / 连续沉默反对 → 英语这类先不说。"""
+    if event not in ("english", "turn"):
+        return True
+    path = os.path.join(CAT_DIR, "cat-turn.py")
+    spec = importlib.util.spec_from_file_location("cat_turn_mod", path)
+    if not spec or not spec.loader:
+        return True
+    try:
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        who = (arg or os.environ.get("TANGTANG_MEMBER_ID")
+               or os.environ.get("TANGTANG_SPEAKER") or "")
+        if event == "english":
+            who = mod.normalize_who(who) or "hanghang"
+        return bool(mod.gate_allows(event, who))
+    except Exception:
+        return True
+
+
 def should_speak(state, event):
     if event in USER_EVENTS:
         return True
+    arg = sys.argv[2] if len(sys.argv) > 2 else ""
+    if not _turn_gate_ok(event, arg):
+        return False
     minutes = COOLDOWN_MINUTES.get(event)
     if minutes is None:
         return True

@@ -437,6 +437,21 @@ tangtang_note_member_presence() {
   return 1
 }
 
+# 当天 stop、或连续沉默/反对已达降温：这类先不开窗。不加大音量。
+# 0=可以开  1=先不说。打印 [turn] SKIP ...
+tangtang_turn_gate_open() {
+  local event="${1:-english}"
+  local who="${2:-}"
+  local out rc=0
+  [ -n "$who" ] || who="$(tangtang_turn_who "$event" "")"
+  out="$(/usr/bin/python3 "$CAT_DIR/cat-turn.py" gate "$event" "$who" 2>/dev/null)" || rc=$?
+  if [ "$rc" = "0" ]; then
+    return 0
+  fi
+  echo "[turn] ${out:-SKIP	cool	今晚这类先不说}"
+  return 1
+}
+
 tangtang_note_presence_for_event() {
   local event="${1:-}" arg="${2:-}"
   case "$event" in
