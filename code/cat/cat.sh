@@ -8,6 +8,7 @@
 #   ./cat.sh -p               # 强制透明宠物浮现
 #   ./cat.sh -s               # 强制全屏舞台
 #   ./cat.sh status           # 查看糖糖当前心情状态
+#   ./cat.sh habits [成员]    # 查看五口之家习惯摘要（不投屏）
 #   ./cat.sh chat "想聊的"     # 云端真对话
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -27,6 +28,11 @@ while [ $# -gt 0 ]; do
     -s) FORCE_STAGE=1; shift;;
     -p) FORCE_PET=1; shift;;
     status) STATUS_REQ=1; shift;;
+    habits)
+      shift
+      /usr/bin/python3 "$CAT_DIR/cat-family.py" summary "$@"
+      exit 0
+      ;;
     chat) CHAT_REQ=1; shift;;
     *) TEXT="$1"; shift;;
   esac

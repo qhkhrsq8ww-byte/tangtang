@@ -1,7 +1,7 @@
 #!/bin/bash
 # 糖糖 · 语音对话 v3
-# 链路：听 → 辨 → 懂 → 答 → 说
-# 说明：声纹/习惯数据仅写入本地，不提交Git。
+# 链路：听 → 辨（五口之家）→ 记习惯 → 懂 → 答 → 说
+# 声纹/习惯数据仅写入本地，不提交 Git。
 set -u
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
@@ -10,22 +10,36 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DUR="${1:-5}"
 PCM="/tmp/tangtang_voice.pcm"
 
-PROFILE="${TANGTANG_PROFILE:-play}"
-case "$PROFILE" in
-  play|friend) ;;
-  *) PROFILE="play" ;;
-esac
-export TANGTANG_PROFILE="$PROFILE"
-
-echo "🎤 糖糖在听...（${DUR}秒，${PROFILE}模式）"
+echo "🎤 糖糖在听...（${DUR}秒）"
 if ! "$CAT_DIR/cat-listen.sh" "$DUR" "$PCM" >/dev/null 2>&1; then
   echo "❌ 麦克风录音失败"
   exit 1
 fi
 
-WHO=$("$CAT_DIR/cat-vp.py" identify "$PCM" 2>/dev/null | tail -1)
-[ -z "$WHO" ] && WHO="unknown"
-echo "👤 识别状态: $WHO"
+WHO_LINE=$(/usr/bin/python3 "$CAT_DIR/cat-family.py" who "$PCM" 2>/dev/null | tail -1)
+IFS=$'\t' read -r MEMBER_ID DISPLAY PROFILE SCORE <<< "$WHO_LINE"
+MEMBER_ID="${MEMBER_ID:-unknown}"
+PROFILE="${PROFILE:-play}"
+case "$PROFILE" in
+  play|friend|adult|elder) ;;
+  *) PROFILE="play" ;;
+esac
+
+if [ "$MEMBER_ID" = "unknown" ] || [ -z "$MEMBER_ID" ]; then
+  echo "👤 识别状态: 未确定（不绑定家人）"
+  MEMBER_ID="unknown"
+  DISPLAY=""
+  export TANGTANG_SPEAKER="unknown"
+  export TANGTANG_MEMBER_ID="unknown"
+  export TANGTANG_PROFILE="$PROFILE"
+  export TANGTANG_CHILD_NAME="${TANGTANG_CHILD_NAME:-小朋友}"
+else
+  echo "👤 识别: ${DISPLAY}（${PROFILE}，置信 ${SCORE}）"
+  export TANGTANG_SPEAKER="$MEMBER_ID"
+  export TANGTANG_MEMBER_ID="$MEMBER_ID"
+  export TANGTANG_PROFILE="$PROFILE"
+  export TANGTANG_CHILD_NAME="$DISPLAY"
+fi
 
 echo "🧠 识别中..."
 TEXT=$("$CAT_DIR/cat-stt-baidu.sh" "$PCM" 2>/dev/null | tr -d '\n')
@@ -36,15 +50,18 @@ if [ -z "$TEXT" ]; then
 fi
 
 echo "   你说: $TEXT"
-# unknown 只作为本地匿名访客，不冒充家庭成员
-if [ "$WHO" != "unknown" ]; then
-  "$CAT_DIR/cat-vp.py" log "$WHO" "$TEXT" >/dev/null 2>&1 || true
+if [ "$MEMBER_ID" != "unknown" ]; then
+  /usr/bin/python3 "$CAT_DIR/cat-family.py" observe "$MEMBER_ID" "$TEXT" >/dev/null 2>&1 || true
 else
-  "$CAT_DIR/cat-vp.py" log "unknown" "" >/dev/null 2>&1 || true
+  /usr/bin/python3 "$CAT_DIR/cat-family.py" observe "unknown" "" >/dev/null 2>&1 || true
 fi
 
 echo "💬 糖糖思考中..."
-REPLY=$(TANGTANG_PROFILE="$PROFILE" TANGTANG_SPEAKER="$WHO" /usr/bin/python3 "$CAT_DIR/cat-chat.py" "$TEXT" 2>/dev/null | tr -d '\n')
+REPLY=$(TANGTANG_PROFILE="$TANGTANG_PROFILE" \
+  TANGTANG_SPEAKER="$TANGTANG_SPEAKER" \
+  TANGTANG_MEMBER_ID="$TANGTANG_MEMBER_ID" \
+  TANGTANG_CHILD_NAME="$TANGTANG_CHILD_NAME" \
+  /usr/bin/python3 "$CAT_DIR/cat-chat.py" "$TEXT" 2>/dev/null | tr -d '\n')
 if [ -z "$REPLY" ]; then
   REPLY="糖糖刚才有点走神啦，我们再聊聊？"
 fi

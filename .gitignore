@@ -4,6 +4,7 @@ code/cat/tangtang-config.sh
 code/cat/tangtang-local.json
 code/cat/.baidu_token
 code/cat/cat-chat-history.json
+code/cat/cat-chat-history-*.json
 code/cat/cat-state.json
 code/cat/cat-memory.json
 code/cat/cat-mood.txt

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "note": "示例配置，不放真实姓名、声纹或家庭隐私数据",
+  "note": "字段模板。本仓库实际五口之家名册在 data/family.json；声纹和习惯流水不入库。",
   "family_id": "family_demo",
   "members": [
     {

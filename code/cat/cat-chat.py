@@ -42,7 +42,7 @@ FALLBACK_REPLY = "汪汪～ 糖糖在呢。"
 
 def current_profile():
     p = (os.environ.get("TANGTANG_PROFILE") or "play").strip().lower()
-    return p if p in ("play", "friend") else "play"
+    return p if p in ("play", "friend", "adult", "elder") else "play"
 
 
 def child_name():
@@ -50,7 +50,7 @@ def child_name():
 
 
 def speaker_id():
-    return (os.environ.get("TANGTANG_SPEAKER") or "unknown").strip() or "unknown"
+    return (os.environ.get("TANGTANG_MEMBER_ID") or os.environ.get("TANGTANG_SPEAKER") or "unknown").strip() or "unknown"
 
 
 def build_persona():
@@ -64,12 +64,22 @@ def build_persona():
     )
     if profile == "friend":
         style = (
-            "当前是 friend 模式（大约12岁）：你是朋友、倾听者、温柔提醒者。"
+            "当前说话的是青少年（friend）：你是朋友、倾听者、温柔提醒者。"
             "尊重对方，给选择，不要幼态化，不要说教。1-2句，口语化。"
+        )
+    elif profile == "elder":
+        style = (
+            "当前说话的是家里长辈。自然、简短、有礼貌，不要用哄小孩的口吻，不要撒娇过头。"
+            "1-2句即可。"
+        )
+    elif profile == "adult":
+        style = (
+            "当前说话的是家里的大人。自然、简短，像家里的小狗在回话，不要幼态化。"
+            "1-2句即可。"
         )
     else:
         style = (
-            "当前是 play 模式（大约9岁）：你是玩伴、小教练、小任务搭档。"
+            "当前说话的大约9岁（play）：你是玩伴、小教练、小任务搭档。"
             "先共情，再温柔提醒，给选择，陪着做，具体鼓励。1-2句，口语化，可以带一点挑战。"
         )
     safety = (
@@ -79,11 +89,13 @@ def build_persona():
         "若提到自伤、被伤害、严重不适或危险：先安抚，明确安全优先，"
         "鼓励立刻告诉可信任的大人；不要承诺替孩子保守危险秘密。"
         "禁止说：你必须、警告、根据系统检测、爸爸/妈妈让我监督你。"
+        "不要提起另一个孩子的私人谈话、作业或习惯。"
     )
     if speaker in ("unknown", "", "访客"):
-        who = "还不能确定说话的人是谁。用通用亲切称呼，不要假装认识，不要提起其他家庭成员的私事。"
+        who = "还不能确定说话的人是谁。用通用亲切称呼，不要假装认识，不要提起任何家人的私事。"
+        name = "小朋友"
     else:
-        who = "只陪伴当前说话的人，不要提起其他孩子的私事或拿他们比较。"
+        who = f"只陪伴当前这位「{name}」，不要提起家里其他人的私事，也不要拿他们比较。"
     return f"{species}\n{style}\n{safety}\n{who}\n默认称呼：{name}。"
 
 
@@ -170,11 +182,20 @@ def main():
         print(SAFE_REPLY)
         return
 
-    hist_file = os.path.join(DATA_DIR, "cat-chat-history.json")
+    hist_name = speaker_id() if speaker_id() not in ("unknown", "", "访客") else "guest"
+    hist_file = os.path.join(DATA_DIR, f"cat-chat-history-{hist_name}.json")
+    # 兼容旧的单一历史文件：仅 guest 读取一次后不再混用
+    legacy = os.path.join(DATA_DIR, "cat-chat-history.json")
     history = []
     if os.path.exists(hist_file):
         try:
             with open(hist_file, encoding="utf-8") as f:
+                history = json.load(f)
+        except Exception:
+            history = []
+    elif hist_name == "guest" and os.path.exists(legacy):
+        try:
+            with open(legacy, encoding="utf-8") as f:
                 history = json.load(f)
         except Exception:
             history = []
