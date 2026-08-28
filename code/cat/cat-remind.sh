@@ -1,12 +1,12 @@
 #!/bin/bash
 # ============================================================
-# 糖糖语音提醒（不上投影；播前检测客厅是否有小朋友）
+# 糖糖语音提醒（不上投影）
+# 上学日白天只跟爷爷奶奶说；航航 16:00、洽洽 18:00 到家后才跟小朋友互动
 # 用法:
 #   ./cat-remind.sh pet_walk
 #   ./cat-remind.sh meal lunch
-#   ./cat-remind.sh alarm school     # 上学闹铃（工作日 6:30，不看出门）
-#   ./cat-remind.sh --print water     # 只打印文案，不做在场检测、不 TTS
-#   ./cat-remind.sh --force pet_walk  # 跳过在场检测，强制出声
+#   ./cat-remind.sh alarm school
+#   ./cat-remind.sh --print water
 #   ./cat-remind.sh --force alarm school
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -26,15 +26,49 @@ done
 EVENT="${1:-rest}"
 ARG="${2:-}"
 
-# 房间喇叭默认 friend；若只检测到航航则改 play
+# 房间喇叭默认 friend；上学日按作息改：白天 elder，航航到家后 play
 export TANGTANG_PROFILE="${TANGTANG_REMIND_PROFILE:-friend}"
 
-# 上学闹铃：卧室也要听到，默认不看出门；9月1日起工作日才响
+# 上学闹铃：卧室也要听到，默认不看出门；只在上学日响
 if [ "$EVENT" = "alarm" ]; then
   : "${TANGTANG_FROM:=${TANGTANG_SCHOOL_START:-2026-09-01}}"
   if [ "${TANGTANG_ALARM_REQUIRE_PRESENCE:-0}" != "1" ]; then
     TANGTANG_REQUIRE_PRESENCE=0
   fi
+fi
+
+apply_audience() {
+  local kids rc
+  if ! tangtang_is_school_day; then
+    return 2
+  fi
+  kids="$(tangtang_kids_interactable)"
+  rc=$?
+  if [ "$rc" != "0" ]; then
+    export TANGTANG_PROFILE=elder
+    export TANGTANG_CHILD_NAME="爷爷奶奶"
+    export TANGTANG_PRESENT_KIDS=""
+    export TANGTANG_SCHOOL_DAYTIME=1
+    TANGTANG_REQUIRE_PRESENCE=0
+    return 1
+  fi
+  export TANGTANG_PRESENT_KIDS="$kids"
+  export TANGTANG_SCHOOL_DAYTIME=0
+  if [ "$kids" = "航航" ]; then
+    export TANGTANG_PROFILE=play
+    export TANGTANG_CHILD_NAME="航航"
+  elif [ "$kids" = "洽洽" ]; then
+    export TANGTANG_PROFILE=friend
+    export TANGTANG_CHILD_NAME="洽洽"
+  else
+    export TANGTANG_PROFILE="${TANGTANG_REMIND_PROFILE:-friend}"
+  fi
+  TANGTANG_REQUIRE_PRESENCE=0
+  return 0
+}
+
+if [ "$FORCE" != "1" ]; then
+  apply_audience || true
 fi
 
 log_skip() {
@@ -50,12 +84,13 @@ if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ]; then
     log_skip "今天不在提醒日期内，这次不说"
     exit 0
   fi
-  if [ "$EVENT" = "alarm" ] && ! tangtang_dow_match "${TANGTANG_ALARM_DOW:-1-5}"; then
-    log_skip "周六周日休息，不上学闹铃"
+  if [ "$EVENT" = "alarm" ] && ! tangtang_is_school_day; then
+    log_skip "今天不上学，闹铃休息"
     exit 0
   fi
 fi
 
+# 周末/节假日：仍看出门。上学日白天对爷爷奶奶说，不要求小朋友手机。
 if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ] && [ "${TANGTANG_REQUIRE_PRESENCE:-1}" = "1" ]; then
   present="$(tangtang_kids_present)"
   prc=$?
@@ -70,6 +105,7 @@ if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ] && [ "${TANGTANG_REQUIRE_PRESENCE:
   export TANGTANG_PRESENT_KIDS="$present"
   if [ "$present" = "航航" ]; then
     export TANGTANG_PROFILE=play
+    export TANGTANG_CHILD_NAME="航航"
   else
     export TANGTANG_PROFILE="${TANGTANG_REMIND_PROFILE:-friend}"
   fi

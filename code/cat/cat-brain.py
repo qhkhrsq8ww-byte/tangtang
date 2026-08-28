@@ -46,6 +46,7 @@ EVENT_STATE = {
 
 EVENT_SCENE = {
     "rest": "phone_break",
+    "greet": "greet",
     "wake": "wake",
     "alarm": "alarm",
     "sleep": "sleep",
@@ -264,8 +265,8 @@ def pick_from_library(event, profile):
         return None
     items = COPY_LIB.get("items") or []
     matched = [i for i in items if i.get("scene") == scene and i.get("profile") == profile]
-    if not matched:
-        matched = [i for i in items if i.get("scene") == scene]
+    if not matched and profile in ("play", "friend"):
+        matched = [i for i in items if i.get("scene") == scene and i.get("profile") in ("play", "friend")]
     texts = [i.get("text") for i in matched if i.get("text")]
     if not texts:
         return None
@@ -366,6 +367,8 @@ def compose(state, memory, event, arg):
         text = (arg or "").strip()
         if not text:
             return "", "calm"
+        if profile == "elder":
+            return text, label
         if high:
             text = f"{text}～ {nick}，糖糖最喜欢你啦汪汪～"
         else:

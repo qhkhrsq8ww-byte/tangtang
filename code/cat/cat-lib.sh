@@ -14,11 +14,15 @@ fi
 : "${TANGTANG_REQUIRE_PRESENCE:=1}"
 : "${TANGTANG_SCHOOL_START:=2026-09-01}"
 : "${TANGTANG_ALARM_DOW:=1-5}"
+: "${TANGTANG_SCHOOL_LEAVE:=07:30}"
+: "${TANGTANG_HOME_HANGHANG:=16:00}"
+: "${TANGTANG_HOME_QIAQIA:=18:00}"
 export TANGTANG_PROFILE TANGTANG_CHILD_NAME
 export TANGTANG_PROJECTOR_IP TANGTANG_AIRPLAY_PORT
 export TANGTANG_REQUIRE_PRESENCE
 export TANGTANG_HOST_QIAQIA TANGTANG_HOST_HANGHANG
 export TANGTANG_SCHOOL_START TANGTANG_ALARM_DOW
+export TANGTANG_SCHOOL_LEAVE TANGTANG_HOME_HANGHANG TANGTANG_HOME_QIAQIA
 
 # 记忆只写本机硬盘（Mac Air: ~/Library/Application Support/Tangtang）
 # 现在不要指向路由器 Samba。未设置时由 tangtang_paths.py 解析并迁移旧文件。
@@ -132,6 +136,141 @@ tangtang_date_in_window() {
     return 1
   fi
   return 0
+}
+
+tangtang_calendar_file() {
+  local p
+  for p in \
+    "${TANGTANG_CALENDAR:-}" \
+    "${TANGTANG_DATA_DIR:-}/school_calendar.txt" \
+    "$CAT_DIR/school_calendar.txt" \
+    "$CAT_DIR/../../data/school_calendar.txt"
+  do
+    [ -n "$p" ] && [ -f "$p" ] && printf '%s\n' "$p" && return 0
+  done
+  return 1
+}
+
+tangtang_now_hm() {
+  printf '%s\n' "${TANGTANG_FAKE_TIME:-$(date +%H:%M)}"
+}
+
+# HH:MM -> 分钟
+tangtang_hm_min() {
+  local hm="$1"
+  local h="${hm%%:*}"
+  local m="${hm##*:}"
+  h=$((10#$h))
+  m=$((10#$m))
+  printf '%s\n' $((h * 60 + m))
+}
+
+# 当前时刻是否在 [start, end) ，HH:MM
+tangtang_time_in_away() {
+  local start="$1" end="$2"
+  local now
+  now="$(tangtang_now_hm)"
+  local n s e
+  n="$(tangtang_hm_min "$now")"
+  s="$(tangtang_hm_min "$start")"
+  e="$(tangtang_hm_min "$end")"
+  [ "$n" -ge "$s" ] && [ "$n" -lt "$e" ]
+}
+
+tangtang_date_between() {
+  local day="$1" from="$2" to="$3"
+  [ "$day" \> "$from" ] || [ "$day" = "$from" ] || return 1
+  [ "$day" \< "$to" ] || [ "$day" = "$to" ] || return 1
+  return 0
+}
+
+# 0=今天放假（小朋友在家）
+tangtang_is_holiday() {
+  local cal day line kind span from to
+  day="$(tangtang_today)"
+  cal="$(tangtang_calendar_file)" || return 1
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%%#*}"
+    line="$(printf '%s' "$line" | awk '{$1=$1};1')"
+    [ -n "$line" ] || continue
+    kind="${line%% *}"
+    span="${line#* }"
+    span="${span%% *}"
+    [ "$kind" = "holiday" ] || continue
+    if [ "${span#*..}" != "$span" ]; then
+      from="${span%%..*}"
+      to="${span#*..}"
+    else
+      from="$span"
+      to="$span"
+    fi
+    if tangtang_date_between "$day" "$from" "$to"; then
+      return 0
+    fi
+  done < "$cal"
+  return 1
+}
+
+# 0=调休上课日（周末也上学）
+tangtang_is_makeup_school() {
+  local cal day line kind span
+  day="$(tangtang_today)"
+  cal="$(tangtang_calendar_file)" || return 1
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%%#*}"
+    line="$(printf '%s' "$line" | awk '{$1=$1};1')"
+    [ -n "$line" ] || continue
+    kind="${line%% *}"
+    span="${line#* }"
+    span="${span%% *}"
+    [ "$kind" = "school" ] || continue
+    [ "$span" = "$day" ] && return 0
+  done < "$cal"
+  return 1
+}
+
+# 0=今天要上学（非节假日的工作日，或调休上课）
+tangtang_is_school_day() {
+  tangtang_date_in_window "${TANGTANG_SCHOOL_START:-2026-09-01}" "" || return 1
+  tangtang_is_holiday && return 1
+  tangtang_is_makeup_school && return 0
+  tangtang_dow_match "${TANGTANG_ALARM_DOW:-1-5}"
+}
+
+# 0=这个小朋友按作息正在上学、不在家
+# 参数: qiaqia|hanghang|洽洽|航航|member_id
+tangtang_child_at_school() {
+  local who="$1"
+  local home leave
+  leave="${TANGTANG_SCHOOL_LEAVE:-07:30}"
+  case "$who" in
+    qiaqia|洽洽) home="${TANGTANG_HOME_QIAQIA:-18:00}" ;;
+    hanghang|航航) home="${TANGTANG_HOME_HANGHANG:-16:00}" ;;
+    *) return 1 ;;
+  esac
+  tangtang_is_school_day || return 1
+  tangtang_time_in_away "$leave" "$home"
+}
+
+# 现在可以互动的小朋友名字（空格分隔）。上学时段即使手机在家也不算。
+# 0=有人 1=没人 2=没配置且不是上学日（沿用手机检测）
+tangtang_kids_interactable() {
+  local names=()
+  if tangtang_is_school_day; then
+    if ! tangtang_child_at_school hanghang; then
+      names+=("航航")
+    fi
+    if ! tangtang_child_at_school qiaqia; then
+      names+=("洽洽")
+    fi
+    if [ ${#names[@]} -gt 0 ]; then
+      printf '%s\n' "${names[*]}"
+      return 0
+    fi
+    printf '\n'
+    return 1
+  fi
+  tangtang_kids_present
 }
 
 # 解析时刻表一行，结果放 TANGTANG_SCHED_* 

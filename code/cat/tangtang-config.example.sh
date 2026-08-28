@@ -8,9 +8,14 @@ export TANGTANG_PROFILE="play"
 # 房间定时提醒默认 friend（少卖萌，全家都能听）
 export TANGTANG_REMIND_PROFILE="friend"
 
-# 上学闹铃：2026-09-01 起，工作日 06:30；周六日休息
+# 上学闹铃：2026-09-01 起，上学日 06:30；周末/节假日休息
 export TANGTANG_SCHOOL_START="2026-09-01"
 export TANGTANG_ALARM_DOW="1-5"
+# 白天上学：约 07:30 后不跟小朋友互动。航航 16:00 到家，洽洽 18:00 到家。
+export TANGTANG_SCHOOL_LEAVE="07:30"
+export TANGTANG_HOME_HANGHANG="16:00"
+export TANGTANG_HOME_QIAQIA="18:00"
+# 放假日历：仓库 data/school_calendar.txt （寒假暑假按学校通知追加）
 
 # 糖糖口头称呼。语音识别到家人后会改成对方的 display_name。
 export TANGTANG_CHILD_NAME="小朋友"

@@ -31,10 +31,20 @@ if [ "$MEMBER_ID" = "unknown" ] || [ -z "$MEMBER_ID" ]; then
   DISPLAY=""
   export TANGTANG_SPEAKER="unknown"
   export TANGTANG_MEMBER_ID="unknown"
+  if tangtang_is_school_day && tangtang_child_at_school hanghang && tangtang_child_at_school qiaqia; then
+    PROFILE="elder"
+    export TANGTANG_CHILD_NAME="爷爷奶奶"
+  else
+    export TANGTANG_CHILD_NAME="${TANGTANG_CHILD_NAME:-小朋友}"
+  fi
   export TANGTANG_PROFILE="$PROFILE"
-  export TANGTANG_CHILD_NAME="${TANGTANG_CHILD_NAME:-小朋友}"
 else
   echo "👤 识别: ${DISPLAY}（${PROFILE}，置信 ${SCORE}）"
+  if tangtang_child_at_school "$MEMBER_ID"; then
+    echo "[糖糖] 上学期间不跟${DISPLAY}互动（按作息还没到家）"
+    rm -f "$PCM"
+    exit 0
+  fi
   export TANGTANG_SPEAKER="$MEMBER_ID"
   export TANGTANG_MEMBER_ID="$MEMBER_ID"
   export TANGTANG_PROFILE="$PROFILE"
