@@ -17,7 +17,7 @@ from core.events.event import Event
 from core.response.orchestrator import ResponseOrchestrator
 from presentation.animation_controller import AnimationController
 from presentation.asset_manifest import AssetManifest
-from presentation.frame_renderer import FrameRenderer
+from presentation.frame_renderer import FrameRenderer, PixelBuffer, composite_frame
 from presentation.mapping import AnimationAction
 
 V10 = ROOT / "assets" / "character" / "tangtang" / "v10"
@@ -214,6 +214,84 @@ class TestV10ControllerNoThrow(unittest.TestCase):
         self.assertEqual(AnimationAction("walk").name, "walk")
         self.assertEqual(AnimationAction("跑步").name, "run")
         self.assertEqual(AnimationAction("飞天").name, "idle")
+
+
+class TestV10NoGhosting(unittest.TestCase):
+    def test_consecutive_paints_do_not_keep_previous_rgba(self) -> None:
+        w = h = 4
+        red = bytearray(w * h * 4)
+        red[0:4] = bytes((255, 0, 0, 255))
+        blue = bytearray(w * h * 4)
+        blue[4:8] = bytes((0, 0, 255, 255))
+        first = composite_frame(red, width=w, height=h)
+        self.assertEqual(first.pixel(0, 0), (255, 0, 0, 255))
+        second = composite_frame(blue, previous=bytes(red), fade_t=1.0, width=w, height=h)
+        self.assertEqual(second.pixel(0, 0)[3], 0)
+        self.assertEqual(second.pixel(1, 0)[2], 255)
+        renderer = FrameRenderer(AssetManifest(V10), V10)
+        renderer.buffer = PixelBuffer(w, h)
+        renderer.paint(red)
+        self.assertEqual(renderer.buffer.pixel(0, 0)[0], 255)
+        renderer.paint(blue)
+        self.assertEqual(renderer.buffer.pixel(0, 0)[3], 0)
+        self.assertNotEqual(renderer.buffer.pixel(1, 0)[3], 0)
+
+    def test_crossfade_caps_previous_opacity(self) -> None:
+        w = h = 2
+        prev = bytearray(w * h * 4)
+        prev[0:4] = bytes((255, 255, 255, 255))
+        nxt = bytearray(w * h * 4)
+        nxt[4:8] = bytes((0, 0, 0, 255))
+        buf = composite_frame(nxt, previous=bytes(prev), fade_t=0.5, width=w, height=h, fade_cap=0.4)
+        self.assertLessEqual(buf.pixel(0, 0)[3], int(255 * 0.4) + 2)
+
+    def test_walk_and_run_frames_are_single_subject(self) -> None:
+        for name in ("walk", "run"):
+            folder = V10 / "animations" / name
+            for path in sorted(folder.glob(f"{name}_*.png")):
+                runs = _subject_column_runs(path)
+                self.assertEqual(len(runs), 1, f"{path.name} runs={runs}")
+                width = runs[0][1] - runs[0][0] + 1
+                self.assertLessEqual(width, 500, path.name)
+
+
+def _subject_column_runs(
+    path: Path, alpha_min: int = 40, min_col: int = 10, merge_gap: int = 18
+) -> list[tuple[int, int]]:
+    from PIL import Image
+
+    im = Image.open(path).convert("RGBA")
+    pix = im.load()
+    width, height = im.size
+    occupied = []
+    for x in range(width):
+        n = 0
+        for y in range(height):
+            if pix[x, y][3] >= alpha_min:
+                n += 1
+                if n >= min_col:
+                    break
+        occupied.append(n >= min_col)
+    raw: list[tuple[int, int]] = []
+    x = 0
+    while x < width:
+        if occupied[x]:
+            x1 = x
+            while x1 < width and occupied[x1]:
+                x1 += 1
+            raw.append((x, x1 - 1))
+            x = x1
+        else:
+            x += 1
+    if not raw:
+        return []
+    merged = [list(raw[0])]
+    for a, b in raw[1:]:
+        if a - merged[-1][1] <= merge_gap:
+            merged[-1][1] = b
+        else:
+            merged.append([a, b])
+    return [(int(a), int(b)) for a, b in merged]
 
 
 if __name__ == "__main__":

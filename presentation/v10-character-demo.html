@@ -34,11 +34,9 @@
     height: auto;
     aspect-ratio: 1 / 1;
     transform: translateX(-50%);
-    object-fit: contain;
     pointer-events: none;
-    transition: opacity 150ms linear;
+    background: transparent;
   }
-  .character.fade { opacity: 0.55; }
   .hud {
     position: absolute; left: 16px; top: 12px;
     color: var(--ink);
@@ -67,17 +65,21 @@
 <body>
 <div class="stage-wrap">
   <div class="stage" id="stage">
-    <img class="character" id="dog" alt="糖糖" />
+    <canvas class="character" id="dog" width="512" height="512" aria-label="糖糖"></canvas>
     <div class="hud" id="hud">loading…</div>
     <div class="chrome" id="chrome"></div>
   </div>
 </div>
+<script src="frame_renderer.js"></script>
 <script>
-const ASSET = "../../assets/character/tangtang/v10";
+const ASSET = "../assets/character/tangtang/v10";
 const BUTTONS = ["idle", "listen", "happy", "walk", "run", "trot", "sleep", "get_up"];
 const LABELS = { idle: "Idle", listen: "Listen", happy: "Happy", walk: "Walk", run: "Run", trot: "Trot", sleep: "Sleep", get_up: "Get Up" };
+const FADE_MS_MIN = 100;
+const FADE_MS_MAX = 200;
 let meta = null;
 let frames = [];
+let images = [];
 let idx = 0;
 let timer = null;
 let current = "idle";
@@ -85,6 +87,9 @@ let looping = true;
 let speed = 1;
 let paused = false;
 let fadeMs = 150;
+let renderer = null;
+let prevImg = null;
+let fadeUntil = 0;
 
 function showDebug() {
   const q = new URLSearchParams(location.search);
@@ -94,9 +99,14 @@ function showDebug() {
   return !phone;
 }
 
+function query() {
+  return new URLSearchParams(location.search);
+}
+
 async function loadMeta() {
   const res = await fetch(`${ASSET}/manifest.json`);
   meta = await res.json();
+  renderer = window.TangTangFrameRenderer.create(document.getElementById("dog"));
   const chrome = document.getElementById("chrome");
   BUTTONS.forEach((name) => {
     const b = document.createElement("button");
@@ -117,7 +127,7 @@ async function loadMeta() {
   pauseBtn.textContent = "Pause";
   pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "Resume" : "Pause"; };
   chrome.appendChild(pauseBtn);
-  const q = new URLSearchParams(location.search);
+  const q = query();
   if (q.get("projection") === "1") document.body.classList.add("projection");
   if (q.get("phone") === "1" || (!showDebug() && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent))) {
     document.body.classList.add("phone");
@@ -125,7 +135,15 @@ async function loadMeta() {
   if (!showDebug()) {
     document.getElementById("hud").style.display = "none";
   }
-  play("idle");
+  const start = BUTTONS.includes(q.get("anim")) ? q.get("anim") : "idle";
+  await play(start);
+  const freeze = q.get("frame");
+  if (freeze != null && freeze !== "") {
+    idx = Math.max(0, Math.min(images.length - 1, parseInt(freeze, 10) || 0));
+    paused = q.get("paused") !== "0";
+    paint();
+    hud();
+  }
 }
 
 async function exists(url) {
@@ -133,6 +151,15 @@ async function exists(url) {
     const r = await fetch(url, { method: "HEAD" });
     return r.ok;
   } catch (e) { return false; }
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 async function play(name) {
@@ -147,10 +174,16 @@ async function play(name) {
     const fallback = `${ASSET}/animations/idle/idle_01.png`;
     if (await exists(fallback)) urls.push(fallback);
   }
-  const img = document.getElementById("dog");
-  img.classList.add("fade");
-  setTimeout(() => img.classList.remove("fade"), fadeMs);
+  const loaded = [];
+  for (const url of urls) {
+    try { loaded.push(await loadImage(url)); } catch (e) { /* skip */ }
+  }
+  if (!loaded.length) return;
+  prevImg = images[idx] || prevImg;
+  fadeMs = Math.max(FADE_MS_MIN, Math.min(FADE_MS_MAX, fadeMs));
+  fadeUntil = performance.now() + fadeMs;
   frames = urls;
+  images = loaded;
   idx = 0;
   current = name;
   looping = spec.loop !== false;
@@ -168,13 +201,25 @@ function fpsNow() {
   return Math.max(4, Math.min(30, base * speed));
 }
 
+function paint() {
+  const img = images[idx];
+  if (!img || !renderer) return;
+  const now = performance.now();
+  let fadeT = 1;
+  if (prevImg && now < fadeUntil) {
+    fadeT = 1 - (fadeUntil - now) / fadeMs;
+  }
+  renderer.draw(img, prevImg, fadeT);
+  if (fadeT >= 1) prevImg = img;
+}
+
 function restartTimer() {
   if (timer) clearInterval(timer);
   const tick = () => {
-    if (paused || !frames.length) return hud();
-    document.getElementById("dog").src = frames[idx];
+    if (paused || !images.length) { paint(); hud(); return; }
+    paint();
     hud();
-    idx = looping ? (idx + 1) % frames.length : Math.min(idx + 1, frames.length - 1);
+    idx = looping ? (idx + 1) % images.length : Math.min(idx + 1, images.length - 1);
   };
   tick();
   timer = setInterval(tick, 1000 / fpsNow());
@@ -186,8 +231,8 @@ function hud() {
   el.style.display = "";
   el.innerHTML =
     `Animation <b>${current}</b><br>` +
-    `Frame ${frames.length ? (idx % frames.length) + 1 : 0}/${frames.length}<br>` +
-    `FPS ${fpsNow().toFixed(1)} · Loop ${looping} · Speed ${speed.toFixed(2)}`;
+    `Frame ${images.length ? (idx % images.length) + 1 : 0}/${images.length}<br>` +
+    `FPS ${fpsNow().toFixed(1)} · Loop ${looping} · Speed ${speed.toFixed(2)} · clearRect`;
 }
 
 loadMeta().catch((err) => {
