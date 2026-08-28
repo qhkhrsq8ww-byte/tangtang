@@ -158,6 +158,83 @@ tangtang_calendar_file() {
   return 1
 }
 
+tangtang_rest_days_file() {
+  local p
+  for p in \
+    "${TANGTANG_REST_DAYS:-}" \
+    "${TANGTANG_DATA_DIR:-}/rest_days.txt" \
+    "$CAT_DIR/rest_days.txt" \
+    "$CAT_DIR/../../data/rest_days.txt"
+  do
+    [ -n "$p" ] && [ -f "$p" ] && printf '%s\n' "$p" && return 0
+  done
+  return 1
+}
+
+tangtang_today_plan_file() {
+  local p
+  for p in \
+    "${TANGTANG_TODAY_PLAN:-}" \
+    "$CAT_DIR/today_plan.json" \
+    "$CAT_DIR/../../data/today_plan.json"
+  do
+    [ -n "$p" ] && [ -f "$p" ] && printf '%s\n' "$p" && return 0
+  done
+  return 1
+}
+
+# 日历里指定 kind（holiday / school / rest）是否覆盖今天。0=是
+tangtang_calendar_kind_today() {
+  local want="$1"
+  local cal day line kind span from to
+  day="$(tangtang_today)"
+  cal="$(tangtang_calendar_file)" || return 1
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%%#*}"
+    line="$(printf '%s' "$line" | awk '{$1=$1};1')"
+    [ -n "$line" ] || continue
+    kind="${line%% *}"
+    span="${line#* }"
+    span="${span%% *}"
+    [ "$kind" = "$want" ] || continue
+    if [ "${span#*..}" != "$span" ]; then
+      from="${span%%..*}"
+      to="${span#*..}"
+    else
+      from="$span"
+      to="$span"
+    fi
+    if tangtang_date_between "$day" "$from" "$to"; then
+      return 0
+    fi
+  done < "$cal"
+  return 1
+}
+
+# 0=今天小朋友在家休息（不是每周五）。CAT_CHILD_HOME=1 / --home 也算。
+# 不改开学日，不关上学闹铃。
+tangtang_is_rest_day() {
+  local day line token
+  case "${CAT_CHILD_HOME:-${TANGTANG_CHILD_HOME:-0}}" in
+    1|yes|true|on|home) return 0 ;;
+  esac
+  if tangtang_calendar_kind_today rest; then
+    return 0
+  fi
+  day="$(tangtang_today)"
+  line=""
+  if line="$(tangtang_rest_days_file)"; then
+    while IFS= read -r token || [ -n "$token" ]; do
+      token="${token%%#*}"
+      token="$(printf '%s' "$token" | awk '{$1=$1};1')"
+      [ -n "$token" ] || continue
+      token="${token%% *}"
+      [ "$token" = "$day" ] && return 0
+    done < "$line"
+  fi
+  return 1
+}
+
 tangtang_now_hm() {
   printf '%s\n' "${TANGTANG_FAKE_TIME:-$(date +%H:%M)}"
 }
@@ -246,6 +323,7 @@ tangtang_is_school_day() {
 
 # 0=这个小朋友按作息正在上学、不在家
 # 参数: qiaqia|hanghang|洽洽|航航|member_id
+# 休息日 / CAT_CHILD_HOME=1：在家，不禁童。不关爷爷奶奶提醒，不改闹铃。
 tangtang_child_at_school() {
   local who="$1"
   local home leave
@@ -255,6 +333,7 @@ tangtang_child_at_school() {
     hanghang|航航) home="${TANGTANG_HOME_HANGHANG:-16:00}" ;;
     *) return 1 ;;
   esac
+  tangtang_is_rest_day && return 1
   tangtang_is_school_day || return 1
   tangtang_time_in_away "$leave" "$home"
 }
@@ -389,13 +468,20 @@ tangtang_turn_event_enabled() {
 tangtang_turn_who() {
   local event="${1:-}"
   local arg="${2:-}"
+  case "$arg" in
+    qiaqia|洽洽|6|grade6) printf '%s\n' "qiaqia"; return 0 ;;
+    hanghang|航航|2|grade2|g2) printf '%s\n' "hanghang"; return 0 ;;
+  esac
   case "$event" in
     english)
-      case "$arg" in
-        qiaqia|洽洽|6|grade6) printf '%s\n' "qiaqia" ;;
-        *) printf '%s\n' "hanghang" ;;
-      esac
+      printf '%s\n' "hanghang"
       return 0
+      ;;
+    ask|move|rest)
+      case "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}" in
+        qiaqia|洽洽) printf '%s\n' "qiaqia"; return 0 ;;
+        *) printf '%s\n' "hanghang"; return 0 ;;
+      esac
       ;;
   esac
   case "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}" in
