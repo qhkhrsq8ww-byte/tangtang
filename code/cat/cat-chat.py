@@ -227,6 +227,7 @@ def main():
     history.append({"role": "assistant", "content": reply})
     history = history[-20:]
     tmp = hist_file + ".tmp"
+    os.makedirs(os.path.dirname(hist_file) or ".", exist_ok=True)
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False)
     os.replace(tmp, hist_file)
