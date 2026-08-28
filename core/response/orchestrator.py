@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from core.errors import ActionError
+from core.persona.copy import CopyGuard
+from core.persona.profiles import PersonaRenderer, profile_for
 from core.policy.injection import InjectionGuard, REFUSE_TEXT
 
 DECISIONS = frozenset({"SPEAK", "SILENT", "DELAY", "LOG_ONLY"})
@@ -65,9 +67,13 @@ class ResponseOrchestrator:
         self,
         responder: Callable[[Mapping[str, Any]], str] | None = None,
         injection: InjectionGuard | None = None,
+        copy_guard: CopyGuard | None = None,
+        persona: PersonaRenderer | None = None,
     ) -> None:
         self.responder = responder or (lambda context: "")
         self.injection = injection or InjectionGuard()
+        self.copy_guard = copy_guard or CopyGuard()
+        self.persona = persona
 
     def run(
         self,
@@ -103,7 +109,16 @@ class ResponseOrchestrator:
                 sink="none",
                 private_facts=(),
             )
-        text = self.responder(ctx)
+        if self.persona is not None and not ctx.get("skip_persona"):
+            rendered = self.persona.reply_text(
+                member_id=member_id,
+                utterance=utterance,
+                scene=ctx.get("scene") if isinstance(ctx.get("scene"), str) else None,
+                context=ctx,
+            )
+            text = rendered
+        else:
+            text = self.responder(ctx)
         if not isinstance(text, str):
             raise ActionError("responder must return text, not a sink callable")
         needles = self.injection.other_private_needles(ctx, member_id)
@@ -116,6 +131,8 @@ class ResponseOrchestrator:
                 sink="voice",
                 private_facts=(),
             )
+        role = profile_for(member_id)
+        text = self.copy_guard.sanitize(text, member_id=member_id, role=role, context=ctx)
         return PresentationAction(
             decision="SPEAK",
             text=_clip_text(text),

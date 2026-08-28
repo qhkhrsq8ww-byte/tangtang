@@ -20,6 +20,7 @@ from core.memory.store import Memory
 from core.policy.injection import InjectionGuard
 from core.policy.interrupt_policy import InterruptPolicy
 from core.policy.privacy_policy import PrivacyDecision, PrivacyPolicy
+from core.persona.profiles import PersonaRenderer
 from core.response.orchestrator import PresentationAction, ResponseOrchestrator
 from core.context.builder import ContextBuilder
 
@@ -64,6 +65,7 @@ class PrivacyPipeline:
         injection: InjectionGuard | None = None,
         responder: Callable[[Mapping[str, Any]], str] | None = None,
         clock: Callable[[], datetime] | None = None,
+        persona: PersonaRenderer | None = None,
     ) -> None:
         self.identity = identity or IdentityResolver(members)
         self.privacy = privacy or PrivacyPolicy(members)
@@ -86,7 +88,11 @@ class PrivacyPipeline:
             privacy=self.privacy,
             injection=self.injection,
         )
-        self.orchestrator = ResponseOrchestrator(responder=responder, injection=self.injection)
+        self.orchestrator = ResponseOrchestrator(
+            responder=responder,
+            injection=self.injection,
+            persona=persona or PersonaRenderer(members),
+        )
 
     def ingest(
         self,
@@ -185,5 +191,6 @@ class PrivacyPipeline:
             privacy_scope=scope,
         )
         ctx["utterance"] = utterance
+        ctx["scene"] = obs.get("scene")
         decision = self.interrupt.decide(obs)
         return self.orchestrator.run(decision=decision, context=ctx, action="reply")
