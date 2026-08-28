@@ -12,6 +12,8 @@ from typing import Any, Callable, Iterable
 
 from core.runtime.isolate import isolate
 
+from presentation.asset_manifest import AssetManifest, V10_ROOT
+from presentation.frame_renderer import FrameRenderer
 from presentation.mapping import (
     AnimationAction,
     LOOPING,
@@ -26,7 +28,13 @@ from presentation.registry import (
     frame_path,
     load_metadata,
 )
-from presentation.state_machine import ANIM_TO_STATE, MAX_FPS, SLEEP_MAX_FPS, AnimationStateMachine
+from presentation.state_machine import (
+    ANIM_TO_STATE,
+    MAX_FPS,
+    SLEEP_MAX_FPS,
+    TRANSITION_GRAPH,
+    AnimationStateMachine,
+)
 
 DEFAULT_ANCHOR = {"x": 0.5, "y": 1.0}
 
@@ -47,6 +55,9 @@ class AnimationClip:
     transition_from: str | None = None
     night_softened: bool = False
     interrupt_blocked: bool = False
+    fade_ms: int = 150
+    speed: float = 1.0
+    paused: bool = False
     projection: dict[str, Any] = field(default_factory=dict)
 
     def timeline(self, ticks: int | None = None) -> list[str]:
@@ -102,6 +113,12 @@ class AnimationController:
         self.meta = load_metadata(self.root)
         self.machine = AnimationStateMachine("IDLE")
         self._last_clip: AnimationClip | None = None
+        self._paused = False
+        self._speed = 1.0
+        self._loop_override: bool | None = None
+        self._playing = True
+        self.v10 = AssetManifest(V10_ROOT if (V10_ROOT / "manifest.json").is_file() else None)
+        self.renderer = FrameRenderer(self.v10)
 
     @property
     def projection(self) -> dict[str, Any]:
@@ -224,9 +241,88 @@ class AnimationController:
             transition_from=trans.from_state if trans.hold_previous else None,
             night_softened=night_softened,
             projection=self.projection,
+            fade_ms=150,
+            speed=self._speed,
+            paused=self._paused,
         )
+        if self._loop_override is not None:
+            clip.loop = self._loop_override
         self._last_clip = clip
         return clip
+
+    def stop(self) -> AnimationClip:
+        self._paused = False
+        self._playing = False
+        clip = self.play(AnimationAction("idle", force=True, priority=99))
+        self._playing = True
+        return clip
+
+    def pause(self) -> AnimationClip:
+        self._paused = True
+        current = self._last_clip or self._idle_clip(fallback_used=False)
+        current.paused = True
+        return current
+
+    def resume(self) -> AnimationClip:
+        self._paused = False
+        current = self._last_clip or self.play("idle")
+        current.paused = False
+        self._playing = True
+        return current
+
+    def set_speed(self, speed: float) -> float:
+        value = float(speed) if isinstance(speed, (int, float)) else 1.0
+        self._speed = max(0.25, min(2.0, value))
+        if self._last_clip is not None:
+            self._last_clip.speed = self._speed
+        return self._speed
+
+    def set_loop(self, loop: bool) -> bool:
+        self._loop_override = bool(loop)
+        if self._last_clip is not None:
+            self._last_clip.loop = bool(loop)
+        return bool(loop)
+
+    def cross_fade(self, target: str, duration_ms: int = 150) -> AnimationClip:
+        fade = int(duration_ms) if isinstance(duration_ms, int) else 150
+        fade = max(100, min(200, fade))
+        clip = self.play(target)
+        clip.fade_ms = fade
+        clip.speed = self._speed
+        clip.paused = self._paused
+        return clip
+
+    def transition(self, target: str, duration_ms: int = 150) -> list[AnimationClip]:
+        """idle↔listen↔happy, idle→walk→run→idle, idle→sleep→get_up→idle."""
+        wanted = ANIM_TO_STATE.get(AnimationAction(target).name, "IDLE")
+        path = _state_path(self.machine.state, wanted)
+        clips: list[AnimationClip] = []
+        for state in path:
+            anim = STATE_TO_ANIM.get(state, "idle")
+            clips.append(self.cross_fade(anim, duration_ms))
+        return clips or [self.cross_fade("idle", duration_ms)]
+
+    def deliver_decoupled(
+        self,
+        action: AnimationAction | str | Any | None,
+        *,
+        tts: Callable[[], Any] | None = None,
+        projection: Callable[[AnimationClip], Any] | None = None,
+    ) -> dict[str, Any]:
+        """TTS / projection / animation are independent. TTS fail ≠ stop animation."""
+        clip = self.play_safe(action)
+        tts_ok = True
+        if tts is not None:
+            tts_ok = isolate(tts, fallback=None).ok
+        projection_ok = True
+        if projection is not None:
+            projection_ok = self.project_safe(projection, clip)
+        return {
+            "clip": clip,
+            "animation_ok": True,
+            "tts_ok": tts_ok,
+            "projection_ok": projection_ok,
+        }
 
     def play_safe(self, action: AnimationAction | str | Any | None) -> AnimationClip:
         result = isolate(lambda: self.play(action), fallback=None)
@@ -288,3 +384,40 @@ def _is_two_frame_pong(frames: Iterable[str]) -> bool:
     if len(seq) % 2:
         expected.append(a)
     return seq == expected[: len(seq)]
+
+
+STATE_TO_ANIM = {
+    "IDLE": "idle",
+    "LISTEN": "listen",
+    "HAPPY": "happy",
+    "ENCOURAGE": "encourage",
+    "SAD": "sad",
+    "WALK": "walk",
+    "RUN": "run",
+    "TROT": "trot",
+    "SIT": "sit",
+    "LIE": "lie",
+    "SLEEP": "sleep",
+    "GET_UP": "get_up",
+}
+
+
+def _state_path(start: str, goal: str) -> list[str]:
+    if start == goal:
+        return [goal]
+    from collections import deque
+
+    q: deque[tuple[str, list[str]]] = deque([(start, [])])
+    seen = {start}
+    while q:
+        node, trail = q.popleft()
+        for nxt in TRANSITION_GRAPH.get(node, ()):
+            if nxt in seen:
+                continue
+            step = trail + [nxt]
+            if nxt == goal:
+                return step
+            seen.add(nxt)
+            q.append((nxt, step))
+    # No graph path: still attempt the target (play() may sleep-lock).
+    return [goal]
