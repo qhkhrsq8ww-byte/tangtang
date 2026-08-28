@@ -60,6 +60,30 @@ class PolicyPort(Protocol):
 
 
 @runtime_checkable
+class PrivacyPolicyPort(Protocol):
+    """Deterministic classifier. LLM must not implement this port."""
+
+    def classify(
+        self,
+        *,
+        member_id: str | None = None,
+        utterance: str | None = None,
+        observation: Mapping[str, Any] | None = None,
+    ) -> Any: ...
+
+    def allow_destination(
+        self,
+        destination: str,
+        *,
+        member_id: str | None = None,
+        utterance: str | None = None,
+        privacy: str | None = None,
+    ) -> bool: ...
+
+    def is_child(self, member_id: str | None) -> bool: ...
+
+
+@runtime_checkable
 class ContextPort(Protocol):
     def build(
         self,
