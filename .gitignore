@@ -19,3 +19,4 @@ code/cat/assets_ref/
 .DS_Store
 code/cat/cat-voiceprints.json
 code/cat/cat-habits.json
+.env
