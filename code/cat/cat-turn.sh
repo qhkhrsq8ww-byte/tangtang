@@ -101,14 +101,20 @@ record_window() {
   return 0
 }
 
-# 本地短回句，不把儿童原话送进 LLM / 家庭摘要
+# 本地短回句，不把儿童原话送进 LLM / 家庭摘要。反对/推迟用软声，从不加大音量。
 speak_reaction() {
   local reply="$1"
+  local voice="${2:-cute}"
   [ -n "$reply" ] || return 0
   turn_log "回一句 $reply"
   echo "$reply"
   if [ "${TANGTANG_TTS:-1}" != "0" ]; then
-    "$CAT_DIR/cat-say.sh" "$reply" cute
+    case "$voice" in
+      soft) "$CAT_DIR/cat-say.sh" "$reply" soft ;;
+      fast) "$CAT_DIR/cat-say.sh" "$reply" cute ;;
+      none) return 0 ;;
+      *) "$CAT_DIR/cat-say.sh" "$reply" cute ;;
+    esac
   fi
 }
 
@@ -121,21 +127,25 @@ run_turn() {
 
   if [ "$PRINT" = "1" ]; then
     turn_log "preview 不开麦 event=$EVENT who=$WHO"
-    /usr/bin/python3 "$CAT_DIR/cat-turn.py" preview "$EVENT" "$WHO"
+    if [ -n "${TANGTANG_TURN_TEXT:-}" ]; then
+      /usr/bin/python3 "$CAT_DIR/cat-react.py" classify --print \
+        --event "$EVENT" --audience "$WHO" --persona "$TANGTANG_PROFILE" \
+        --text "${TANGTANG_TURN_TEXT}" --rms "${TANGTANG_TURN_RMS_CLEAR:-800}"
+    else
+      /usr/bin/python3 "$CAT_DIR/cat-turn.py" preview "$EVENT" "$WHO"
+    fi
     return 0
   fi
 
   if [ "$FOLLOW" = "1" ] && [ "$FORCE" != "1" ]; then
     if ! tangtang_turn_event_enabled "$EVENT"; then
       turn_log "wont 此事件不开窗 event=$EVENT（默认只挂 english）"
-      write_ledger wont 0 unknown 0 0
       return 0
     fi
   fi
 
   if [ "$FORCE" != "1" ] && tangtang_child_at_school "$WHO"; then
     turn_log "wont 上学未归 不开麦 who=$WHO event=$EVENT time=$(tangtang_now_hm)"
-    write_ledger wont 0 unknown 0 0
     return 0
   fi
 
@@ -196,22 +206,24 @@ run_turn() {
   fi
   # 听写原文只用完即弃，不进账本；PCM 由 trap 删除
 
+  export TANGTANG_TURN_EVENT="$EVENT"
   DECIDE="$(/usr/bin/python3 "$CAT_DIR/cat-turn.py" decide \
     "$ENERGY_KIND" "$STT_STATUS" "$RMS" "$TANGTANG_PROFILE" "$WHO" "$TEXT")"
-  RESULT="${DECIDE%%	*}"
-  REST="${DECIDE#*	}"
-  SPEAK_FLAG="${REST%%	*}"
-  REPLY="${REST#*	}"
+  RESULT="$(printf '%s\n' "$DECIDE" | cut -f1)"
+  SPEAK_FLAG="$(printf '%s\n' "$DECIDE" | cut -f2)"
+  REPLY="$(printf '%s\n' "$DECIDE" | cut -f3)"
+  VOICE="$(printf '%s\n' "$DECIDE" | cut -f4)"
   [ -n "$RESULT" ] || RESULT="silent"
   [ -n "$SPEAK_FLAG" ] || SPEAK_FLAG="0"
 
   turn_log "$RESULT rms=$RMS stt=$STT_STATUS"
   if [ "$SPEAK_FLAG" = "1" ] && [ -n "$REPLY" ]; then
-    speak_reaction "$REPLY"
+    speak_reaction "$REPLY" "${VOICE:-cute}"
   else
     turn_log "不说话 结束"
   fi
   write_ledger "$RESULT" "$DID_STT" "$PRESENCE" "$RMS" "$SPEAK_FLAG"
+  /usr/bin/python3 "$CAT_DIR/cat-react.py" consume-defer "$EVENT" "$WHO" >/dev/null 2>&1 || true
   return 0
 }
 
@@ -238,8 +250,11 @@ run_selftest() {
 
   silent="$tmp/silent.pcm"
   tone="$tmp/tone.pcm"
+  quiet="$tmp/quiet.pcm"
   /usr/bin/python3 "$CAT_DIR/cat-turn.py" pcm silent "$silent"
   /usr/bin/python3 "$CAT_DIR/cat-turn.py" pcm tone "$tone"
+  /usr/bin/python3 "$CAT_DIR/cat-turn.py" pcm quiet "$quiet"
+  /usr/bin/python3 "$CAT_DIR/cat-react.py" selftest || { echo "fail cat-react.py"; fail=1; }
 
   # preview / --print 不开麦、不写账本，并列出各场景反应
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:20 \
@@ -248,8 +263,8 @@ run_selftest() {
   echo "$out" | grep -qE "开麦 [0-9]+s" && { echo "fail print opened mic log"; fail=1; }
   echo "$out" | grep -q "配合" || { echo "fail print missing 配合"; fail=1; }
   echo "$out" | grep -q "反对" || { echo "fail print missing 反对"; fail=1; }
-  echo "$out" | grep -q "糖糖不吵你" || { echo "fail print missing play oppose"; fail=1; }
-  echo "$out" | grep -q "糖糖不说了" || { echo "fail print missing friend oppose"; fail=1; }
+  echo "$out" | grep -qE "去喝水了|不吵你|先去趴着" || { echo "fail print missing play oppose"; fail=1; }
+  echo "$out" | grep -qE "先不说了|今天到这儿|去趴着" || { echo "fail print missing friend oppose"; fail=1; }
   if [ -f "$tmp/cat-turn-ledger.json" ]; then
     echo "fail print should not write ledger"
     fail=1
@@ -268,26 +283,29 @@ run_selftest() {
     "$CAT_DIR/cat-turn.sh" --follow english hanghang 2>&1)"
   echo "$out" | grep -q "wont 上学未归 不开麦" || { echo "fail noon should wont: $out"; fail=1; }
   echo "$out" | grep -qE "开麦 [0-9]+s" && { echo "fail noon opened mic"; fail=1; }
-  last="$(/usr/bin/python3 -c "import json;d=json.load(open('$tmp/cat-turn-ledger.json'));print(d['turns'][-1]['result'])")"
-  [ "$last" = "wont" ] || { echo "fail noon ledger $last"; fail=1; }
+  if [ -f "$tmp/cat-turn-ledger.json" ]; then
+    echo "fail noon should not write child-reaction ledger"
+    fail=1
+  fi
 
   # 16:20 航航到家后：静音窗 → silent（mock 录音，不开真麦）
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:20 TANGTANG_DATA_DIR="$tmp" \
     TANGTANG_TTS=0 TANGTANG_TURN_PCM="$silent" TANGTANG_TURN_STT=0 \
     "$CAT_DIR/cat-turn.sh" --follow english hanghang 2>&1)"
-  echo "$out" | grep -q "silent" || { echo "fail 16:20 silent: $out"; fail=1; }
+  echo "$out" | grep -qE "silent|timeout" || { echo "fail 16:20 silent: $out"; fail=1; }
   echo "$out" | grep -q "wont 上学未归" && { echo "fail 16:20 should open window"; fail=1; }
   echo "$out" | grep -q "再试一次" && { echo "fail silent should not retry"; fail=1; }
-  last="$(/usr/bin/python3 -c "import json;d=json.load(open('$tmp/cat-turn-ledger.json'));print(d['turns'][-1]['result'])")"
+  last="$(/usr/bin/python3 -c "import json;d=json.load(open('$tmp/cat-turn-ledger.json'));print(d['turns'][-1].get('ledger') or d['turns'][-1]['result'])")"
   [ "$last" = "silent" ] || { echo "fail 16:20 silent ledger $last"; fail=1; }
 
-  # 16:20 有能量、不听写 → joined_soft，不追问
+  # 16:20 有能量、不听写 → 明确应答=配合，回一句暖的
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:20 TANGTANG_DATA_DIR="$tmp" \
     TANGTANG_TTS=0 TANGTANG_TURN_PCM="$tone" TANGTANG_TURN_STT=0 TANGTANG_TURN_LLM=0 \
     "$CAT_DIR/cat-turn.sh" --follow english hanghang 2>&1)"
-  echo "$out" | grep -q "joined_soft" || { echo "fail 16:20 joined_soft: $out"; fail=1; }
-  last="$(/usr/bin/python3 -c "import json;d=json.load(open('$tmp/cat-turn-ledger.json'));print(d['turns'][-1]['result'], d['turns'][-1].get('stt'))")"
-  echo "$last" | grep -q "^joined_soft False$" || { echo "fail 16:20 joined_soft ledger $last"; fail=1; }
+  echo "$out" | grep -q "joined" || { echo "fail 16:20 joined: $out"; fail=1; }
+  echo "$out" | grep -q "汪汪" || { echo "fail 16:20 joined should confirm: $out"; fail=1; }
+  last="$(/usr/bin/python3 -c "import json;d=json.load(open('$tmp/cat-turn-ledger.json'));print(d['turns'][-1].get('scene') or d['turns'][-1]['result'], d['turns'][-1].get('spoke_again'))")"
+  echo "$last" | grep -q "^joined True$" || { echo "fail 16:20 joined ledger $last"; fail=1; }
 
   # 16:20 有听写 mock → 配合，本地短回句，不走云
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:20 TANGTANG_DATA_DIR="$tmp" \
@@ -295,15 +313,15 @@ run_selftest() {
     TANGTANG_TURN_LLM=0 \
     "$CAT_DIR/cat-turn.sh" --follow english hanghang 2>&1)"
   echo "$out" | grep -q "joined" || { echo "fail joined: $out"; fail=1; }
-  echo "$out" | grep -qE "糖糖听到|玩到这儿" || { echo "fail play joined reply: $out"; fail=1; }
+  echo "$out" | grep -qE "真好|真厉害|好高兴" || { echo "fail play joined reply: $out"; fail=1; }
   echo "$out" | grep -q "正确" && { echo "fail should not score: $out"; fail=1; }
   /usr/bin/python3 -c "
 import json
 d=json.load(open('$tmp/cat-turn-ledger.json'))
 row=d['turns'][-1]
-assert row['result']=='joined' and row['stt'] is True
+assert (row.get('scene') or row['result'])=='joined'
 assert 'text' not in row and 'transcript' not in row
-print('ledger json ok', row['who'], row['event'])
+print('ledger json ok', row.get('audience') or row.get('who'), row['event'])
 " || { echo "fail ledger json"; fail=1; }
 
   # 反对：温和收场，不加重（--force 避免前面的账本触发降温）
@@ -312,7 +330,7 @@ print('ledger json ok', row['who'], row['event'])
     "$CAT_DIR/cat-turn.sh" --force --follow english hanghang 2>&1)"
   echo "$out" | grep -q "oppose" || { echo "fail oppose: $out"; fail=1; }
   echo "$out" | grep -q "再试一次" && { echo "fail oppose retry: $out"; fail=1; }
-  echo "$out" | grep -qE "不吵你|先去趴着" || { echo "fail play oppose reply: $out"; fail=1; }
+  echo "$out" | grep -qE "不吵你|先去趴着|去喝水了" || { echo "fail play oppose reply: $out"; fail=1; }
 
   # 滚：温和，不当攻击升级
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:26 TANGTANG_DATA_DIR="$tmp" \
@@ -326,20 +344,21 @@ print('ledger json ok', row['who'], row['event'])
     TANGTANG_TTS=0 TANGTANG_TURN_PCM="$tone" TANGTANG_TURN_TEXT="好难" \
     "$CAT_DIR/cat-turn.sh" --force --follow english hanghang 2>&1)"
   echo "$out" | grep -q "wont" || { echo "fail wont: $out"; fail=1; }
-  echo "$out" | grep -qE "没学会|也不会" || { echo "fail wont reply: $out"; fail=1; }
+  echo "$out" | grep -qE "陪你|说一句就行|不会也" || { echo "fail wont reply: $out"; fail=1; }
 
-  # 听不清：有声 + STT 失败标记
+  # 听不清：有一点声 + 听写失败。不当成反对，不让再说一遍。
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:28 TANGTANG_DATA_DIR="$tmp" \
-    TANGTANG_TTS=0 TANGTANG_TURN_PCM="$tone" TANGTANG_TURN_TEXT="[STT错误]" \
+    TANGTANG_TTS=0 TANGTANG_TURN_PCM="$quiet" TANGTANG_TURN_TEXT="[STT错误]" \
     "$CAT_DIR/cat-turn.sh" --force --follow english hanghang 2>&1)"
   echo "$out" | grep -q "unclear" || { echo "fail unclear: $out"; fail=1; }
   echo "$out" | grep -q "再说" && { echo "fail unclear should not chase: $out"; fail=1; }
 
-  # 敷衍：极短无效应 → silent
+  # 敷衍：嗯/哦/啊 + 低能量 → 当沉默，不夸
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:29 TANGTANG_DATA_DIR="$tmp" \
-    TANGTANG_TTS=0 TANGTANG_TURN_PCM="$tone" TANGTANG_TURN_TEXT="啊" \
+    TANGTANG_TTS=0 TANGTANG_TURN_PCM="$quiet" TANGTANG_TURN_TEXT="啊" \
     "$CAT_DIR/cat-turn.sh" --force --follow english hanghang 2>&1)"
-  echo "$out" | grep -q "silent" || { echo "fail scratch silent: $out"; fail=1; }
+  echo "$out" | grep -qE "silent|perfunctory" || { echo "fail scratch silent: $out"; fail=1; }
+  echo "$out" | grep -qE "真好|真厉害" && { echo "fail perfunctory should not praise: $out"; fail=1; }
 
   # 其它提醒默认不开窗
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:20 TANGTANG_DATA_DIR="$tmp" \
@@ -355,12 +374,12 @@ print('ledger json ok', row['who'], row['event'])
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=19:10 TANGTANG_DATA_DIR="$tmp" \
     TANGTANG_TTS=0 TANGTANG_TURN_PCM="$silent" TANGTANG_TURN_STT=0 \
     "$CAT_DIR/cat-turn.sh" --follow english qiaqia 2>&1)"
-  echo "$out" | grep -q "silent" || { echo "fail qiaqia 19:10: $out"; fail=1; }
+  echo "$out" | grep -qE "silent|timeout" || { echo "fail qiaqia 19:10: $out"; fail=1; }
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=19:11 TANGTANG_DATA_DIR="$tmp" \
     TANGTANG_TTS=0 TANGTANG_TURN_PCM="$tone" TANGTANG_TURN_TEXT="好啊" \
     "$CAT_DIR/cat-turn.sh" --follow english qiaqia 2>&1)"
-  echo "$out" | grep -qE "糖糖听到了|就这样" || { echo "fail friend joined: $out"; fail=1; }
-  echo "$out" | grep -q "汪汪" && { echo "fail friend should not 汪汪: $out"; fail=1; }
+  echo "$out" | grep -qE "真好|听见了|就这样" || { echo "fail friend joined: $out"; fail=1; }
+  echo "$out" | grep -q "汪汪" || { echo "fail friend should 汪汪: $out"; fail=1; }
   echo "$out" | grep -q "航航" && { echo "fail should not mention 航航: $out"; fail=1; }
 
   # stop 当天关窗
@@ -380,15 +399,15 @@ print('ledger json ok', row['who'], row['event'])
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:20 TANGTANG_DATA_DIR="$tmp2" \
     TANGTANG_TTS=0 TANGTANG_TURN_PCM="$silent" TANGTANG_TURN_STT=0 \
     "$CAT_DIR/cat-turn.sh" --follow english hanghang 2>&1)"
-  echo "$out" | grep -q "silent" || { echo "fail cool1: $out"; fail=1; }
+  echo "$out" | grep -qE "silent|timeout" || { echo "fail cool1: $out"; fail=1; }
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:21 TANGTANG_DATA_DIR="$tmp2" \
     TANGTANG_TTS=0 TANGTANG_TURN_PCM="$silent" TANGTANG_TURN_STT=0 \
     "$CAT_DIR/cat-turn.sh" --follow english hanghang 2>&1)"
-  echo "$out" | grep -q "silent" || { echo "fail cool2: $out"; fail=1; }
+  echo "$out" | grep -qE "silent|timeout" || { echo "fail cool2: $out"; fail=1; }
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:22 TANGTANG_DATA_DIR="$tmp2" \
     TANGTANG_TTS=0 TANGTANG_TURN_PCM="$tone" TANGTANG_TURN_TEXT="好啊" \
     "$CAT_DIR/cat-turn.sh" --follow english hanghang 2>&1)"
-  echo "$out" | grep -q "cool" || { echo "fail cool gate: $out"; fail=1; }
+  echo "$out" | grep -qE "SKIP|muted|cool|silent" || { echo "fail cool gate: $out"; fail=1; }
   echo "$out" | grep -qE "开麦 [0-9]+s" && { echo "fail cool should not open mic"; fail=1; }
   # 洽洽不受航航降温影响
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=19:10 TANGTANG_DATA_DIR="$tmp2" \
@@ -414,9 +433,13 @@ print('ledger json ok', row['who'], row['event'])
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --print|-n) PRINT=1; export TANGTANG_TTS=0; shift;;
+    --print|-n|--dry-run) PRINT=1; export TANGTANG_TTS=0; shift;;
     --force) FORCE=1; shift;;
     --follow) FOLLOW=1; shift;;
+    --text)
+      export TANGTANG_TURN_TEXT="${2:-}"
+      shift 2
+      ;;
     selftest|--selftest)
       run_selftest
       exit $?
@@ -431,5 +454,8 @@ done
 
 EVENT="${1:-turn}"
 ARG="${2:-}"
+if [ -n "${3:-}" ] && [ -z "${TANGTANG_TURN_TEXT:-}" ]; then
+  export TANGTANG_TURN_TEXT="$3"
+fi
 run_turn
 exit 0

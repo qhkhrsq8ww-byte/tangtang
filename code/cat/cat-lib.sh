@@ -22,6 +22,7 @@ fi
 : "${TANGTANG_TURN_RMS:=300}"
 : "${TANGTANG_TURN_GAP:=0.5}"
 : "${TANGTANG_TURN_ALL:=0}"
+: "${TANGTANG_TURN_RMS_CLEAR:=800}"
 export TANGTANG_PROFILE TANGTANG_CHILD_NAME
 export TANGTANG_PROJECTOR_IP TANGTANG_AIRPLAY_PORT
 export TANGTANG_REQUIRE_PRESENCE
@@ -29,7 +30,7 @@ export TANGTANG_HOST_QIAQIA TANGTANG_HOST_HANGHANG
 export TANGTANG_SCHOOL_START TANGTANG_ALARM_DOW
 export TANGTANG_SCHOOL_LEAVE TANGTANG_HOME_HANGHANG TANGTANG_HOME_QIAQIA
 export TANGTANG_TURN_EVENTS TANGTANG_TURN_SECONDS TANGTANG_TURN_RMS
-export TANGTANG_TURN_GAP TANGTANG_TURN_ALL
+export TANGTANG_TURN_GAP TANGTANG_TURN_ALL TANGTANG_TURN_RMS_CLEAR
 
 # 记忆只写本机硬盘（Mac Air: ~/Library/Application Support/Tangtang）
 # 现在不要指向路由器 Samba。未设置时由 tangtang_paths.py 解析并迁移旧文件。
@@ -437,18 +438,18 @@ tangtang_note_member_presence() {
   return 1
 }
 
-# 当天 stop、或连续沉默/反对已达降温：这类先不开窗。不加大音量。
+# 小朋友反应冷却：反对/今天别叫/连续沉默 → 这条提醒先不说。不加大音量。
 # 0=可以开  1=先不说。打印 [turn] SKIP ...
 tangtang_turn_gate_open() {
   local event="${1:-english}"
   local who="${2:-}"
   local out rc=0
   [ -n "$who" ] || who="$(tangtang_turn_who "$event" "")"
-  out="$(/usr/bin/python3 "$CAT_DIR/cat-turn.py" gate "$event" "$who" 2>/dev/null)" || rc=$?
-  if [ "$rc" = "0" ]; then
+  out="$(/usr/bin/python3 "$CAT_DIR/cat-react.py" muted "$event" "$who" 2>/dev/null)" || rc=$?
+  if [ "$rc" != "0" ]; then
     return 0
   fi
-  echo "[turn] ${out:-SKIP	cool	今晚这类先不说}"
+  echo "[turn] SKIP ${out:-muted	cool}"
   return 1
 }
 
@@ -469,3 +470,30 @@ tangtang_note_presence_for_event() {
       ;;
   esac
 }
+
+tangtang_help() {
+  cat <<'EOF'
+糖糖公共函数（被其它脚本 source）
+
+小朋友反应（客厅短窗，见 data/child_reactions.json）
+  配合 joined    回一句暖的，然后停。不连着夸。
+  反对 oppose    轻轻让开，这条今天不再叫这个孩子。不争、不加大声音。
+  沉默 silent    合法。不追问。同一事件连续两次，今天先跳过。
+  推迟 defer     回一句好，晚上同事件若还有档才再试一次。
+  不会 wont      帮一小下就停。英语只说这句的意思。
+  听不清 unclear 不让人家重复。比熊可回一声汪汪，朋友不回。
+  今天别叫 stop_today  让开，今天这条不再叫。
+  敷衍 perfunctory     当沉默，不当成配合。
+  超时 timeout         同沉默，不回。
+
+  一轮最多再回一句。儿童原话不进账本。
+  预览：./cat-turn.sh --print english hanghang 不要
+EOF
+}
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  case "${1:-help}" in
+    help|-h|--help) tangtang_help; exit 0 ;;
+    *) tangtang_help; exit 1 ;;
+  esac
+fi

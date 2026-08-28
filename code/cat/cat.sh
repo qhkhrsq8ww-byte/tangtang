@@ -85,11 +85,12 @@ while [ $# -gt 0 ]; do
 
 7. 客厅语音小回合（只在客厅）
    英语小伴读说完一句、等音箱播完，再开约 5 秒麦。糖糖最多再回一句。
-   配合：短暖结束。反对/沉默：尊重，不追问、不加重。说「今天别叫我」则当天不再开窗。
-   连续两次没应或反对，今晚这类先不说。不比较兄妹，英语不打分。
+   小朋友反应见 data/child_reactions.json：配合回一句暖的；反对/今天别叫就让开；
+   沉默合法不追问；推迟最多晚上再试一次；不会只帮一小下。不测验、不比较、不加大声音。
    麦是客厅 Mac 旁的 MAONO AU-BM10。音箱要设成 Mac 默认输出；若还在儿童房，客厅听不见回话。
    试：./cat.sh turn    ./cat.sh turn english hanghang
    预览反应（不开麦）：./cat.sh reactions    ./cat.sh turn --print
+   看某种说法会怎么回：./cat.sh turn --print english hanghang 不要
 EOF
       exit 0
       ;;

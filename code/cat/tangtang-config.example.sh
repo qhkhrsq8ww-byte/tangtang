@@ -23,7 +23,7 @@ export TANGTANG_HOME_QIAQIA="18:00"
 # export TANGTANG_ENGLISH_FILE="/absolute/path/to/english_jiangsu.json"
 # export TANGTANG_TURN_EVENTS="english"
 # export TANGTANG_TURN_SECONDS="5"
-# 连续 2 次沉默或反对，当晚该类不再开窗（见 cat-turn-keywords.json cool_streak）
+# 连续 2 次沉默，或一次反对/今天别叫：当天该事件不再叫这个孩子（见 data/child_reactions.json）
 # 若希望喝水/吃饭等提醒也开窗（不建议）：export TANGTANG_TURN_ALL=1
 
 # 客厅互动：蓝牙音箱应作为 Mac 默认音频输出（系统设置 → 声音 → 输出）。

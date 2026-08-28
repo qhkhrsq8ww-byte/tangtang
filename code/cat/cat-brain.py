@@ -344,11 +344,11 @@ def interact(state, memory, kind):
 
 
 def _turn_gate_ok(event, arg=""):
-    """客厅短窗账本：当天 stop / 连续沉默反对 → 英语这类先不说。"""
+    """小朋友反应冷却：反对/今天别叫/连续沉默 → 这条英语先不说。"""
     if event not in ("english", "turn"):
         return True
-    path = os.path.join(CAT_DIR, "cat-turn.py")
-    spec = importlib.util.spec_from_file_location("cat_turn_mod", path)
+    path = os.path.join(CAT_DIR, "cat-react.py")
+    spec = importlib.util.spec_from_file_location("cat_react_mod", path)
     if not spec or not spec.loader:
         return True
     try:
@@ -357,8 +357,9 @@ def _turn_gate_ok(event, arg=""):
         who = (arg or os.environ.get("TANGTANG_MEMBER_ID")
                or os.environ.get("TANGTANG_SPEAKER") or "")
         if event == "english":
-            who = mod.normalize_who(who) or "hanghang"
-        return bool(mod.gate_allows(event, who))
+            who = mod.normalize_audience(who) or "hanghang"
+        muted, _reason = mod.is_muted(event, who)
+        return not muted
     except Exception:
         return True
 
