@@ -20,6 +20,8 @@ from core.logging.safe import SafeLogger
 from core.memory.family import FamilyMemory, FamilySummary, HabitStore, ParentContext
 from core.memory.private import PrivateMemory
 from core.memory.store import Memory, MemoryStore
+from core.persona.copy import CopyGuard, WALK_SUGGESTION
+from core.persona.profiles import PersonaRenderer
 from core.policy.injection import InjectionGuard, REFUSE_TEXT
 from core.policy.interrupt_policy import InterruptPolicy
 from core.policy.privacy_policy import PrivacyPolicy
@@ -28,6 +30,8 @@ from core.response.orchestrator import PresentationAction, ResponseOrchestrator
 __all__ = [
     "ActionError",
     "ContextBuilder",
+    "CopyGuard",
+    "PersonaRenderer",
     "ContextPort",
     "Event",
     "EventBus",
@@ -64,5 +68,6 @@ __all__ = [
     "SafeLogger",
     "ShellError",
     "Stores",
+    "WALK_SUGGESTION",
     "should_interrupt",
 ]
