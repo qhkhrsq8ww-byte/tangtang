@@ -17,6 +17,8 @@ FORBIDDEN_SURVEILLANCE = (
     re.compile(r"我知道你刚才.{0,16}\d+\s*分钟"),
     re.compile(r"已经玩了\s*\d+\s*分钟手机"),
     re.compile(r"你刚才玩了\s*\d+\s*分钟"),
+    re.compile(r"我知道你已经玩手机\s*\d+\s*分钟"),
+    re.compile(r"已经玩手机\s*\d+\s*分钟"),
     re.compile(r"监控到你"),
     re.compile(r"糖糖看到你玩了\s*\d+"),
     re.compile(r"屏幕时间\s*\d+\s*分钟"),

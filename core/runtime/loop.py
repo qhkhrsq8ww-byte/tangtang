@@ -141,6 +141,7 @@ class TangTangRuntime:
         action: PresentationAction | None,
         *,
         audio: Any = None,
+        observation: Mapping[str, Any] | None = None,
     ) -> tuple[DeliveryResult, list[str]]:
         tts_res = isolate(lambda: self.tts.deliver(event, action))
         proj_res = isolate(lambda: self.projection.deliver(event, action))
@@ -161,8 +162,13 @@ class TangTangRuntime:
                 errors.extend(value.errors)
                 delivery.event_kept = delivery.event_kept and value.event_kept
         delivery.errors = errors
-        scene = None
-        if action is not None and action.decision == "SPEAK":
+        obs = dict(observation or {})
+        scene = obs.get("scene")
+        if scene in {"phone", "sitting"}:
+            clip = "走路"
+        elif scene == "exercise":
+            clip = "跑步"
+        elif action is not None and action.decision == "SPEAK":
             clip = "眨眼"
         else:
             clip = "站立"
@@ -172,6 +178,16 @@ class TangTangRuntime:
         )
         anim = list(frames.value or ["stand_0"])
         return delivery, anim
+
+    def present(
+        self,
+        event: Event,
+        action: PresentationAction | None,
+        *,
+        observation: Mapping[str, Any] | None = None,
+    ) -> tuple[DeliveryResult, list[str]]:
+        """Presentation layer only. Brain has already emitted the action."""
+        return self._deliver(event, action, observation=observation)
 
     def handle_voice(
         self,
@@ -252,7 +268,7 @@ class TangTangRuntime:
             member_id=member_id,
             sink="none",
         )
-        delivery, frames = self._deliver(event, action, audio=audio)
+        delivery, frames = self._deliver(event, action, audio=audio, observation=obs_map)
         return RuntimeResult(
             event=event,
             member_id=member_id,
@@ -304,7 +320,7 @@ class TangTangRuntime:
                 member_id=None,
                 sink="voice",
             )
-            delivery, frames = self._deliver(event, action, audio=audio)
+            delivery, frames = self._deliver(event, action, audio=audio, observation=obs)
             return RuntimeResult(
                 event=event,
                 member_id=None,
@@ -345,7 +361,9 @@ class TangTangRuntime:
                 errors=errors,
             )
         action = turn.action
-        delivery, frames = self._deliver(result.event, action, audio=audio)
+        delivery, frames = self._deliver(
+            result.event, action, audio=audio, observation=obs
+        )
         return RuntimeResult(
             event=result.event,
             member_id=result.decision.member_id,
@@ -470,7 +488,7 @@ class TangTangRuntime:
                 )
         else:
             action = spoken.value
-        delivery, frames = self._deliver(ev, action)
+        delivery, frames = self._deliver(ev, action, observation=obs)
         return RuntimeResult(
             event=ev,
             member_id=mid,
