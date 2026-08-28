@@ -514,6 +514,18 @@ def gh_create_pr(repo, branch, day, body):
     return True, (p.stdout or "").strip()
 
 
+def push_existing(allow_dirty=True):
+    json_path, txt_path, _folder, day, repo = report_paths()
+    if not os.path.isfile(json_path):
+        sys.stderr.write("no report file %s\n" % json_path)
+        return 1
+    with open(json_path, encoding="utf-8") as f:
+        report = json.load(f)
+    sanitize_or_die(report, json_path)
+    submit_report(report, allow_dirty=allow_dirty, do_push=True)
+    return 0
+
+
 def submit_report(report, allow_dirty=False, do_push=True):
     """Write JSON, optionally commit+push only that file. Never force-push."""
     json_path, txt_path, local = write_report(report)
@@ -760,6 +772,8 @@ def main(argv):
 
     if cmd in ("selftest", "--selftest"):
         return _selftest()
+    if cmd in ("push-existing", "resubmit"):
+        return push_existing(allow_dirty=True)
     if cmd == "hwcheck":
         json.dump(hwcheck(), sys.stdout, ensure_ascii=False, indent=2)
         sys.stdout.write("\n")

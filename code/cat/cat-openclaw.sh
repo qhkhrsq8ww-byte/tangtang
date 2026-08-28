@@ -214,22 +214,31 @@ do_report() {
 }
 
 if [ "$REPORT_ONLY" = "1" ]; then
-  if [ ! -s "$STEPS_FILE" ]; then
-    # 没有刚跑过的 steps：用 skip 四步占位再写（仍不含原话）
-    builtin_four_steps
+  day="$(tangtang_today)"
+  existing=""
+  root="$(cd "$CAT_DIR/../.." && pwd)"
+  if [ -f "$root/reports/openclaw/${day}.json" ]; then
+    existing="$root/reports/openclaw/${day}.json"
   fi
   if [ "$DRY" = "1" ]; then
+    if [ -n "$existing" ]; then
+      cat "$existing"
+      exit 0
+    fi
+    builtin_four_steps
     /usr/bin/python3 "$PY" dry-run --who "$WHO" --steps-file "$STEPS_FILE"
     exit $?
   fi
-  if [ "$SUBMIT" = "1" ] || [ "$NOSUBMIT" != "1" ]; then
-    if [ "$NOSUBMIT" = "1" ]; then
-      /usr/bin/python3 "$PY" write --who "$WHO" --steps-file "$STEPS_FILE"
-    else
-      /usr/bin/python3 "$PY" submit --who "$WHO" --steps-file "$STEPS_FILE" --allow-dirty
-    fi
+  if [ -n "$existing" ]; then
+    echo "[openclaw] 使用已有 $existing"
+    /usr/bin/python3 "$PY" push-existing
     exit $?
   fi
+  echo "[openclaw] 尚无今日报告，先跑四步"
+  run_hwcheck
+  run_four_steps
+  /usr/bin/python3 "$PY" submit --who "$WHO" --steps-file "$STEPS_FILE" --allow-dirty
+  exit $?
 fi
 
 echo "[openclaw] who=$WHO rest_day=$REST_DAY host=$(uname -s)"
