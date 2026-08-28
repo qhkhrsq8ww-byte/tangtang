@@ -1,10 +1,12 @@
-"""Canonical event model for TangTang V4."""
+"""Canonical, validated event model for TangTang V4."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Mapping
 from uuid import uuid4
+
+PRIVACY_SCOPES = frozenset({"PRIVATE", "FAMILY", "PUBLIC"})
 
 
 @dataclass(frozen=True)
@@ -19,10 +21,12 @@ class Event:
     correlation_id: str | None = None
 
     def __post_init__(self) -> None:
-        if self.privacy not in {"PRIVATE", "FAMILY", "PUBLIC"}:
+        if self.privacy not in PRIVACY_SCOPES:
             raise ValueError("privacy must be PRIVATE, FAMILY, or PUBLIC")
-        if not self.event_type:
+        if not self.event_type.strip():
             raise ValueError("event_type is required")
+        if self.privacy == "PRIVATE" and not self.member_id:
+            raise ValueError("PRIVATE events require member_id")
 
     def to_dict(self) -> dict[str, Any]:
         return {
