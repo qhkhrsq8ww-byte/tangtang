@@ -156,6 +156,9 @@ class PrivacyPolicy:
         text = str(text) if text is not None else ""
         canonical = self.canonical_member_id(raw_id)
         child = self.is_child(raw_id) or self.is_child(canonical)
+        unknown_label = bool(
+            raw_id and str(raw_id).strip().lower() in {"unknown", "访客", "guest"}
+        )
 
         if child:
             mid = canonical or raw_id or "unknown"
@@ -172,7 +175,7 @@ class PrivacyPolicy:
                 reason="child-fail-closed" if not self._looks_child_private(text) else "child-private-marker",
             )
 
-        if canonical is None and not raw_id:
+        if canonical is None and (not raw_id or unknown_label):
             return PrivacyDecision(
                 privacy="PUBLIC",
                 member_id=None,

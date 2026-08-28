@@ -25,6 +25,9 @@ PRODUCT_GROUPS: dict[str, frozenset[str]] = {
 }
 
 CHILD_PRODUCTS = frozenset({"qiaqia", "hanghang", "child_12", "child_9"})
+UNKNOWN_LABELS = frozenset({
+    "unknown", "访客", "guest", "stranger", "none", "null",
+})
 
 
 def _norm(value: Any) -> str | None:
@@ -124,21 +127,29 @@ class IdentityResolver:
             observation.get("label")
             or observation.get("member_id")
             or observation.get("speaker")
+            or observation.get("candidate_member")
         )
         coarse = observation.get("coarse_features")
         if not isinstance(coarse, Mapping):
             coarse = {}
 
-        # Voiceprint alone is never enough.
+        # Voiceprint alone is never enough. Adapters convert a match into
+        # candidate_member / label so this resolver never treats vp-id as identity.
         has_non_voice = bool(presence or label or coarse)
         if voiceprint and not has_non_voice:
             return None
+
+        if label and label.lower() in UNKNOWN_LABELS and not presence:
+            label = None
 
         candidate = self._lookup(presence) or self._lookup(label)
 
         if candidate is None and coarse:
             guess = _norm(coarse.get("role_guess") or coarse.get("age_band"))
             candidate = self._lookup(guess)
+
+        if candidate and candidate.lower() in UNKNOWN_LABELS:
+            return None
 
         at_school = bool(observation.get("school_hours") or observation.get("at_school"))
         presence_home = observation.get("presence_home")
