@@ -9,6 +9,8 @@
 #   ./cat.sh -s               # 强制全屏舞台
 #   ./cat.sh status           # 查看糖糖当前心情状态
 #   ./cat.sh habits [成员]    # 查看五口之家习惯摘要（不投屏）
+#   ./cat.sh preview          # 打印今日语音提醒文案（不发声）
+#   ./cat.sh presence         # 看洽洽/航航是否在客厅网段
 #   ./cat.sh chat "想聊的"     # 云端真对话
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -32,6 +34,13 @@ while [ $# -gt 0 ]; do
       shift
       /usr/bin/python3 "$CAT_DIR/cat-family.py" summary "$@"
       exit 0
+      ;;
+    preview)
+      "$CAT_DIR/cat-schedule.sh" preview
+      exit 0
+      ;;
+    presence)
+      exec "$CAT_DIR/cat-presence.sh"
       ;;
     chat) CHAT_REQ=1; shift;;
     *) TEXT="$1"; shift;;
