@@ -41,7 +41,7 @@
       "profile": "friend",
       "aliases": ["洽洽", "qiaqia"],
       "permissions": {"self_private": true, "family_summary": false},
-      "preferences": {"preferred_greeting": "洽洽"}
+      "preferences": {"preferred_greeting": "洽洽", "english_grade": 6, "english_book": "译林牛津"}
     },
     {
       "member_id": "hanghang",
@@ -51,7 +51,7 @@
       "profile": "play",
       "aliases": ["航航", "hanghang"],
       "permissions": {"self_private": true, "family_summary": false},
-      "preferences": {"preferred_greeting": "航航"}
+      "preferences": {"preferred_greeting": "航航", "english_grade": 2, "english_book": "译林牛津"}
     }
   ],
   "behavior_event_types": [

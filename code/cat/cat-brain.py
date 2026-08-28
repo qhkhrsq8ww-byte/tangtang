@@ -13,11 +13,12 @@
   pat / say "<文字>" / status / play / homework / tidy / exercise
   emotion / weather / water / pet_walk / pet_water / pet_food / pet_groom
   alarm [school]
+  english [hanghang|qiaqia]
 输出:
   一行：话术<TAB>情绪标签<TAB>画面对应状态
   话术为空表示这次不说话（冷却或 random 静默）
 """
-import json, os, sys, random, datetime
+import json, os, sys, random, datetime, importlib.util
 
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CAT_DIR not in sys.path:
@@ -38,6 +39,7 @@ EVENT_STATE = {
     "pet_walk": "walking", "pet_water": "caring", "pet_food": "happy", "pet_groom": "caring",
     "meal": "happy", "pat": "happy",
     "homework": "thinking", "tidy": "thinking", "thinking": "thinking",
+    "english": "thinking",
     "curious": "curious",
     "accompany": "accompany",
     "night": "night",
@@ -62,6 +64,7 @@ EVENT_SCENE = {
     "pet_water": "pet_water",
     "pet_food": "pet_food",
     "pet_groom": "pet_groom",
+    "english": "english",
 }
 
 # 主动提醒冷却（分钟）。点名/摸摸/指定说不冷却。
@@ -72,6 +75,7 @@ COOLDOWN_MINUTES = {
     "alarm": 20,
     "random": 20, "home": 120,
     "pet_walk": 90, "pet_water": 90, "pet_food": 180, "pet_groom": 240,
+    "english": 90,
 }
 USER_EVENTS = {"greet", "pat", "say", "status"}
 
@@ -175,6 +179,9 @@ REPLY = {
     "pet_groom": {
         "_": ["糖糖毛有点乱。有空轻轻梳两下就好。"],
     },
+    "english": {
+        "_": ["糖糖想学一个英语词。你要不要当小老师？不学也行。"],
+    },
 }
 
 
@@ -255,6 +262,16 @@ def load_copy_library():
 
 
 COPY_LIB = load_copy_library()
+
+
+def pick_english_line(who):
+    path = os.path.join(CAT_DIR, "cat-english.py")
+    spec = importlib.util.spec_from_file_location("cat_english", path)
+    if not spec or not spec.loader:
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return (mod.pick_line(who) or "").strip() or None
 
 
 def pick_from_library(event, profile):
@@ -388,6 +405,11 @@ def compose(state, memory, event, arg):
         return pick(REPLY["random"], label), label
 
     lib_text = pick_from_library(event, profile)
+    if event == "english":
+        try:
+            lib_text = pick_english_line(arg) or lib_text
+        except Exception:
+            pass
     if lib_text:
         return lib_text, label
 
@@ -430,7 +452,7 @@ def main():
         state = interact(state, memory, event)
     elif event in ("wake", "alarm", "sleep", "rest", "meal", "say", "play",
                    "homework", "tidy", "exercise", "emotion", "weather", "water",
-                   "pet_walk", "pet_water", "pet_food", "pet_groom"):
+                   "pet_walk", "pet_water", "pet_food", "pet_groom", "english"):
         state = interact(state, memory, "care")
 
     text, label = compose(state, memory, event, arg)

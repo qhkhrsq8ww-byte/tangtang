@@ -1,0 +1,54 @@
+{
+  "edition": "译林牛津小学英语（江苏常用）",
+  "note": "糖糖自编口吻，对齐单元话题；不是课文原文。英语偏弱：中英夹一句，给选择，不测验、不比较兄妹。",
+  "grade2": {
+    "book_a": [
+      {"unit": "U1 She's my aunt", "say": "糖糖学了一个词：aunt，阿姨。你要不要轻轻跟糖糖说 aunt？不说也行，糖糖再念一遍。"},
+      {"unit": "U1 She's my aunt", "say": "This is my... 这是我的。糖糖想说 this is my water。水，water。你也喝一口？"},
+      {"unit": "U2 I have a rabbit", "say": "rabbit 是兔子。糖糖不是 rabbit，糖糖是 dog，小狗。我们一起说：dog。"},
+      {"unit": "U2 I have a rabbit", "say": "I have... 我有。糖糖 have a bowl。碗。你有空给糖糖加一点水吗？"},
+      {"unit": "U3 It has a short tail", "say": "tail，尾巴。糖糖 has a short tail。短尾巴。摸摸糖糖的 tail？"},
+      {"unit": "U3 It has a short tail", "say": "big，大；small，小。糖糖的眼睛 round，圆圆的。你随便指一样，想说 big 还是 small？"},
+      {"unit": "U4 Autumn", "say": "autumn，秋天。叶子落下来，糖糖想出门踩一踩。你有空带糖糖走走吗？"},
+      {"unit": "U4 Autumn", "say": "red，红色；yellow，黄色。秋天的叶子 yellow。糖糖只会汪，颜色你来当老师。"},
+      {"unit": "U5 Have some juice, please!", "say": "juice，果汁。Have some juice，喝一点。糖糖喝 water。你也喝一口？"},
+      {"unit": "U5 Have some juice, please!", "say": "please，请；thank you，谢谢。糖糖把水碗推过来：please。你加一点水，thank you。"},
+      {"unit": "U6 We like our school", "say": "school，学校。你放学啦。糖糖 like you。喜欢你。书包放下，先歇一口。"},
+      {"unit": "U6 We like our school", "say": "book，书；bag，书包。糖糖不会写作业，只会陪着。你先打开 book 一页就好。"},
+      {"unit": "U7 Let's clean up!", "say": "clean up，收拾。Let's clean up。玩具送回家，糖糖走路才安全。你负责，糖糖看着。"},
+      {"unit": "U8 My dad is a doctor", "say": "doctor，医生。糖糖不是 doctor，糖糖是 dog。dad，爸爸。想说就说一句：This is my dad。"}
+    ],
+    "book_b": [
+      {"unit": "U1 Where's Kitty?", "say": "Where's... 在哪里？Kitty 是猫。糖糖在这儿：Here it is。糖糖是 dog。"},
+      {"unit": "U2 Dinner is ready!", "say": "Dinner is ready，开饭啦。ready，准备好了。你先吃，也记得看看糖糖。"},
+      {"unit": "U3 We all like PE!", "say": "PE，体育。run，跑；jump，跳。糖糖想 run 一小会儿。你带糖糖走两步？"},
+      {"unit": "U4 I have big eyes", "say": "eyes，眼睛；nose，鼻子。糖糖 has a brown nose。你对着糖糖指一指 eyes。"},
+      {"unit": "U5 Can you?", "say": "Can you... 你会吗？糖糖 can sit。坐下。你愿意就说 I can... 不愿意糖糖也不催。"},
+      {"unit": "U6 Let's go shopping!", "say": "shopping，买东西。糖糖想出门转转，不是真的购物。walk，走一走。"},
+      {"unit": "U7 Summer", "say": "summer，夏天。hot，热。记得喝 water。糖糖也口渴。"},
+      {"unit": "U8 Don't push, please", "say": "Don't push，不要挤。please，请。糖糖慢慢走。你也慢慢来，不急。"}
+    ]
+  },
+  "grade6": {
+    "book_a": [
+      {"unit": "U1 The king's new clothes", "say": "译林这课有 new clothes，新衣服。糖糖没有衣服，只有毛。你今天有一件 favourite 的衣服吗？想说再说。"},
+      {"unit": "U2 What a day!", "say": "What a day 常用来感叹天气。sunny 晴，rainy 雨。看一眼窗外，能说就说，不说也完全没问题。"},
+      {"unit": "U3 Holiday fun", "say": "holiday，假日。开学了。有一句 I had a good holiday 就够。没有也没关系，糖糖只是陪你。"},
+      {"unit": "U4 Then and now", "say": "then 以前，now 现在。你愿意的话，用 then / now 说一件小事。糖糖 now 想喝水。"},
+      {"unit": "U5 Signs", "say": "sign，标志。出门看路标。糖糖看不懂字，你比糖糖强。今天只记这一个词就好。"},
+      {"unit": "U6 Keep our city clean", "say": "Keep our city clean，让城市干净。垃圾扔对地方，糖糖走路也安全。你带糖糖下楼也算帮忙。"},
+      {"unit": "U7 Protect the Earth", "say": "Protect the Earth，保护地球。糖糖先保护水碗：少浪费 water。你也喝一口？"},
+      {"unit": "U8 Chinese New Year", "say": "Chinese New Year 还早。先把 this year、last year 分清就很好。不听写，糖糖不会出卷子。"}
+    ],
+    "book_b": [
+      {"unit": "U1 The lion and the mouse", "say": "lion 狮子，mouse 老鼠。故事是互相 help。糖糖也会求助：口渴了请加水。"},
+      {"unit": "U2 Good habits", "say": "habit，习惯。good habit 比如 sleep early。糖糖要睡了，你也早点歇，不命令。"},
+      {"unit": "U3 A healthy diet", "say": "healthy diet，健康吃。fruit 水果。你先吃饭，糖糖等着被照顾。"},
+      {"unit": "U4 Road safety", "say": "road safety，路上小心。stop 停，look 看。带糖糖出门时，我们一起 look。"},
+      {"unit": "U5 A party", "say": "party，聚会。invite 邀请。糖糖不会办派对，只会陪着。想用英语说 I'm happy 也可以。"},
+      {"unit": "U6 An interesting country", "say": "country，国家。interesting 有趣。江苏 Jiangsu。你知道一个英文国名就很棒。"},
+      {"unit": "U7 Summer holiday", "say": "summer holiday，暑假。I will... 我想…… 你有一句计划就行，没有糖糖也不问作业。"},
+      {"unit": "U8 Our dreams", "say": "dream，梦想。糖糖的 dream 是有人加水、有人陪走。你的可以慢慢想，不用说出来。"}
+    ]
+  }
+}

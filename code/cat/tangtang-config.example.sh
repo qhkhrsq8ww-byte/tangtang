@@ -17,6 +17,9 @@ export TANGTANG_HOME_HANGHANG="16:00"
 export TANGTANG_HOME_QIAQIA="18:00"
 # 放假日历：仓库 data/school_calendar.txt （寒假暑假按学校通知追加）
 
+# 英语小伴读：译林牛津。航航二年级、洽洽六年级。上学日到家后各一句。
+# export TANGTANG_ENGLISH_FILE="/absolute/path/to/english_jiangsu.json"
+
 # 糖糖口头称呼。语音识别到家人后会改成对方的 display_name。
 export TANGTANG_CHILD_NAME="小朋友"
 

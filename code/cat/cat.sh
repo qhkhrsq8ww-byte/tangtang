@@ -13,6 +13,8 @@
 #   ./cat.sh today            # 今天会响哪些
 #   ./cat.sh features         # 糖糖有哪些功能
 #   ./cat.sh alarm            # 立刻试上学闹铃（跳过日期）
+#   ./cat.sh english          # 试航航二年级英语小伴读
+#   ./cat.sh english qiaqia   # 试洽洽六年级英语小伴读
 #   ./cat.sh presence         # 看洽洽/航航是否在客厅网段
 #   ./cat.sh data             # 看记忆文件写在本机哪
 #   ./cat.sh chat "想聊的"     # 云端真对话
@@ -73,11 +75,21 @@ while [ $# -gt 0 ]; do
 5. 本机记性
    状态/习惯/声纹/对话只写 Mac Air 硬盘，不写路由器盘。
    ./cat.sh data
+
+6. 英语小伴读（译林牛津·江苏）
+   航航小学二年级，洽洽小学六年级。英语偏弱：中英夹一句，给选择，不督学。
+   上学日航航 16:20、洽洽 19:10；周末放假休息。
+   试听：./cat.sh english    ./cat.sh english qiaqia
 EOF
       exit 0
       ;;
     alarm)
       exec "$CAT_DIR/cat-schedule.sh" fire --force alarm school
+      ;;
+    english)
+      shift
+      who="${1:-hanghang}"
+      exec "$CAT_DIR/cat-schedule.sh" fire --force english "$who"
       ;;
     presence)
       exec "$CAT_DIR/cat-presence.sh"

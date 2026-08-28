@@ -40,7 +40,7 @@ sched_note() {
 sched_active_today() {
   tangtang_dow_match "${TANGTANG_SCHED_DOW:-*}" || return 1
   tangtang_date_in_window "${TANGTANG_SCHED_FROM:-}" "${TANGTANG_SCHED_UNTIL:-}" || return 1
-  if [ "${TANGTANG_SCHED_EVENT:-}" = "alarm" ]; then
+  if [ "${TANGTANG_SCHED_EVENT:-}" = "alarm" ] || [ "${TANGTANG_SCHED_EVENT:-}" = "english" ]; then
     tangtang_is_school_day || return 1
   fi
   return 0
