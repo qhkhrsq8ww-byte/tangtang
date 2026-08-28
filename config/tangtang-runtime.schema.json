@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TangTang Runtime Context",
+  "type": "object",
+  "required": ["member", "scene", "policy"],
+  "properties": {
+    "member": {
+      "type": "object",
+      "required": ["member_id", "profile"],
+      "properties": {
+        "member_id": {"type": "string"},
+        "profile": {"enum": ["play", "friend", "adult", "elder", "unknown"]},
+        "age": {"type": ["integer", "null"], "minimum": 0},
+        "identity_confidence": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "scene": {"type": "string"},
+    "today": {"type": "object"},
+    "recent": {"type": "object"},
+    "policy": {
+      "type": "object",
+      "properties": {
+        "privacy": {"type": "string"},
+        "interrupt": {"enum": ["silent", "normal", "high", "emergency"]}
+      }
+    }
+  }
+}
