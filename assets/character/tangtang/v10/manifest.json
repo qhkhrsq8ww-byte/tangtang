@@ -1,0 +1,193 @@
+{
+  "character": "tangtang",
+  "version": "v10",
+  "title": "糖糖 V10",
+  "width": 512,
+  "height": 512,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.957
+  },
+  "format": "png",
+  "alpha": true,
+  "style": {
+    "look": "warm-soft-family-child-friendly-real-puppy-low-stimulation",
+    "accessory": "light_blue_bandana_gold_bone_tag",
+    "bandana": "#A8D5FF",
+    "bandana_shadow": "#5BA7E3",
+    "tag": "#F5C84B",
+    "master": "设计总图 (blue bandana). 3/4 product render yellow leather collar is a documented conflict and is NOT used at runtime."
+  },
+  "animations": {
+    "idle": {
+      "frames": 16,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.957
+      },
+      "width": 512,
+      "height": 512,
+      "files": [
+        "animations/idle/idle_01.png",
+        "animations/idle/idle_02.png",
+        "animations/idle/idle_03.png",
+        "animations/idle/idle_04.png",
+        "animations/idle/idle_05.png",
+        "animations/idle/idle_06.png",
+        "animations/idle/idle_07.png",
+        "animations/idle/idle_08.png",
+        "animations/idle/idle_09.png",
+        "animations/idle/idle_10.png",
+        "animations/idle/idle_11.png",
+        "animations/idle/idle_12.png",
+        "animations/idle/idle_13.png",
+        "animations/idle/idle_14.png",
+        "animations/idle/idle_15.png",
+        "animations/idle/idle_16.png"
+      ]
+    },
+    "listen": {
+      "frames": 12,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.957
+      },
+      "width": 512,
+      "height": 512,
+      "files": [
+        "animations/listen/listen_01.png",
+        "animations/listen/listen_02.png",
+        "animations/listen/listen_03.png",
+        "animations/listen/listen_04.png",
+        "animations/listen/listen_05.png",
+        "animations/listen/listen_06.png",
+        "animations/listen/listen_07.png",
+        "animations/listen/listen_08.png",
+        "animations/listen/listen_09.png",
+        "animations/listen/listen_10.png",
+        "animations/listen/listen_11.png",
+        "animations/listen/listen_12.png"
+      ]
+    },
+    "happy": {
+      "frames": 12,
+      "fps": 16,
+      "loop": true,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.957
+      },
+      "width": 512,
+      "height": 512,
+      "files": [
+        "animations/happy/happy_01.png",
+        "animations/happy/happy_02.png",
+        "animations/happy/happy_03.png",
+        "animations/happy/happy_04.png",
+        "animations/happy/happy_05.png",
+        "animations/happy/happy_06.png",
+        "animations/happy/happy_07.png",
+        "animations/happy/happy_08.png",
+        "animations/happy/happy_09.png",
+        "animations/happy/happy_10.png",
+        "animations/happy/happy_11.png",
+        "animations/happy/happy_12.png"
+      ]
+    },
+    "trot": {
+      "frames": 12,
+      "fps": 15,
+      "loop": true,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.957
+      },
+      "width": 512,
+      "height": 512,
+      "files": [
+        "animations/trot/trot_01.png",
+        "animations/trot/trot_02.png",
+        "animations/trot/trot_03.png",
+        "animations/trot/trot_04.png",
+        "animations/trot/trot_05.png",
+        "animations/trot/trot_06.png",
+        "animations/trot/trot_07.png",
+        "animations/trot/trot_08.png",
+        "animations/trot/trot_09.png",
+        "animations/trot/trot_10.png",
+        "animations/trot/trot_11.png",
+        "animations/trot/trot_12.png"
+      ]
+    },
+    "sleep": {
+      "frames": 12,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.957
+      },
+      "width": 512,
+      "height": 512,
+      "files": [
+        "animations/sleep/sleep_01.png",
+        "animations/sleep/sleep_02.png",
+        "animations/sleep/sleep_03.png",
+        "animations/sleep/sleep_04.png",
+        "animations/sleep/sleep_05.png",
+        "animations/sleep/sleep_06.png",
+        "animations/sleep/sleep_07.png",
+        "animations/sleep/sleep_08.png",
+        "animations/sleep/sleep_09.png",
+        "animations/sleep/sleep_10.png",
+        "animations/sleep/sleep_11.png",
+        "animations/sleep/sleep_12.png"
+      ]
+    },
+    "get_up": {
+      "frames": 8,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.957
+      },
+      "width": 512,
+      "height": 512,
+      "files": [
+        "animations/get_up/get_up_01.png",
+        "animations/get_up/get_up_02.png",
+        "animations/get_up/get_up_03.png",
+        "animations/get_up/get_up_04.png",
+        "animations/get_up/get_up_05.png",
+        "animations/get_up/get_up_06.png",
+        "animations/get_up/get_up_07.png",
+        "animations/get_up/get_up_08.png"
+      ]
+    }
+  },
+  "views": {
+    "front": "base/front.png",
+    "three_quarter_left": "base/three_quarter_left.png",
+    "left": "base/left.png",
+    "three_quarter_back_left": "base/three_quarter_back_left.png",
+    "back": "base/back.png",
+    "three_quarter_back_right": "base/three_quarter_back_right.png",
+    "right": "base/right.png",
+    "three_quarter_right": "base/three_quarter_right.png",
+    "look_down": "base/look_down.png",
+    "look_up": "base/look_up.png",
+    "tilt_left": "base/tilt_left.png",
+    "tilt_right": "base/tilt_right.png",
+    "sit": "base/sit.png",
+    "lie": "base/lie.png"
+  },
+  "expressions_dir": "expressions",
+  "actions_dir": "actions",
+  "scenes_dir": "scenes",
+  "fallback": "idle"
+}
