@@ -101,6 +101,8 @@ if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ]; then
         fi
         export TANGTANG_PROFILE=friend
         export TANGTANG_CHILD_NAME="洽洽"
+        export TANGTANG_MEMBER_ID="${TANGTANG_MEMBER_ID:-qiaqia}"
+        export TANGTANG_SPEAKER="${TANGTANG_SPEAKER:-qiaqia}"
         ;;
       *)
         if tangtang_child_at_school hanghang; then
@@ -109,6 +111,8 @@ if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ]; then
         fi
         export TANGTANG_PROFILE=play
         export TANGTANG_CHILD_NAME="航航"
+        export TANGTANG_MEMBER_ID="${TANGTANG_MEMBER_ID:-hanghang}"
+        export TANGTANG_SPEAKER="${TANGTANG_SPEAKER:-hanghang}"
         ;;
     esac
     # 当天说过「到此为止」，或连续沉默/反对：这类先不说，不加重
@@ -142,6 +146,38 @@ fi
 
 if [ "$PRINT" != "1" ] && [ "$EVENT" = "alarm" ]; then
   tangtang_alarm_chime
+fi
+
+# 本地习惯：反对/今天别叫/连续沉默则少说。--force 仍说。dry-run 打印原因。
+if [ "$FORCE" != "1" ]; then
+  hwho=""
+  case "$EVENT" in
+    english)
+      case "${ARG:-hanghang}" in
+        qiaqia|洽洽|6|grade6) hwho="qiaqia" ;;
+        *) hwho="hanghang" ;;
+      esac
+      ;;
+    *)
+      hwho="${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}"
+      ;;
+  esac
+  if [ -n "$hwho" ]; then
+    if [ "$PRINT" = "1" ]; then
+      export TANGTANG_HABIT_READONLY=1
+    fi
+    gate="$(/usr/bin/python3 "$CAT_DIR/cat-habits.py" should-speak "$EVENT" "$hwho" 2>/dev/null || true)"
+    unset TANGTANG_HABIT_READONLY
+    if printf '%s\n' "$gate" | grep -q '^skip'; then
+      reason="${gate#skip|}"
+      if [ "$PRINT" = "1" ]; then
+        echo "这次不说（习惯：$reason）"
+        exit 0
+      fi
+      log_skip "这次不说（习惯：$reason）"
+      exit 0
+    fi
+  fi
 fi
 
 if [ -n "$ARG" ]; then

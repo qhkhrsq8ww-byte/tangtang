@@ -264,30 +264,95 @@ def load_copy_library():
 COPY_LIB = load_copy_library()
 
 
-def pick_english_line(who):
+def pick_english_line(who, preferred_id=None):
     path = os.path.join(CAT_DIR, "cat-english.py")
     spec = importlib.util.spec_from_file_location("cat_english", path)
+    if not spec or not spec.loader:
+        return None, ""
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    if hasattr(mod, "pick_with_id"):
+        text, lid = mod.pick_with_id(who, preferred_id=preferred_id)
+        return ((text or "").strip() or None), (lid or "")
+    return ((mod.pick_line(who) or "").strip() or None), ""
+
+
+def _habits_mod():
+    path = os.path.join(CAT_DIR, "cat-habits.py")
+    spec = importlib.util.spec_from_file_location("tangtang_habits", path)
     if not spec or not spec.loader:
         return None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return (mod.pick_line(who) or "").strip() or None
+    return mod
 
 
-def pick_from_library(event, profile):
+def habit_who(event, arg=""):
+    try:
+        mod = _habits_mod()
+        if mod:
+            return mod.audience(event, arg) or ""
+    except Exception:
+        pass
+    return (os.environ.get("TANGTANG_MEMBER_ID") or os.environ.get("TANGTANG_SPEAKER") or "").strip()
+
+
+def habits_should_speak(event, arg=""):
+    try:
+        mod = _habits_mod()
+        if not mod:
+            return True
+        ok, reason = mod.should_speak(event, habit_who(event, arg))
+        if not ok:
+            sys.stderr.write("[habit] skip %s %s %s\n" % (habit_who(event, arg), event, reason))
+        return ok
+    except Exception:
+        return True
+
+
+def habits_prefer_line(event, arg=""):
+    try:
+        mod = _habits_mod()
+        if not mod:
+            return ""
+        return (mod.prefer_line(event, habit_who(event, arg)) or "").strip()
+    except Exception:
+        return ""
+
+
+def habits_remember_line(event, arg, line_id):
+    lid = (line_id or "").strip()
+    who = habit_who(event, arg)
+    if not lid or not who:
+        return
+    try:
+        mod = _habits_mod()
+        if mod:
+            mod.remember_line(who, event, lid)
+    except Exception:
+        return
+
+
+def pick_from_library(event, profile, preferred_id=None):
     if not COPY_LIB:
-        return None
+        return None, ""
     scene = EVENT_SCENE.get(event)
     if not scene:
-        return None
+        return None, ""
     items = COPY_LIB.get("items") or []
     matched = [i for i in items if i.get("scene") == scene and i.get("profile") == profile]
     if not matched and profile in ("play", "friend"):
         matched = [i for i in items if i.get("scene") == scene and i.get("profile") in ("play", "friend")]
-    texts = [i.get("text") for i in matched if i.get("text")]
-    if not texts:
-        return None
-    return random.choice(texts)
+    matched = [i for i in matched if i.get("text")]
+    if not matched:
+        return None, ""
+    pref = (preferred_id or "").strip()
+    if pref:
+        for i in matched:
+            if (i.get("id") or "") == pref:
+                return i.get("text"), pref
+    choice = random.choice(matched)
+    return choice.get("text"), (choice.get("id") or "")
 
 
 def drift(state):
@@ -363,11 +428,14 @@ def _turn_gate_ok(event, arg=""):
         return True
 
 
-def should_speak(state, event):
+def should_speak(state, event, arg=""):
     if event in USER_EVENTS:
         return True
-    arg = sys.argv[2] if len(sys.argv) > 2 else ""
+    if not arg:
+        arg = sys.argv[2] if len(sys.argv) > 2 else ""
     if not _turn_gate_ok(event, arg):
+        return False
+    if not habits_should_speak(event, arg):
         return False
     minutes = COOLDOWN_MINUTES.get(event)
     if minutes is None:
@@ -427,13 +495,17 @@ def compose(state, memory, event, arg):
             return "", label
         return pick(REPLY["random"], label), label
 
-    lib_text = pick_from_library(event, profile)
+    preferred = habits_prefer_line(event, arg)
+    lib_text, lib_id = pick_from_library(event, profile, preferred)
     if event == "english":
         try:
-            lib_text = pick_english_line(arg) or lib_text
+            en_text, en_id = pick_english_line(arg, preferred)
+            if en_text:
+                lib_text, lib_id = en_text, en_id
         except Exception:
             pass
     if lib_text:
+        habits_remember_line(event, arg, lib_id)
         return lib_text, label
 
     if event == "meal":
@@ -466,7 +538,7 @@ def main():
         print(text)
         return
 
-    if not should_speak(state, event):
+    if not should_speak(state, event, arg):
         save_state(state)
         print(f"\t{label}\tidle")
         return

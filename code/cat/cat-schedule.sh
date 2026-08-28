@@ -103,6 +103,7 @@ case "$CMD" in
     ;;
   preview)
     export TANGTANG_REMIND_PROFILE="${TANGTANG_REMIND_PROFILE:-friend}"
+    real_dir="$TANGTANG_DATA_DIR"
     while read -r line; do
       [ -n "$line" ] || continue
       tangtang_parse_schedule_line "$line"
@@ -112,6 +113,21 @@ case "$CMD" in
       mark=""
       sched_active_today || mark="  [今天不响]"
       hm=$(printf '%02d:%02d' "$TANGTANG_SCHED_HOUR" "$TANGTANG_SCHED_MIN")
+      hwho=""
+      case "$TANGTANG_SCHED_EVENT" in
+        english)
+          case "${TANGTANG_SCHED_ARG:-hanghang}" in
+            qiaqia|洽洽) hwho="qiaqia" ;;
+            *) hwho="hanghang" ;;
+          esac
+          ;;
+      esac
+      hnote=""
+      if [ -n "$hwho" ]; then
+        hnote="$(TANGTANG_DATA_DIR="$real_dir" TANGTANG_HABIT_READONLY=1 \
+          /usr/bin/python3 "$CAT_DIR/cat-habits.py" note "$TANGTANG_SCHED_EVENT" "$hwho" 2>/dev/null || true)"
+      fi
+      [ -n "$hnote" ] && extra="${extra}  [${hnote}]"
       if [ -n "${TANGTANG_SCHED_ARG:-}" ]; then
         text=$(TANGTANG_DATA_DIR="$tmp" TANGTANG_FAKE_TIME="$hm" "$CAT_DIR/cat-remind.sh" --print "$TANGTANG_SCHED_EVENT" "$TANGTANG_SCHED_ARG")
         printf '%02d:%02d  %s %s%s%s\n  %s\n' "$TANGTANG_SCHED_HOUR" "$TANGTANG_SCHED_MIN" "$TANGTANG_SCHED_EVENT" "$TANGTANG_SCHED_ARG" "$extra" "$mark" "${text:-（这次不说）}"
@@ -128,7 +144,7 @@ case "$CMD" in
     echo "# 白天小朋友上学时只跟爷爷奶奶说；航航16:00到、洽洽18:00到才跟小朋友互动"
     echo "# 英语小伴读说完后，客厅开短窗听一句（麦在客厅 Mac 旁；音箱须是 Mac 默认输出）"
     echo "# 其它提醒播前检测洽洽/航航手机；没人则静音跳过"
-    echo "# 记忆写在本机硬盘，不写路由器盘：\$HOME/Library/Application Support/Tangtang"
+    echo "# 习惯成长只写本机硬盘标签（配合/沉默/反对），不记小朋友原话，不自动改这张 crontab"
     echo "MAILTO=\"\""
     echo "SHELL=/bin/bash"
     echo "PATH=/usr/bin:/bin:/usr/local/bin"

@@ -8,7 +8,7 @@
 #   ./cat.sh -p               # 强制透明宠物浮现
 #   ./cat.sh -s               # 强制全屏舞台
 #   ./cat.sh status           # 查看糖糖当前心情状态
-#   ./cat.sh habits [成员]    # 查看五口之家习惯摘要（不投屏）
+#   ./cat.sh habits [成员]    # 习惯摘要（客厅 Mac，不记小朋友原话）
 #   ./cat.sh preview          # 打印今日语音提醒文案（不发声）
 #   ./cat.sh today            # 今天会响哪些
 #   ./cat.sh features         # 糖糖有哪些功能
@@ -41,6 +41,9 @@ while [ $# -gt 0 ]; do
     habits)
       shift
       /usr/bin/python3 "$CAT_DIR/cat-family.py" summary "$@"
+      echo
+      echo "本地成长（只记标签，不记原话）"
+      /usr/bin/python3 "$CAT_DIR/cat-habits.py" preview "$@"
       exit 0
       ;;
     preview)
@@ -62,7 +65,9 @@ while [ $# -gt 0 ]; do
 
 2. 认人与习惯
    声纹只回答「是谁」；习惯按爷爷/奶奶/爸爸/洽洽/航航分开记。
-   儿童原话不进家庭共享。  ./cat.sh habits
+   习惯会记在客厅 Mac，不记小朋友原话。
+   糖糖根据配合/沉默/反对，自己少说、说得更准时；不上传训练。
+   ./cat.sh habits
 
 3. 定时语音提醒
    喝水、吃饭、休息、照顾糖糖（加水/出门/吃饭/梳毛）。
@@ -115,7 +120,7 @@ EOF
     data)
       echo "记忆目录（Mac Air 本机硬盘，不写路由器）"
       echo "$TANGTANG_DATA_DIR"
-      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|voiceprints|chat-history|remind-log|turn-ledger)' || true
+      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|habit-growth|voiceprints|chat-history|remind-log|turn-ledger)' || true
       exit 0
       ;;
     chat) CHAT_REQ=1; shift;;

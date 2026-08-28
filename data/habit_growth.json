@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "id": "habit_growth",
+  "dog": "糖糖",
+  "note": "本地规则成长：只记粗标签，不记小朋友原话、不录音、不上传训练。bash/python 直接 load。不自动改 crontab，上学闹铃永不因习惯挪点。",
+  "store": "cat-habit-growth.json",
+  "ledger": "cat-turn-ledger.json",
+  "local_only": true,
+  "no_child_transcript": true,
+  "no_cloud_train": true,
+  "no_auto_crontab": true,
+  "alarm_never_auto_shift": true,
+  "sibling_isolated": true,
+  "decay_days": 21,
+  "max_people": 8,
+  "max_events_per_person": 24,
+  "max_recent_per_cell": 40,
+  "max_line_scores": 12,
+  "max_file_bytes": 65536,
+  "labels": [
+    "joined", "oppose", "silent", "defer", "wont", "unclear", "stop_today", "skip"
+  ],
+  "scene_map": {
+    "joined": "joined",
+    "joined_soft": "joined",
+    "oppose": "oppose",
+    "silent": "silent",
+    "timeout": "silent",
+    "perfunctory": "silent",
+    "noncoop": "silent",
+    "scratch": "silent",
+    "defer": "defer",
+    "wont": "wont",
+    "unclear": "unclear",
+    "stop": "stop_today",
+    "stop_today": "stop_today",
+    "skip": "skip",
+    "adult_interrupt": "skip"
+  },
+  "forbidden_keys": [
+    "text", "transcript", "utterance", "pcm", "audio", "words", "say",
+    "stt_text", "embedding", "voiceprint", "speech", "raw"
+  ],
+  "people": ["grandpa", "grandma", "dad", "qiaqia", "hanghang"],
+  "aliases": {
+    "yeye": "grandpa", "grandpa": "grandpa", "爷爷": "grandpa",
+    "nainai": "grandma", "grandma": "grandma", "奶奶": "grandma",
+    "baba": "dad", "dad": "dad", "爸爸": "dad",
+    "qiaqia": "qiaqia", "洽洽": "qiaqia",
+    "hanghang": "hanghang", "航航": "hanghang"
+  },
+  "roles": {
+    "child": {
+      "ids": ["qiaqia", "hanghang"],
+      "silent_streak_24h": 2,
+      "oppose_7d_skip_tomorrow": 2,
+      "faster_mute": true
+    },
+    "elder": {
+      "ids": ["grandpa", "grandma"],
+      "silent_streak_24h": 3,
+      "oppose_7d_skip_tomorrow": 3,
+      "persistent_events": ["water", "meal", "pet_water", "pet_food"]
+    },
+    "adult": {
+      "ids": ["dad"],
+      "silent_streak_24h": 3,
+      "oppose_7d_skip_tomorrow": 3
+    }
+  },
+  "defer_max_retries": 1,
+  "prefer_joined_line": true,
+  "hour_hint_min_joined": 3
+}

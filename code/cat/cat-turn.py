@@ -22,12 +22,16 @@ from tangtang_paths import data_dir  # noqa: E402
 
 LEDGER_NAME = "cat-turn-ledger.json"
 MAX_TURNS = 400
-FORBIDDEN_KEYS = ("text", "transcript", "utterance", "pcm", "words", "say")
+FORBIDDEN_KEYS = (
+    "text", "transcript", "utterance", "pcm", "words", "say",
+    "stt_text", "audio", "speech", "raw",
+)
 RESULTS = (
     "joined", "joined_soft", "silent", "oppose", "wont", "stop", "unclear",
+    "defer", "stop_today", "skip", "timeout", "perfunctory", "noncoop",
 )
 COOL_RESULTS = ("silent", "oppose")
-SYSTEM_RESULTS = RESULTS + ("wont",)
+SYSTEM_RESULTS = RESULTS
 
 DEFAULT_SPEAK = {
     "joined": True,
@@ -443,8 +447,27 @@ def gate_allows(event, who, root=None, day=None):
     return ok
 
 
+def gate_allows(event, who, root=None, day=None):
+    ok, _reason, _detail = gate_status(event, who, root=root, day=day)
+    return ok
+
+
+def _notify_habits(row, root=None):
+    try:
+        import importlib.util
+        path = os.path.join(CAT_DIR, "cat-habits.py")
+        spec = importlib.util.spec_from_file_location("tangtang_habits", path)
+        if not spec or not spec.loader:
+            return
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        mod.apply_turn(row, root=root)
+    except Exception:
+        return
+
+
 def append_turn(event, who, result, stt, presence, seconds, rms,
-                root=None, ts=None, speak=None):
+                root=None, ts=None, speak=None, line_id=None, spoke=None):
     result = result if result in SYSTEM_RESULTS else "silent"
     presence = presence if presence in ("home", "away", "unknown") else "unknown"
     if ts is None:
@@ -455,6 +478,8 @@ def append_turn(event, who, result, stt, presence, seconds, rms,
             ts = "%sT%s:00" % (fake_day, fake_time)
         else:
             ts = datetime.now().isoformat(timespec="seconds")
+    if speak is None and spoke is not None:
+        speak = bool(spoke)
     row = {
         "ts": ts,
         "event": event or "turn",
@@ -467,6 +492,10 @@ def append_turn(event, who, result, stt, presence, seconds, rms,
     }
     if speak is not None:
         row["speak"] = bool(speak)
+        row["spoke"] = bool(speak)
+    lid = (line_id or os.environ.get("TANGTANG_LINE_ID") or "").strip()
+    if lid:
+        row["line_id"] = lid[:80]
     for k in FORBIDDEN_KEYS:
         row.pop(k, None)
     path = ledger_path(root)
@@ -477,6 +506,7 @@ def append_turn(event, who, result, stt, presence, seconds, rms,
     data["turns"] = turns[-MAX_TURNS:]
     save_json(path, data)
     json.loads(open(path, encoding="utf-8").read())
+    _notify_habits(row, root)
     return row
 
 
@@ -717,10 +747,12 @@ def main():
         speak = None
         if len(sys.argv) > 9:
             speak = sys.argv[9] in ("1", "true", "yes")
+        line_id = sys.argv[10] if len(sys.argv) > 10 else ""
         row = append_turn(
             event=event, who=who, result=result,
             stt=stt_raw in ("1", "true", "yes"),
             presence=presence, seconds=seconds, rms=rms, speak=speak,
+            line_id=line_id,
         )
         print(row["result"])
         return

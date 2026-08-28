@@ -21,6 +21,7 @@ MEMORY_FILES = (
     "cat-chat-history.json",
     "cat-remind-log.txt",
     "cat-turn-ledger.json",
+    "cat-habit-growth.json",
 )
 
 

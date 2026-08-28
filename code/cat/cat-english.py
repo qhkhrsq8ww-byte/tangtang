@@ -65,7 +65,7 @@ def term_key(when=None):
     return "book_a"
 
 
-def pick_line(who="", when=None):
+def iter_items(who="", when=None):
     lib = load_library()
     who = resolve_who(who)
     when = when or current_when()
@@ -73,14 +73,40 @@ def pick_line(who="", when=None):
         grade = lib.get("grade6") or {}
     else:
         grade = lib.get("grade2") or {}
-    items = grade.get(term_key(when)) or []
-    if not items:
-        if who == "qiaqia":
-            return "糖糖想跟你玩一个英语词。愿意再说，不愿意也没关系。"
-        return "糖糖想学一个英语词。你要不要当小老师？不学也行。"
-    idx = when.timetuple().tm_yday % len(items)
-    item = items[idx]
-    return (item.get("say") or "").strip()
+    term = term_key(when)
+    items = grade.get(term) or []
+    for idx, item in enumerate(items):
+        lid = (item.get("id") or "").strip() or "en_%s_%s_%d" % (who, term, idx)
+        yield lid, item
+
+
+def fallback_line(who):
+    who = resolve_who(who)
+    if who == "qiaqia":
+        return "糖糖想跟你玩一个英语词。愿意再说，不愿意也没关系。"
+    return "糖糖想学一个英语词。你要不要当小老师？不学也行。"
+
+
+def pick_with_id(who="", when=None, preferred_id=None):
+    who = resolve_who(who)
+    when = when or current_when()
+    rows = list(iter_items(who, when))
+    if not rows:
+        return fallback_line(who), ""
+    pref = (preferred_id or "").strip()
+    if pref:
+        for lid, item in rows:
+            text = (item.get("say") or "").strip()
+            if lid == pref and text:
+                return text, lid
+    idx = when.timetuple().tm_yday % len(rows)
+    lid, item = rows[idx]
+    return (item.get("say") or "").strip(), lid
+
+
+def pick_line(who="", when=None, preferred_id=None):
+    text, _lid = pick_with_id(who, when, preferred_id=preferred_id)
+    return text
 
 
 def _selftest():
