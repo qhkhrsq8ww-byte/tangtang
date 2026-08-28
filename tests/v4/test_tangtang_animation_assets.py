@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 ASSET = ROOT / "assets" / "character" / "tangtang"
 SKIP_DIRS = {"v10"}
+PNG_SIG = b"\x89PNG\r\n\x1a\n"
 
 
 def pack_pngs() -> list[Path]:
