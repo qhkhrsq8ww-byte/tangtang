@@ -37,6 +37,21 @@
 | `158f4a1` | **P1-4 crontab/launchd 迁移**：`config/migrate-paths.sh` 一键迁移脚本（备份→替换→标记废弃），crontab 备份到 `config/backups/crontab-20260828.bak` |
 | `a351364` | **回归套件**：`tests/test-v3.1-privacy.sh`（28 项），`tangtang-quiet-hours.py` 增加 `--test-time` |
 
+## 二·B、隐私最终回归（真实场景验证）
+
+输入 `cat-vp.py log child_9 "我今天被同学欺负了，好难过"` 后，扫描整个 data 目录：
+
+| 检查点 | 结果 |
+|---|---|
+| cat-habits.json 中 child_9 的 text | `""`（空，原话被拦截） |
+| 结构化信息（时间/活跃时段/次数/星期） | ✅ 完整保留 |
+| 全文搜索「被同学欺负」 | **0 命中** |
+| family summary 中儿童原话 | 无（只显示「1 次互动 + 活跃时段」） |
+| dad（FAMILY）原话 | ✅ 保留「今晚加班到九点」，可进家庭摘要 |
+| unknown（PUBLIC）原话 | ✅ 保留「今天下雨了」，进普通事件流 |
+
+**结论：儿童原话已在存储层完全拦截，无法以任何形式落盘。**
+
 ## 三、路径迁移说明
 
 ### crontab（12 条任务 + 2 条废弃）
