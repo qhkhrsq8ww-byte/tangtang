@@ -52,7 +52,8 @@ while [ $# -gt 0 ]; do
 糖糖现在有这些功能（客厅 Mac Air 出声，先不上投影）
 
 1. 说话陪伴
-   比熊糖糖口吻。航航用玩伴（play），洽洽用朋友（friend）。
+   比熊糖糖口吻。航航用玩伴，洽洽用朋友。
+   上学日白天只跟爷爷奶奶说，不跟小朋友互动。
    ./cat.sh "想说的话"    ./cat.sh chat "聊几句"
 
 2. 认人与习惯
@@ -61,11 +62,11 @@ while [ $# -gt 0 ]; do
 
 3. 定时语音提醒
    喝水、吃饭、休息、照顾糖糖（加水/出门/吃饭/梳毛）。
-   播前看洽洽航航手机在不在家网。没人则不说。
-   ./cat.sh preview
+   上学日白天只跟爷爷奶奶说（航航16:00到、洽洽18:00到）。
+   周末/晚上才看出门。  ./cat.sh preview    ./cat.sh presence
 
 4. 上学闹铃
-   2026-09-01 起，工作日 06:30 铃+说话；周六日休息。
+   上学日 06:30 铃+说话；周末和节假日休息；调休上课日也响。
    卧室也要听到，不看出门检测。开学前 07:30 仍用普通早安。
    试听：./cat.sh alarm
 
@@ -104,6 +105,17 @@ brain_say(){
 if [ "$STATUS_REQ" = "1" ]; then
   /usr/bin/python3 "$CAT_DIR/cat-brain.py" status
   exit 0
+fi
+
+# 上学日白天不跟洽洽航航互动（他们不在家）；客厅里按爷爷奶奶说
+if [ -n "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}" ] \
+   && tangtang_child_at_school "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}"; then
+  echo "[糖糖] 上学期间不跟小朋友互动（按作息还没到家）"
+  exit 0
+fi
+if tangtang_is_school_day && tangtang_child_at_school hanghang && tangtang_child_at_school qiaqia; then
+  export TANGTANG_PROFILE=elder
+  export TANGTANG_CHILD_NAME="${TANGTANG_CHILD_NAME:-爷爷奶奶}"
 fi
 
 if [ "$CHAT_REQ" = "1" ]; then

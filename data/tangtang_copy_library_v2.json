@@ -1,9 +1,10 @@
 {
-  "version": "2.2",
-  "principle": "用糖糖自己的口吻：照顾小狗和小朋友健康放在同一句；先共情，给选择，不命令",
+  "version": "2.3",
+  "principle": "用糖糖自己的口吻：照顾小狗和小朋友健康放在同一句；先共情，给选择，不命令。上学日白天只对爷爷奶奶说。",
   "profiles": {
     "play": {"age": 9, "grade": "小学三年级", "role": "玩伴+小教练+小任务搭档"},
-    "friend": {"age": 12, "grade": "初一", "role": "朋友+倾听者+温柔提醒者"}
+    "friend": {"age": 12, "grade": "初一", "role": "朋友+倾听者+温柔提醒者"},
+    "elder": {"role": "对爷爷奶奶说话，不叫小朋友的名字"}
   },
   "items": [
     {"id":"phone_break_play","scene":"phone_break","scene_name":"少玩手机","profile":"play","text":"糖糖腿都坐麻啦。陪糖糖站起来30秒，你眼睛也歇一下？","animation":"idle"},
@@ -35,6 +36,14 @@
     {"id":"pet_food_play","scene":"pet_food","scene_name":"喂糖糖","profile":"play","text":"糖糖肚子饿了。到点吃饭啦，你也别空着肚子。","animation":"happy"},
     {"id":"pet_food_friend","scene":"pet_food","scene_name":"喂糖糖","profile":"friend","text":"糖糖该吃饭了。你方便的话喂一下；你也记得吃饭。","animation":"welcome"},
     {"id":"pet_groom_play","scene":"pet_groom","scene_name":"梳毛","profile":"play","text":"糖糖毛毛乱乱的。轻轻梳一梳，糖糖最喜欢你了。","animation":"caring"},
-    {"id":"pet_groom_friend","scene":"pet_groom","scene_name":"梳毛","profile":"friend","text":"糖糖毛有点乱。有空的话梳两下就好，不急。","animation":"caring"}
+    {"id":"pet_groom_friend","scene":"pet_groom","scene_name":"梳毛","profile":"friend","text":"糖糖毛有点乱。有空的话梳两下就好，不急。","animation":"caring"},
+    {"id":"meal_elder","scene":"meal","scene_name":"吃饭","profile":"elder","text":"到点吃饭了。也麻烦照看一下糖糖。","animation":"welcome"},
+    {"id":"water_elder","scene":"water","scene_name":"喝水","profile":"elder","text":"糖糖口渴了。方便的话加一点水。","animation":"caring"},
+    {"id":"pet_water_elder","scene":"pet_water","scene_name":"给糖糖加水","profile":"elder","text":"糖糖的水碗可能空了。麻烦加一点水。","animation":"caring"},
+    {"id":"pet_walk_elder","scene":"pet_walk","scene_name":"遛糖糖","profile":"elder","text":"糖糖想出门转转。家里谁方便带一下？","animation":"walk"},
+    {"id":"pet_food_elder","scene":"pet_food","scene_name":"喂糖糖","profile":"elder","text":"糖糖该吃饭了。方便的话喂一下。","animation":"welcome"},
+    {"id":"rest_elder","scene":"phone_break","scene_name":"少玩手机","profile":"elder","text":"坐久了的话，起来走动一下。糖糖也活动活动。","animation":"idle"},
+    {"id":"sleep_elder","scene":"sleep","scene_name":"睡觉","profile":"elder","text":"糖糖要歇了。大家也早点休息。","animation":"sleeping"},
+    {"id":"greet_elder","scene":"greet","scene_name":"打招呼","profile":"elder","text":"糖糖在。","animation":"welcome"}
   ]
 }

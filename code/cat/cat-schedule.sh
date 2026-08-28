@@ -40,6 +40,9 @@ sched_note() {
 sched_active_today() {
   tangtang_dow_match "${TANGTANG_SCHED_DOW:-*}" || return 1
   tangtang_date_in_window "${TANGTANG_SCHED_FROM:-}" "${TANGTANG_SCHED_UNTIL:-}" || return 1
+  if [ "${TANGTANG_SCHED_EVENT:-}" = "alarm" ]; then
+    tangtang_is_school_day || return 1
+  fi
   return 0
 }
 
@@ -106,11 +109,12 @@ case "$CMD" in
       extra="$(sched_note)"
       mark=""
       sched_active_today || mark="  [今天不响]"
+      hm=$(printf '%02d:%02d' "$TANGTANG_SCHED_HOUR" "$TANGTANG_SCHED_MIN")
       if [ -n "${TANGTANG_SCHED_ARG:-}" ]; then
-        text=$(TANGTANG_DATA_DIR="$tmp" "$CAT_DIR/cat-remind.sh" --print "$TANGTANG_SCHED_EVENT" "$TANGTANG_SCHED_ARG")
+        text=$(TANGTANG_DATA_DIR="$tmp" TANGTANG_FAKE_TIME="$hm" "$CAT_DIR/cat-remind.sh" --print "$TANGTANG_SCHED_EVENT" "$TANGTANG_SCHED_ARG")
         printf '%02d:%02d  %s %s%s%s\n  %s\n' "$TANGTANG_SCHED_HOUR" "$TANGTANG_SCHED_MIN" "$TANGTANG_SCHED_EVENT" "$TANGTANG_SCHED_ARG" "$extra" "$mark" "${text:-（这次不说）}"
       else
-        text=$(TANGTANG_DATA_DIR="$tmp" "$CAT_DIR/cat-remind.sh" --print "$TANGTANG_SCHED_EVENT")
+        text=$(TANGTANG_DATA_DIR="$tmp" TANGTANG_FAKE_TIME="$hm" "$CAT_DIR/cat-remind.sh" --print "$TANGTANG_SCHED_EVENT")
         printf '%02d:%02d  %s%s%s\n  %s\n' "$TANGTANG_SCHED_HOUR" "$TANGTANG_SCHED_MIN" "$TANGTANG_SCHED_EVENT" "$extra" "$mark" "${text:-（这次不说）}"
       fi
       rm -rf "$tmp"
@@ -118,7 +122,8 @@ case "$CMD" in
     ;;
   crontab)
     echo "# 糖糖语音提醒 · 先 crontab -l 备份，再粘贴"
-    echo "# 上学闹铃：2026-09-01 起工作日 06:30，周六日休息；卧室也响"
+    echo "# 上学闹铃：上学日 06:30（放假/周末不响；调休上课日也响）"
+    echo "# 白天小朋友上学时只跟爷爷奶奶说；航航16:00到、洽洽18:00到才跟小朋友互动"
     echo "# 其它提醒播前检测洽洽/航航手机；没人则静音跳过"
     echo "# 记忆写在本机硬盘，不写路由器盘：\$HOME/Library/Application Support/Tangtang"
     echo "MAILTO=\"\""
@@ -166,10 +171,25 @@ case "$CMD" in
     tangtang_date_in_window "" "2026-08-31" || { echo "fail Aug28 until Aug31"; fail=1; }
     TANGTANG_FAKE_TODAY=2026-09-01
     if tangtang_date_in_window "" "2026-08-31"; then echo "fail Sep1 after wake until"; fail=1; fi
-    tangtang_parse_schedule_line "30 6 alarm school dow=1-5 from=2026-09-01 presence=0"
+    tangtang_parse_schedule_line "30 6 alarm school from=2026-09-01 presence=0"
     [ "$TANGTANG_SCHED_EVENT" = "alarm" ] && [ "$TANGTANG_SCHED_ARG" = "school" ] \
-      && [ "$TANGTANG_SCHED_DOW" = "1-5" ] && [ "$TANGTANG_SCHED_PRESENCE" = "0" ] \
+      && [ "$TANGTANG_SCHED_PRESENCE" = "0" ] \
       || { echo "fail parse alarm line"; fail=1; }
+    TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=12:00
+    tangtang_is_school_day || { echo "fail Sep1 is school day"; fail=1; }
+    tangtang_child_at_school hanghang || { echo "fail hanghang at school noon"; fail=1; }
+    tangtang_child_at_school qiaqia || { echo "fail qiaqia at school noon"; fail=1; }
+    TANGTANG_FAKE_TIME=16:00
+    if tangtang_child_at_school hanghang; then echo "fail hanghang should be home 16:00"; fail=1; fi
+    tangtang_child_at_school qiaqia || { echo "fail qiaqia still at school 16:00"; fail=1; }
+    TANGTANG_FAKE_TIME=18:00
+    if tangtang_child_at_school qiaqia; then echo "fail qiaqia should be home 18:00"; fail=1; fi
+    TANGTANG_FAKE_TODAY=2026-09-25 TANGTANG_FAKE_TIME=12:00
+    if tangtang_is_school_day; then echo "fail mid-autumn should not be school"; fail=1; fi
+    TANGTANG_FAKE_TODAY=2026-09-20
+    tangtang_is_school_day || { echo "fail Sep20 makeup school"; fail=1; }
+    TANGTANG_FAKE_TODAY=2026-10-10
+    tangtang_is_school_day || { echo "fail Oct10 makeup school"; fail=1; }
     if [ "$fail" = "0" ]; then
       echo "cat-schedule selftest ok"
       exit 0
