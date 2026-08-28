@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""客厅语音小回合：能量、关键词分类、短回句、账本、策略闸门。
+"""客厅语音小回合：能量、账本、短回句。分类以 data/child_reactions.json 为准。
 
 糖糖是比熊玩伴，不是监督机器人。一轮最多回一句。
 账本只写标签，不写儿童原话。记忆目录在 Mac Air 本机硬盘。
-听写只用于判定 oppose/wont/stop/joined；PCM 回合结束由调用方删除。
 """
 import array
 import json
