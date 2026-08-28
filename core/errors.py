@@ -23,3 +23,15 @@ class PathError(ValueError):
 
 class ShellError(ValueError):
     """Event/LLM text must not reach a shell."""
+
+
+class SinkError(Exception):
+    """TTS / STT / projection failed. The Event must still be kept."""
+
+
+class IsolationError(Exception):
+    """Wrapped subsystem failure. Process continues."""
+
+
+class CompatibilityError(ValueError):
+    """Port is not V4-compatible. V5 must not silently smash V4."""

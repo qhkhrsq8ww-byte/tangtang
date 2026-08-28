@@ -2,7 +2,7 @@
 
 from core.compat import should_interrupt
 from core.context.builder import ContextBuilder
-from core.errors import ActionError, EventError, MemoryError, PathError, PrivacyError, ShellError
+from core.errors import ActionError, EventError, MemoryError, PathError, PrivacyError, ShellError, SinkError
 from core.events.event import Event, MAX_PAYLOAD_BYTES, PRIVACY_SCOPES
 from core.events.event_bus import EventBus, InMemoryEventBus, PublishResult
 from core.identity.resolver import IdentityResolver
@@ -67,6 +67,7 @@ __all__ = [
     "ResponsePort",
     "SafeLogger",
     "ShellError",
+    "SinkError",
     "Stores",
     "WALK_SUGGESTION",
     "should_interrupt",
