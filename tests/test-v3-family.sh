@@ -26,10 +26,10 @@ check "quiet syntax" "$PY" -m py_compile "$ROOT/code/cat/tangtang-quiet-hours.py
 check "voice syntax" bash -n "$ROOT/code/cat/cat-voice.sh"
 check "talk syntax" bash -n "$ROOT/code/cat/cat-talk.sh"
 
-for p in grandpa grandma dad mom child_12 child_9; do
+for p in grandpa grandma dad qiaqia hanghang 姐姐 弟弟; do
   profile="$($PY "$ROOT/code/cat/tangtang-profile.py" --speaker "$p" | $PY -c 'import json,sys; print(json.load(sys.stdin)["profile"])')"
   case "$p:$profile" in
-    grandpa:elder|grandma:elder|dad:adult|mom:adult|child_12:friend|child_9:play) ok "profile mapping $p" ;;
+    grandpa:elder|grandma:elder|dad:adult|qiaqia:friend|hanghang:play|姐姐:friend|弟弟:play) ok "profile mapping $p" ;;
     *) bad "profile mapping $p -> $profile" ;;
   esac
 done
