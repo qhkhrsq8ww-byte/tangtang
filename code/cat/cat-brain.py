@@ -23,6 +23,8 @@ DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
 STATE_FILE = os.path.join(DATA_DIR, "cat-state.json")
 MEMORY_FILE = os.path.join(DATA_DIR, "cat-memory.json")
 
+# LEGACY TABLE ONLY. Not the production source of truth.
+# Visual state must come from behavior.legacy_adapter → CharacterStateEngine.
 EVENT_STATE = {
     "greet": "welcome", "home": "welcome", "welcome": "welcome",
     "wake": "wakeup",
@@ -396,7 +398,8 @@ def main():
 
     if not should_speak(state, event):
         save_state(state)
-        print(f"\t{label}\tidle")
+        visual, _ = _resolve_character_state(event, arg, "", label)
+        print(f"\t{label}\t{visual}")
         return
 
     if event in ("greet", "pat", "home"):
@@ -414,13 +417,31 @@ def main():
     save_state(state)
     save_memory(memory)
 
-    visual = EVENT_STATE.get(event, "idle")
-    if event == "random":
-        visual = {"happy": "happy", "calm": "idle", "lonely": "caring",
-                  "sleepy": "sleepy", "low": "caring"}.get(label, "idle")
-    elif event == "say":
-        visual = "idle"
+    visual, text = _resolve_character_state(event, arg, text, label)
     print(f"{text}\t{label}\t{visual}")
+
+
+def _resolve_character_state(event, arg, text, label):
+    """Adapter → CharacterStateEngine → PresentationAction. EVENT_STATE is unused here."""
+    root = os.path.dirname(os.path.dirname(CAT_DIR))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    try:
+        from behavior.legacy_adapter import decide_from_legacy
+        from core.presentation.character_presenter import CharacterPresenter
+        from core.presentation.transport import write_presentation_action
+    except Exception:
+        return EVENT_STATE.get(event, "idle"), text
+
+    decision = decide_from_legacy(event, arg)
+    if not decision.speech_allowed:
+        text = ""
+    action = CharacterPresenter().present(decision, text=text)
+    try:
+        write_presentation_action(action, DATA_DIR)
+    except OSError:
+        pass
+    return action.state, action.text if action.speak else text
 
 
 if __name__ == "__main__":
