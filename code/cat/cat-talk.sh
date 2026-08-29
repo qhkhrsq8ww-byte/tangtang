@@ -2,11 +2,14 @@
 # ============================================================
 # 糖糖 · 智能说话（接大脑 + 情绪音色）
 # 用法: ./cat-talk.sh <事件> [参数]
+#   事件含: greet/wake/alarm/english/sleep/rest/meal/water/exercise/play/pet_walk/pet_water/pet_food/pet_groom ...
 # 大脑决定话术+情绪 → 按情绪选音色 → 更新画面 → 出声
-# 夜间主动提醒受统一 quiet-hours 闸门保护。
+# 夜间主动提醒受统一 quiet-hours 闸门保护（22:30–07:00，speech_allowed=false）。
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=cat-lib.sh
 . "$SCRIPT_DIR/cat-lib.sh"
+
 MOOD_FILE="$CAT_DIR/cat-mood.txt"
 
 if [ "${TANGTANG_INTERACTIVE:-0}" != "1" ]; then
@@ -32,6 +35,11 @@ if [ -z "$text" ]; then
 fi
 
 echo "[$state] $text" > "$MOOD_FILE"
+echo "$text"
+
+if [ "${TANGTANG_TTS:-1}" = "0" ]; then
+  exit 0
+fi
 
 speak_with_fallback() {
   local rate="$1"
@@ -51,9 +59,17 @@ speak_with_fallback() {
 }
 
 case "$label" in
-  happy) speak_with_fallback 5 8 6 175 120 ;;
-  sleepy) speak_with_fallback -20 3 2 130 110 ;;
-  lonely|low) speak_with_fallback -15 5 3 140 115 ;;
-  *) speak_with_fallback -10 5 4 150 118 ;;
+  happy)
+    speak_with_fallback 5 8 6 175 120
+    ;;
+  sleepy)
+    speak_with_fallback -20 3 2 130 110
+    ;;
+  lonely|low)
+    speak_with_fallback -15 5 3 140 115
+    ;;
+  *)
+    speak_with_fallback -10 5 4 150 118
+    ;;
 esac
 exit 0

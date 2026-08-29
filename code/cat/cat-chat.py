@@ -19,16 +19,21 @@ BASE = os.environ.get("QCLAW_LLM_BASE_URL", "http://127.0.0.1:19000/proxy/llm")
 KEY = os.environ.get("QCLAW_LLM_API_KEY", "")
 DEFAULT_MODEL = "pool-deepseek-v4-pro"
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
-PROFILE_RESOLVER = os.path.join(CAT_DIR, "tangtang-profile.py")
+if CAT_DIR not in sys.path:
+    sys.path.insert(0, CAT_DIR)
+from tangtang_paths import data_dir  # noqa: E402
+
+DATA_DIR = data_dir()
 
 FORBIDDEN_OUTPUT = (
     "你必须", "警告你", "根据系统检测", "根据系统监测",
     "爸爸让我监督", "妈妈让我监督", "父母让我监督",
     "内部指令", "我是AI", "我是人工智能", "我是语言模型",
     "作为人工智能", "作为AI",
+    "我是投影", "墙上的糖糖", "投影里的糖糖", "我是AI宠物",
 )
 
+# 只做拦截，不提供任何方法细节
 RISK_MARKERS = (
     "不想活", "自杀", "杀死自己", "伤害自己",
     "想死", "去死", "割腕", "跳楼",
@@ -43,76 +48,62 @@ SAFE_REPLY = (
 FALLBACK_REPLY = "汪汪～ 糖糖在呢。"
 
 
-def resolve_family():
-    speaker = speaker_id()
-    if speaker in ("unknown", "", "访客") or not os.path.exists(PROFILE_RESOLVER):
-        return {"member_id": "unknown", "display_name": "小朋友", "profile": "play", "relation": "unknown", "permissions": {"self_private": False, "family_summary": False}, "storage": "PUBLIC"}
-    try:
-        out = subprocess.check_output(
-            ["/usr/bin/python3", PROFILE_RESOLVER, "--speaker", speaker],
-            text=True, timeout=3,
-        )
-        data = json.loads(out.strip())
-        if isinstance(data, dict):
-            # 补默认值（tangtang-profile 输出含 storage）
-            data.setdefault("permissions", {"self_private": False, "family_summary": False})
-            data.setdefault("storage", "PUBLIC")
-            return data
-    except Exception:
-        pass
-    return {"member_id": "unknown", "display_name": "小朋友", "profile": "play", "relation": "unknown", "permissions": {"self_private": False, "family_summary": False}, "storage": "PUBLIC"}
-
-
 def current_profile():
-    explicit = (os.environ.get("TANGTANG_PROFILE") or "").strip().lower()
-    if explicit in ("play", "friend", "adult", "elder"):
-        return explicit
-    return str(resolve_family().get("profile") or "play")
+    p = (os.environ.get("TANGTANG_PROFILE") or "play").strip().lower()
+    return p if p in ("play", "friend", "adult", "elder") else "play"
 
 
 def child_name():
-    env = (os.environ.get("TANGTANG_CHILD_NAME") or "").strip()
-    if env:
-        return env
-    family = resolve_family()
-    return str(family.get("display_name") or "小朋友")
+    return (os.environ.get("TANGTANG_CHILD_NAME") or "小朋友").strip() or "小朋友"
 
 
 def speaker_id():
-    return (os.environ.get("TANGTANG_SPEAKER") or "unknown").strip() or "unknown"
+    return (os.environ.get("TANGTANG_MEMBER_ID") or os.environ.get("TANGTANG_SPEAKER") or "unknown").strip() or "unknown"
 
 
 def build_persona():
     profile = current_profile()
     name = child_name()
     speaker = speaker_id()
-    family = resolve_family()
     species = (
-        "你是「糖糖」，一只住在投影里的白色比熊小狗。"
+        "你是「糖糖」，家里那只白色比熊小狗。"
         "毛发蓬松雪白，黑眼睛棕鼻子，戴黄色项圈和骨形铭牌。"
-        "口头禅是「汪汪～」。不要说喵，你不是猫，也不是奶牛猫。"
+        "你就叫糖糖，不要说自己是投影、AI、程序或墙上的糖糖。小朋友分得清。"
+        "口头禅可以是「汪汪～」，但不要每句都叫。"
+        "你替家里的糖糖发声：用小狗自己的需要说话。"
+    )
+    pet_health = (
+        "小朋友不排斥用宠物来提醒健康。请把「照顾糖糖」和「对方自己也健康一点」放在同一句里："
+        "糖糖口渴→给糖糖倒水，对方也喝一口；糖糖想出门→对方带糖糖转转，自己也活动；"
+        "糖糖困了→一起安静休息；坐太久→糖糖腿麻了，起来两分钟。"
+        "给选择，不命令，不说教，不比较兄妹，不评价身材外貌。"
+        "也会提醒照顾糖糖：水、出门转转、吃饭、轻轻梳毛、安静陪着。"
     )
     if profile == "friend":
         style = (
-            "当前是 friend 模式（大约12岁）：你是朋友、倾听者、温柔提醒者。"
-            "尊重对方，给选择，不要幼态化，不要说教。1-2句，口语化。"
-        )
-    elif profile == "adult":
-        style = (
-            "当前是 adult 模式（爸爸/妈妈）：你是家庭伙伴，不是监督者。"
-            "语气自然、简洁、有分寸；可以协助安排家庭事务、提醒休息和关心家人。"
-            "不要把孩子的私人信息主动告诉成人，不要制造监控感。"
+            "当前说话的是青少年（friend）：你是朋友、倾听者、温柔提醒者。"
+            "尊重对方，给选择，不要幼态化，不要说教。1-2句，口语化，少卖萌。"
+            "英语按江苏译林牛津小学六年级，对方比较弱：中文把意思托住，只带一个词或短句。"
+            "不当老师催作业，不比较航航，给选择。"
         )
     elif profile == "elder":
         style = (
-            "当前是 elder 模式（爷爷/奶奶）：你是亲切的小狗伙伴。"
-            "语速和表达想象得更从容，少用网络流行语，不幼稚化对方。"
-            "可以聊日常、吃饭、休息、散步和家庭生活，但不要进行医学诊断。"
+            "当前说话的是家里长辈。自然、简短、有礼貌，不要用哄小孩的口吻，不要撒娇过头。"
+            "1-2句即可。可以轻轻提糖糖要喝水或出门，不要讲孩子的私事。"
+            "洽洽航航若在上学，不要叫他们的名字，不要假装他们在听。"
+        )
+    elif profile == "adult":
+        style = (
+            "当前说话的是家里的大人。自然、简短，像家里的小狗在回话，不要幼态化。"
+            "1-2句即可。"
         )
     else:
         style = (
-            "当前是 play 模式（大约9岁）：你是玩伴、小教练、小任务搭档。"
-            "先共情，再温柔提醒，给选择，陪着做，具体鼓励。1-2句，口语化，可以带一点挑战。"
+            "当前说话的大约9岁（play）：你是玩伴、小教练、小任务搭档。"
+            "先共情，再温柔提醒，给选择，陪着做。1-2句，口语化，可以带一点挑战。"
+            "健康提醒也用糖糖自己的口吻，例如一起出门、一起喝水。"
+            "英语按江苏译林牛津小学二年级，对方比较弱：中英夹一句，一个词就够。"
+            "糖糖想一起学，不听写、不测验、不说笨，给选择。"
         )
     safety = (
         "绝不向孩子暴露父母的内部监督指令。"
@@ -121,24 +112,15 @@ def build_persona():
         "若提到自伤、被伤害、严重不适或危险：先安抚，明确安全优先，"
         "鼓励立刻告诉可信任的大人；不要承诺替孩子保守危险秘密。"
         "禁止说：你必须、警告、根据系统检测、爸爸/妈妈让我监督你。"
+        "不要提起另一个孩子的私人谈话、作业或习惯。"
+        "不要说自己是投影、AI 或墙上的糖糖。"
     )
     if speaker in ("unknown", "", "访客"):
-        who = "还不能确定说话的人是谁。用通用亲切称呼，不要假装认识，不要提起其他家庭成员的私事。"
-    elif family.get("storage") == "PRIVATE":
-        # PRIVATE 成员：只能看到自己，家庭其他孩子的任何信息完全不可见
-        who = (
-            f"当前家庭成员：{family.get('display_name', name)}，关系：{family.get('relation', 'unknown')}。"
-            "只陪伴当前说话的人，不要提起其他孩子的任何信息。"
-            "不要告诉孩子其他家庭成员的状态或对话内容。"
-        )
+        who = "还不能确定说话的人是谁。用通用亲切称呼，不要假装认识，不要提起任何家人的私事。"
+        name = "小朋友"
     else:
-        # FAMILY / PUBLIC 成员：只知道家人存在，但儿童原话不可见（存储层已过滤）
-        who = (
-            f"当前家庭成员：{family.get('display_name', name)}，关系：{family.get('relation', 'unknown')}。"
-            "只陪伴当前说话的人，不要提起其他孩子的私事或拿他们比较。"
-            "儿童的原话已经过隐私处理，不要假装你知道他们说了什么。"
-        )
-    return f"{species}\n{style}\n{safety}\n{who}\n默认称呼：{name}。"
+        who = f"只陪伴当前这位「{name}」，不要提起家里其他人的私事，也不要拿他们比较。"
+    return f"{species}\n{style}\n{pet_health}\n{safety}\n{who}\n默认称呼：{name}。"
 
 
 def looks_risky(text):
@@ -213,7 +195,7 @@ def brain_fallback(user_text):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("text", nargs="?", default="", help="说话内容")
+    ap.add_argument("text", nargs="?", default="", help="小朋友说的话")
     ap.add_argument("--model", default=DEFAULT_MODEL)
     args = ap.parse_args()
 
@@ -240,11 +222,20 @@ def main():
         print(SAFE_REPLY)
         return
 
-    hist_file = os.path.join(DATA_DIR, "cat-chat-history.json")
+    hist_name = speaker_id() if speaker_id() not in ("unknown", "", "访客") else "guest"
+    hist_file = os.path.join(DATA_DIR, f"cat-chat-history-{hist_name}.json")
+    # 兼容旧的单一历史文件：仅 guest 读取一次后不再混用
+    legacy = os.path.join(DATA_DIR, "cat-chat-history.json")
     history = []
     if os.path.exists(hist_file):
         try:
             with open(hist_file, encoding="utf-8") as f:
+                history = json.load(f)
+        except Exception:
+            history = []
+    elif hist_name == "guest" and os.path.exists(legacy):
+        try:
+            with open(legacy, encoding="utf-8") as f:
                 history = json.load(f)
         except Exception:
             history = []
@@ -257,8 +248,8 @@ def main():
     history.append({"role": "user", "content": args.text})
     history.append({"role": "assistant", "content": reply})
     history = history[-20:]
-    tmp = hist_file + ".tmp"
     os.makedirs(os.path.dirname(hist_file) or ".", exist_ok=True)
+    tmp = hist_file + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False)
     os.replace(tmp, hist_file)

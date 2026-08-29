@@ -1,6 +1,7 @@
 #!/bin/bash
 # 糖糖 · 听（外置麦 MAONO AU-BM10 录音，带增益）
-# 用法: ./cat-listen.sh [秒数=5]
+# 采集点：客厅 Mac 旁。语音互动只在客厅，不要把麦拉进儿童房。
+# 用法: ./cat-listen.sh [秒数=5] [输出pcm=/tmp/cat_voice.pcm]
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
 . "$SCRIPT_DIR/cat-lib.sh"

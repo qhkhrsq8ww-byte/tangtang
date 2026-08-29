@@ -24,8 +24,8 @@ FAMILY = load_family_document()
 class TestFamilyJsonNotOverwritten(unittest.TestCase):
     def test_sister_brother_display_names(self):
         names = {m["member_id"]: m.get("display_name") for m in FAMILY["members"]}
-        self.assertEqual(names["child_12"], "姐姐")
-        self.assertEqual(names["child_9"], "弟弟")
+        self.assertEqual(names["qiaqia"], "洽洽")
+        self.assertEqual(names["hanghang"], "航航")
         self.assertIn("grandpa", names)
         self.assertIn("dad", names)
 

@@ -11,15 +11,21 @@
 事件:
   greet / wake / sleep / rest / meal [lunch|dinner] / home / random
   pat / say "<文字>" / status / play / homework / tidy / exercise
-  emotion / weather / water
+  emotion / weather / water / pet_walk / pet_water / pet_food / pet_groom
+  alarm [school]
+  english [hanghang|qiaqia]
 输出:
   一行：话术<TAB>情绪标签<TAB>画面对应状态
   话术为空表示这次不说话（冷却或 random 静默）
 """
-import json, os, sys, random, datetime
+import json, os, sys, random, datetime, importlib.util
 
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
+if CAT_DIR not in sys.path:
+    sys.path.insert(0, CAT_DIR)
+from tangtang_paths import data_dir  # noqa: E402
+
+DATA_DIR = data_dir()
 STATE_FILE = os.path.join(DATA_DIR, "cat-state.json")
 MEMORY_FILE = os.path.join(DATA_DIR, "cat-memory.json")
 
@@ -28,11 +34,14 @@ MEMORY_FILE = os.path.join(DATA_DIR, "cat-memory.json")
 EVENT_STATE = {
     "greet": "welcome", "home": "welcome", "welcome": "welcome",
     "wake": "wakeup",
+    "alarm": "wakeup",
     "sleep": "sleeping", "sleepy": "sleepy",
     "rest": "caring", "emotion": "caring", "weather": "caring", "water": "caring",
     "play": "happy", "exercise": "running", "walking": "walking", "running": "running",
+    "pet_walk": "walking", "pet_water": "caring", "pet_food": "happy", "pet_groom": "caring",
     "meal": "happy", "pat": "happy",
     "homework": "thinking", "tidy": "thinking", "thinking": "thinking",
+    "english": "thinking",
     "curious": "curious",
     "accompany": "accompany",
     "night": "night",
@@ -41,7 +50,9 @@ EVENT_STATE = {
 
 EVENT_SCENE = {
     "rest": "phone_break",
+    "greet": "greet",
     "wake": "wake",
+    "alarm": "alarm",
     "sleep": "sleep",
     "meal": "meal",
     "homework": "homework",
@@ -51,6 +62,11 @@ EVENT_SCENE = {
     "emotion": "emotion",
     "weather": "weather",
     "water": "water",
+    "pet_walk": "pet_walk",
+    "pet_water": "pet_water",
+    "pet_food": "pet_food",
+    "pet_groom": "pet_groom",
+    "english": "english",
 }
 
 # 主动提醒冷却（分钟）。点名/摸摸/指定说不冷却。
@@ -58,7 +74,10 @@ COOLDOWN_MINUTES = {
     "rest": 30, "play": 45, "exercise": 45, "water": 60,
     "homework": 40, "tidy": 40, "weather": 180,
     "meal": 90, "wake": 240, "sleep": 180, "emotion": 60,
+    "alarm": 20,
     "random": 20, "home": 120,
+    "pet_walk": 90, "pet_water": 90, "pet_food": 180, "pet_groom": 240,
+    "english": 90,
 }
 USER_EVENTS = {"greet", "pat", "say", "status"}
 
@@ -81,17 +100,18 @@ REPLY = {
               "还想躺一会儿呀？那糖糖再陪你30秒～",
               "起床成功！糖糖给你一个早安击掌！"],
     },
+    "alarm": {
+        "_": ["六点半了，该起床上学了。起来后看一眼糖糖的水，你们也清醒一下。",
+              "汪汪～ 上学啦。糖糖叫你起床，起来给糖糖倒点水，你也喝一口。"],
+    },
     "sleep": {
         "_": ["糖糖困啦……今天玩得开心吗？我们一起准备睡觉吧。",
               "手机也要休息啦～ 糖糖陪你。晚安！明天见！",
               "该睡觉啦，糖糖也要闭眼休息啦，做个好梦～"],
     },
     "rest": {
-        "_": ["这个游戏是不是很好玩？糖糖发现我们已经玩了一会儿啦。",
-              "眼睛要休息一下啦。来，糖糖挑战你：站起来30秒！",
-              "不想休息也没关系，糖糖再提醒一次，你自己决定～",
-              "刚才说好的休息时间到啦。糖糖先起来活动一下，你跟我来！",
-              "看屏幕好久啦，起来活动活动，让眼睛和身体都休息一下～ 糖糖陪你！"],
+        "_": ["糖糖腿都坐麻啦。陪糖糖站起来一下，你眼睛也歇歇？",
+              "看屏幕好久啦。糖糖先起来转转，你要不要跟来？"],
     },
     "meal": {
         "lunch":  ["开饭啦！糖糖的肚子已经开始咕噜咕噜了。",
@@ -118,11 +138,8 @@ REPLY = {
         "low":    ["汪汪……糖糖躲在小角落里，来摸摸头就会好起来啦。"],
     },
     "play": {
-        "_": ["出去玩嘛出去玩嘛，外面的太阳都在等你啦～",
-             "别宅着啦，出去跑跑跳跳多开心，糖糖陪你去～",
-             "糖糖运动任务！今天一起走100步？糖糖先出发啦！",
-             "出去玩嘛～ 出去玩嘛～ 腿都等不及要跑步啦～",
-             "挑战开始！跳10下！任务完成！今天的身体电量充满一点啦！"],
+        "_": ["糖糖想出门转转，你带糖糖去？你也跑两步～",
+             "出去走走嘛，糖糖陪你，太阳也在等。"],
     },
     "homework": {
         "_": ["糖糖任务来了！先挑战最简单的一题！",
@@ -135,9 +152,8 @@ REPLY = {
               "哇！好多东西回家啦！糖糖给你鼓掌～"],
     },
     "exercise": {
-        "_": ["糖糖运动任务！今天一起走100步？",
-              "糖糖先出发啦！挑战开始！跳10下！",
-              "任务完成！今天的身体电量充满一点啦！"],
+        "_": ["糖糖想出门转转。你带糖糖走两圈，你也活动一下？",
+              "糖糖先走起来啦，你要不要一起来？"],
     },
     "emotion": {
         "_": ["糖糖发现你今天好像不太开心。如果你愿意，可以告诉糖糖～",
@@ -149,8 +165,24 @@ REPLY = {
               "好像要下雨，糖糖提醒你带雨伞～"],
     },
     "water": {
-        "_": ["糖糖口渴啦！喝几口水，补充能量！",
-              "来喝水啦，咕嘟咕嘟，身体棒棒～"],
+        "_": ["糖糖口渴啦！给糖糖加点水，你也喝一口～",
+              "来喝水啦，糖糖陪你咕嘟咕嘟～"],
+    },
+    "pet_walk": {
+        "_": ["糖糖想出门转转。你带糖糖走一圈，你也活动一下？",
+              "糖糖腿等不及了，出去走走好不好？"],
+    },
+    "pet_water": {
+        "_": ["糖糖的水是不是快没了？加一点，你也喝一口。"],
+    },
+    "pet_food": {
+        "_": ["糖糖该吃饭了。你方便的话喂一下，你也记得吃饭。"],
+    },
+    "pet_groom": {
+        "_": ["糖糖毛有点乱。有空轻轻梳两下就好。"],
+    },
+    "english": {
+        "_": ["糖糖想学一个英语词。你要不要当小老师？不学也行。"],
     },
 }
 
@@ -161,7 +193,7 @@ def now():
 
 def current_profile():
     p = (os.environ.get("TANGTANG_PROFILE") or "play").strip().lower()
-    return p if p in ("play", "friend") else "play"
+    return p if p in ("play", "friend", "adult", "elder") else "play"
 
 
 def child_name(memory):
@@ -234,20 +266,95 @@ def load_copy_library():
 COPY_LIB = load_copy_library()
 
 
-def pick_from_library(event, profile):
-    if not COPY_LIB:
+def pick_english_line(who, preferred_id=None):
+    path = os.path.join(CAT_DIR, "cat-english.py")
+    spec = importlib.util.spec_from_file_location("cat_english", path)
+    if not spec or not spec.loader:
+        return None, ""
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    if hasattr(mod, "pick_with_id"):
+        text, lid = mod.pick_with_id(who, preferred_id=preferred_id)
+        return ((text or "").strip() or None), (lid or "")
+    return ((mod.pick_line(who) or "").strip() or None), ""
+
+
+def _habits_mod():
+    path = os.path.join(CAT_DIR, "cat-habits.py")
+    spec = importlib.util.spec_from_file_location("tangtang_habits", path)
+    if not spec or not spec.loader:
         return None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def habit_who(event, arg=""):
+    try:
+        mod = _habits_mod()
+        if mod:
+            return mod.audience(event, arg) or ""
+    except Exception:
+        pass
+    return (os.environ.get("TANGTANG_MEMBER_ID") or os.environ.get("TANGTANG_SPEAKER") or "").strip()
+
+
+def habits_should_speak(event, arg=""):
+    try:
+        mod = _habits_mod()
+        if not mod:
+            return True
+        ok, reason = mod.should_speak(event, habit_who(event, arg))
+        if not ok:
+            sys.stderr.write("[habit] skip %s %s %s\n" % (habit_who(event, arg), event, reason))
+        return ok
+    except Exception:
+        return True
+
+
+def habits_prefer_line(event, arg=""):
+    try:
+        mod = _habits_mod()
+        if not mod:
+            return ""
+        return (mod.prefer_line(event, habit_who(event, arg)) or "").strip()
+    except Exception:
+        return ""
+
+
+def habits_remember_line(event, arg, line_id):
+    lid = (line_id or "").strip()
+    who = habit_who(event, arg)
+    if not lid or not who:
+        return
+    try:
+        mod = _habits_mod()
+        if mod:
+            mod.remember_line(who, event, lid)
+    except Exception:
+        return
+
+
+def pick_from_library(event, profile, preferred_id=None):
+    if not COPY_LIB:
+        return None, ""
     scene = EVENT_SCENE.get(event)
     if not scene:
-        return None
+        return None, ""
     items = COPY_LIB.get("items") or []
     matched = [i for i in items if i.get("scene") == scene and i.get("profile") == profile]
+    if not matched and profile in ("play", "friend"):
+        matched = [i for i in items if i.get("scene") == scene and i.get("profile") in ("play", "friend")]
+    matched = [i for i in matched if i.get("text")]
     if not matched:
-        matched = [i for i in items if i.get("scene") == scene]
-    texts = [i.get("text") for i in matched if i.get("text")]
-    if not texts:
-        return None
-    return random.choice(texts)
+        return None, ""
+    pref = (preferred_id or "").strip()
+    if pref:
+        for i in matched:
+            if (i.get("id") or "") == pref:
+                return i.get("text"), pref
+    choice = random.choice(matched)
+    return choice.get("text"), (choice.get("id") or "")
 
 
 def drift(state):
@@ -303,12 +410,38 @@ def interact(state, memory, kind):
     return state
 
 
+def _turn_gate_ok(event, arg=""):
+    """客厅短窗账本：当天 stop / 连续沉默反对 → 英语这类先不说。"""
+    if event not in ("english", "turn"):
+        return True
+    path = os.path.join(CAT_DIR, "cat-turn.py")
+    spec = importlib.util.spec_from_file_location("cat_turn_mod", path)
+    if not spec or not spec.loader:
+        return True
+    try:
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        who = (arg or os.environ.get("TANGTANG_MEMBER_ID")
+               or os.environ.get("TANGTANG_SPEAKER") or "")
+        if event == "english":
+            who = mod.normalize_who(who) or "hanghang"
+        return bool(mod.gate_allows(event, who))
+    except Exception:
+        return True
+
+
 # V4 Round 1: core.compat.should_interrupt is the future policy port.
 # This cooldown gate stays. Do not delete. cat-* may later also consult:
 #   from core.compat import should_interrupt
-def should_speak(state, event):
+def should_speak(state, event, arg=""):
     if event in USER_EVENTS:
         return True
+    if not arg:
+        arg = sys.argv[2] if len(sys.argv) > 2 else ""
+    if not _turn_gate_ok(event, arg):
+        return False
+    if not habits_should_speak(event, arg):
+        return False
     minutes = COOLDOWN_MINUTES.get(event)
     if minutes is None:
         return True
@@ -347,6 +480,8 @@ def compose(state, memory, event, arg):
         text = (arg or "").strip()
         if not text:
             return "", "calm"
+        if profile == "elder":
+            return text, label
         if high:
             text = f"{text}～ {nick}，糖糖最喜欢你啦汪汪～"
         else:
@@ -365,8 +500,17 @@ def compose(state, memory, event, arg):
             return "", label
         return pick(REPLY["random"], label), label
 
-    lib_text = pick_from_library(event, profile)
+    preferred = habits_prefer_line(event, arg)
+    lib_text, lib_id = pick_from_library(event, profile, preferred)
+    if event == "english":
+        try:
+            en_text, en_id = pick_english_line(arg, preferred)
+            if en_text:
+                lib_text, lib_id = en_text, en_id
+        except Exception:
+            pass
     if lib_text:
+        habits_remember_line(event, arg, lib_id)
         return lib_text, label
 
     if event == "meal":
@@ -399,7 +543,7 @@ def main():
         print(text)
         return
 
-    if not should_speak(state, event):
+    if not should_speak(state, event, arg):
         save_state(state)
         visual, _ = _resolve_character_state(event, arg, "", label)
         print(f"\t{label}\t{visual}")
@@ -407,8 +551,9 @@ def main():
 
     if event in ("greet", "pat", "home"):
         state = interact(state, memory, event)
-    elif event in ("wake", "sleep", "rest", "meal", "say", "play",
-                   "homework", "tidy", "exercise", "emotion", "weather", "water"):
+    elif event in ("wake", "alarm", "sleep", "rest", "meal", "say", "play",
+                   "homework", "tidy", "exercise", "emotion", "weather", "water",
+                   "pet_walk", "pet_water", "pet_food", "pet_groom", "english"):
         state = interact(state, memory, "care")
 
     text, label = compose(state, memory, event, arg)
@@ -425,7 +570,7 @@ def main():
 
 
 def _resolve_character_state(event, arg, text, label):
-    """Adapter → CharacterStateEngine → PresentationAction. EVENT_STATE is unused here."""
+    """Adapter → CharacterStateEngine → PresentationAction. EVENT_STATE is fallback only."""
     root = os.path.dirname(os.path.dirname(CAT_DIR))
     if root not in sys.path:
         sys.path.insert(0, root)

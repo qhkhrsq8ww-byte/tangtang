@@ -1,12 +1,15 @@
 # 敏感文件 - 不入库
+# 正式记忆写在本机 ~/Library/Application Support/Tangtang ；下面是旧路径残留，仍忽略
 code/cat/cat-stt-config.sh
 code/cat/tangtang-config.sh
 code/cat/tangtang-local.json
 code/cat/.baidu_token
 code/cat/cat-chat-history.json
+code/cat/cat-chat-history-*.json
 code/cat/cat-state.json
 code/cat/cat-memory.json
 code/cat/cat-mood.txt
+code/cat/cat-remind-log.txt
 code/cat/voices.json
 code/cat/sofa_index.js
 code/cat/sofa_upload.html
@@ -19,6 +22,8 @@ code/cat/assets_ref/
 .DS_Store
 code/cat/cat-voiceprints.json
 code/cat/cat-habits.json
+code/cat/cat-habit-growth.json
+code/cat/cat-turn-ledger.json
 .env
 __pycache__/
 *.pyc

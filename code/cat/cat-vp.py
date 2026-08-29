@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """糖糖 · 本地声纹识别 + 家庭习惯记录
 
-重要：声纹库和习惯库均为本地隐私数据，禁止提交 Git。
+重要：声纹库和习惯库只存在客厅 Mac Air 本机硬盘，禁止提交 Git，也不写路由器盘。
 用法：
   建档: ./cat-vp.py enroll <名字> <pcm文件...>
   识别: ./cat-vp.py identify <pcm文件>
@@ -14,22 +14,15 @@
 实际部署前应使用家庭成员的真实样本做误识别/拒识测试，不应把 0.995 视为科学固定值。
 """
 import json, os, sys, math, subprocess
-from datetime import datetime, timedelta
-
-# 隐私策略层（存储层拦截：PRIVATE 成员原话禁止落盘）
-import importlib.util
-_PRIV_SPEC = importlib.util.spec_from_file_location(
-    "tangtang_privacy", os.path.join(os.path.dirname(os.path.abspath(__file__)), "tangtang-privacy.py"))
-_PRIV = importlib.util.module_from_spec(_PRIV_SPEC)
-_PRIV_SPEC.loader.exec_module(_PRIV)
+from datetime import datetime
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.abspath(os.path.join(BASE, "../.."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", BASE)
+if BASE not in sys.path:
+    sys.path.insert(0, BASE)
+from tangtang_paths import data_dir  # noqa: E402
+
+DATA_DIR = data_dir()
 VP_FILE = os.path.join(DATA_DIR, "cat-voiceprints.json")
-HABIT_FILE = os.path.join(DATA_DIR, "cat-habits.json")
 FEATURE_SH = os.path.join(BASE, "cat-vp-feature.sh")
 THRESHOLD = float(os.environ.get("TANGTANG_VOICE_THRESHOLD", "0.995"))
 
@@ -62,6 +55,7 @@ def load_json(path, default):
         return default
 
 def save_json(path, data):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -73,7 +67,23 @@ def load_vp():
 def save_vp(db):
     save_json(VP_FILE, db)
 
+
+def canonical_member_id(name):
+    family_py = os.path.join(BASE, "cat-family.py")
+    try:
+        r = subprocess.run(
+            [sys.executable, family_py, "resolve", name],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return name
+    if r.returncode == 0 and r.stdout.strip():
+        return r.stdout.strip().split("\t")[0]
+    return name
+
+
 def enroll(name, files):
+    name = canonical_member_id(name)
     db = load_vp(); feats=[]
     for pcm in files:
         feat=extract_features(pcm)
@@ -90,72 +100,51 @@ def enroll(name, files):
     print(f"✅ 已建档「{name}」({len(feats)} 段样本)")
     return 0
 
-def identify(pcm):
-    db=load_vp()
-    feat=extract_features(pcm)
+def identify_with_score(pcm):
+    db = load_vp()
+    feat = extract_features(pcm)
     if not db or not feat:
-        return "unknown"
-    best_name,best_score="unknown",-1
-    for name,data in db.items():
-        avg=data.get("avg",{})
-        score=cosine_sim(feat,avg)
-        if score>best_score:
-            best_name,best_score=name,score
-    return best_name if best_score>=THRESHOLD else "unknown"
+        return "unknown", 0.0
+    best_name, best_score = "unknown", -1.0
+    for name, data in db.items():
+        avg = data.get("avg", {})
+        score = cosine_sim(feat, avg)
+        if score > best_score:
+            best_name, best_score = name, score
+    if best_score < THRESHOLD:
+        return "unknown", best_score
+    return best_name, best_score
 
-def load_habits():
-    return load_json(HABIT_FILE, {"members":{},"logs":[]})
 
-def save_habits(h):
-    save_json(HABIT_FILE,h)
+def identify(pcm):
+    name, _score = identify_with_score(pcm)
+    return name
+
 
 def log(name, text=""):
-    h = load_habits(); now = datetime.now()
-    # 存储层拦截：先解析说话人的隐私策略，再决定是否保留原话
-    policy = _PRIV.policy_for(name)
-    stored_text = _PRIV.scrub_text(text, policy["storage"])
+    stored = text
     try:
+        root = os.path.abspath(os.path.join(BASE, "../.."))
+        if root not in sys.path:
+            sys.path.insert(0, root)
         from core.policy.privacy_policy import PrivacyPolicy
 
         decision = PrivacyPolicy().classify(member_id=name, utterance=text)
         if not decision.allow_habit_store or decision.is_child or decision.privacy == "PRIVATE":
-            stored_text = ""
+            stored = ""
     except Exception:
-        if policy.get("storage") == "PRIVATE":
-            stored_text = ""
-    entry = {
-        "name": name,
-        "text": stored_text,
-        "time": now.strftime("%Y-%m-%d %H:%M:%S"),
-        "hour": now.hour,
-        "weekday": now.strftime("%A"),
-        "storage": policy["storage"],
-    }
-    h.setdefault("logs", []).append(entry)
-    m = h.setdefault("members", {}).setdefault(name, {"total": 0, "by_hour": {}, "days": [], "last": None})
-    m["total"] += 1
-    hour = str(now.hour); m["by_hour"][hour] = m["by_hour"].get(hour, 0) + 1
-    day = now.strftime("%Y-%m-%d")
-    if day not in m["days"]: m["days"].append(day)
-    m["last"] = entry["time"]
-    save_habits(h)
-    return entry
+        stored = text
+    family_py = os.path.join(BASE, "cat-family.py")
+    r = subprocess.run(
+        [sys.executable, family_py, "observe", name, stored],
+        capture_output=True, text=True, timeout=20,
+    )
+    return {"name": name, "text": stored, "ok": r.returncode == 0, "out": (r.stdout or "").strip()}
+
 
 def summary(days=7):
-    h = load_habits(); cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-    logs = [e for e in h.get("logs", []) if e.get("time", "")[:10] >= cutoff]
-    print(f"📊 最近 {days} 天互动总结（共 {len(logs)} 次）\n")
-    if not logs: print("暂无数据，先和糖糖说说话吧～"); return
-    by_name = {}
-    for e in logs: by_name.setdefault(e.get("name", "unknown"), []).append(e)
-    for name, entries in by_name.items():
-        print(f"👤 {name}: {len(entries)} 次互动")
-        active = sorted(set(e.get("hour", 0) for e in entries))
-        if active: print("   活跃时段: " + ", ".join(f"{h}点" for h in active))
-        # 家庭摘要层过滤：PRIVATE 成员原话不展示
-        texts = [e.get("text") for e in entries if e.get("text")]
-        if texts: print(f"   最近说的: {texts[-3:]}")
-        print()
+    family_py = os.path.join(BASE, "cat-family.py")
+    subprocess.run([sys.executable, family_py, "summary", str(days)], timeout=20)
 
 if __name__ == "__main__":
     cmd=sys.argv[1] if len(sys.argv)>1 else "list"
@@ -167,7 +156,7 @@ if __name__ == "__main__":
         pcm=sys.argv[2] if len(sys.argv)>2 else None; print(identify(pcm) if pcm else "unknown")
     elif cmd=="log":
         name=sys.argv[2] if len(sys.argv)>2 else "unknown"; text=sys.argv[3] if len(sys.argv)>3 else ""
-        e=log(name,text); print(f"✅ 已记录: {e['time']} {name}")
+        e=log(name,text); print(e.get("out") or f"✅ 已记录 {name}")
     elif cmd=="summary": summary(int(sys.argv[2]) if len(sys.argv)>2 else 7)
     elif cmd=="list":
         db=load_vp()

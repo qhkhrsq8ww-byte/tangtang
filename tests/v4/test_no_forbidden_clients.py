@@ -39,11 +39,12 @@ class TestCoreHasNoForbiddenClients(unittest.TestCase):
 
     def test_family_json_not_rewritten_this_branch(self):
         family = (ROOT / "data" / "family.json").read_text(encoding="utf-8")
-        self.assertIn('"display_name": "姐姐"', family)
-        self.assertIn('"display_name": "弟弟"', family)
-        self.assertIn('"member_id": "child_12"', family)
-        self.assertIn('"member_id": "child_9"', family)
-        # aliases in code, not overwrite
+        self.assertIn('"display_name": "洽洽"', family)
+        self.assertIn('"display_name": "航航"', family)
+        self.assertIn('"member_id": "qiaqia"', family)
+        self.assertIn('"member_id": "hanghang"', family)
+        self.assertIn('"姐姐"', family)
+        self.assertIn('"弟弟"', family)
         from core.identity.resolver import IdentityResolver
         r = IdentityResolver()
         self.assertEqual(r.resolve({"label": "姐姐"}), "qiaqia")
