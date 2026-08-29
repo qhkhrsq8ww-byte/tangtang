@@ -17,6 +17,7 @@ code/cat/package-lock.json
 code/cat/bin/
 code/cat/generated-images/
 code/cat/assets_ref/
+code/cat/node_modules/
 
 # macOS
 .DS_Store

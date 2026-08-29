@@ -16,9 +16,9 @@ check "family json valid" "$PY" -m json.tool "$ROOT/data/family.json"
 check "persona grandpa" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speaker grandpa
 check "persona grandma" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speaker grandma
 check "persona dad" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speaker dad
-check "persona mom" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speaker mom
-check "persona 12yo" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speaker child_12
-check "persona 9yo" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speaker child_9
+check "persona qiaqia" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speaker qiaqia
+check "persona hanghang" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speaker hanghang
+check "alias 姐姐→qiaqia" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speaker 姐姐
 check "unknown stays unknown" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speaker unknown
 check "chat syntax" "$PY" -m py_compile "$ROOT/code/cat/cat-chat.py"
 check "resolver syntax" "$PY" -m py_compile "$ROOT/code/cat/tangtang-profile.py"
