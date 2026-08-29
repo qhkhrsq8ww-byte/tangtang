@@ -9,6 +9,9 @@
   python3 cat-chat.py "小朋友说的话"
   TANGTANG_PROFILE=play TANGTANG_SPEAKER=unknown python3 cat-chat.py "..."
 输出: 糖糖的回复（纯文本，一行）
+
+V4: 新对话路径是 core.adapters.chat_adapter.ChatAdapter（必经 PrivacyPolicy）。
+本 CLI 默认仍是 V3 拼接 prompt；TANGTANG_V4_PIPELINE=1 走新路径。不要删除本文件。
 """
 import os, sys, json, urllib.request, argparse, subprocess, re
 
@@ -17,6 +20,7 @@ KEY = os.environ.get("QCLAW_LLM_API_KEY", "")
 DEFAULT_MODEL = "pool-deepseek-v4-pro"
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
+PROFILE_RESOLVER = os.path.join(CAT_DIR, "tangtang-profile.py")
 
 FORBIDDEN_OUTPUT = (
     "你必须", "警告你", "根据系统检测", "根据系统监测",
@@ -25,7 +29,6 @@ FORBIDDEN_OUTPUT = (
     "作为人工智能", "作为AI",
 )
 
-# 只做拦截，不提供任何方法细节
 RISK_MARKERS = (
     "不想活", "自杀", "杀死自己", "伤害自己",
     "想死", "去死", "割腕", "跳楼",
@@ -40,13 +43,39 @@ SAFE_REPLY = (
 FALLBACK_REPLY = "汪汪～ 糖糖在呢。"
 
 
+def resolve_family():
+    speaker = speaker_id()
+    if speaker in ("unknown", "", "访客") or not os.path.exists(PROFILE_RESOLVER):
+        return {"member_id": "unknown", "display_name": "小朋友", "profile": "play", "relation": "unknown", "permissions": {"self_private": False, "family_summary": False}, "storage": "PUBLIC"}
+    try:
+        out = subprocess.check_output(
+            ["/usr/bin/python3", PROFILE_RESOLVER, "--speaker", speaker],
+            text=True, timeout=3,
+        )
+        data = json.loads(out.strip())
+        if isinstance(data, dict):
+            # 补默认值（tangtang-profile 输出含 storage）
+            data.setdefault("permissions", {"self_private": False, "family_summary": False})
+            data.setdefault("storage", "PUBLIC")
+            return data
+    except Exception:
+        pass
+    return {"member_id": "unknown", "display_name": "小朋友", "profile": "play", "relation": "unknown", "permissions": {"self_private": False, "family_summary": False}, "storage": "PUBLIC"}
+
+
 def current_profile():
-    p = (os.environ.get("TANGTANG_PROFILE") or "play").strip().lower()
-    return p if p in ("play", "friend") else "play"
+    explicit = (os.environ.get("TANGTANG_PROFILE") or "").strip().lower()
+    if explicit in ("play", "friend", "adult", "elder"):
+        return explicit
+    return str(resolve_family().get("profile") or "play")
 
 
 def child_name():
-    return (os.environ.get("TANGTANG_CHILD_NAME") or "小朋友").strip() or "小朋友"
+    env = (os.environ.get("TANGTANG_CHILD_NAME") or "").strip()
+    if env:
+        return env
+    family = resolve_family()
+    return str(family.get("display_name") or "小朋友")
 
 
 def speaker_id():
@@ -57,6 +86,7 @@ def build_persona():
     profile = current_profile()
     name = child_name()
     speaker = speaker_id()
+    family = resolve_family()
     species = (
         "你是「糖糖」，一只住在投影里的白色比熊小狗。"
         "毛发蓬松雪白，黑眼睛棕鼻子，戴黄色项圈和骨形铭牌。"
@@ -66,6 +96,18 @@ def build_persona():
         style = (
             "当前是 friend 模式（大约12岁）：你是朋友、倾听者、温柔提醒者。"
             "尊重对方，给选择，不要幼态化，不要说教。1-2句，口语化。"
+        )
+    elif profile == "adult":
+        style = (
+            "当前是 adult 模式（爸爸/妈妈）：你是家庭伙伴，不是监督者。"
+            "语气自然、简洁、有分寸；可以协助安排家庭事务、提醒休息和关心家人。"
+            "不要把孩子的私人信息主动告诉成人，不要制造监控感。"
+        )
+    elif profile == "elder":
+        style = (
+            "当前是 elder 模式（爷爷/奶奶）：你是亲切的小狗伙伴。"
+            "语速和表达想象得更从容，少用网络流行语，不幼稚化对方。"
+            "可以聊日常、吃饭、休息、散步和家庭生活，但不要进行医学诊断。"
         )
     else:
         style = (
@@ -82,8 +124,20 @@ def build_persona():
     )
     if speaker in ("unknown", "", "访客"):
         who = "还不能确定说话的人是谁。用通用亲切称呼，不要假装认识，不要提起其他家庭成员的私事。"
+    elif family.get("storage") == "PRIVATE":
+        # PRIVATE 成员：只能看到自己，家庭其他孩子的任何信息完全不可见
+        who = (
+            f"当前家庭成员：{family.get('display_name', name)}，关系：{family.get('relation', 'unknown')}。"
+            "只陪伴当前说话的人，不要提起其他孩子的任何信息。"
+            "不要告诉孩子其他家庭成员的状态或对话内容。"
+        )
     else:
-        who = "只陪伴当前说话的人，不要提起其他孩子的私事或拿他们比较。"
+        # FAMILY / PUBLIC 成员：只知道家人存在，但儿童原话不可见（存储层已过滤）
+        who = (
+            f"当前家庭成员：{family.get('display_name', name)}，关系：{family.get('relation', 'unknown')}。"
+            "只陪伴当前说话的人，不要提起其他孩子的私事或拿他们比较。"
+            "儿童的原话已经过隐私处理，不要假装你知道他们说了什么。"
+        )
     return f"{species}\n{style}\n{safety}\n{who}\n默认称呼：{name}。"
 
 
@@ -159,12 +213,28 @@ def brain_fallback(user_text):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("text", nargs="?", default="", help="小朋友说的话")
+    ap.add_argument("text", nargs="?", default="", help="说话内容")
     ap.add_argument("--model", default=DEFAULT_MODEL)
     args = ap.parse_args()
 
     if not args.text.strip():
         args.text = "糖糖，我来啦"
+
+    # V3 CLI concatenates prompts from local JSON and can skip V4 PrivacyPolicy.
+    # New path: ChatAdapter / TangTangRuntime (cannot skip the privacy gate).
+    # Keep this CLI for the living-room Mac; set TANGTANG_V4_PIPELINE=1 to use V4.
+    if os.environ.get("TANGTANG_V4_PIPELINE") == "1":
+        root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        from tangtang_runtime import TangTangRuntime
+
+        result = TangTangRuntime().handle_utterance(
+            args.text, {"label": speaker_id()}
+        )
+        text = (result.action.text if result.action else "") or FALLBACK_REPLY
+        print(text)
+        return
 
     if looks_risky(args.text):
         print(SAFE_REPLY)
@@ -188,6 +258,7 @@ def main():
     history.append({"role": "assistant", "content": reply})
     history = history[-20:]
     tmp = hist_file + ".tmp"
+    os.makedirs(os.path.dirname(hist_file) or ".", exist_ok=True)
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False)
     os.replace(tmp, hist_file)

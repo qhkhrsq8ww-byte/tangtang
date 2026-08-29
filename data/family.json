@@ -1,0 +1,56 @@
+{
+  "version": "2.0",
+  "family_id": "home",
+  "members": [
+    {
+      "member_id": "grandpa",
+      "display_name": "爷爷",
+      "relation": "grandfather",
+      "profile": "elder",
+      "aliases": ["爷爷", "外公", "grandpa"],
+      "permissions": {"self_private": true, "family_summary": true}
+    },
+    {
+      "member_id": "grandma",
+      "display_name": "奶奶",
+      "relation": "grandmother",
+      "profile": "elder",
+      "aliases": ["奶奶", "外婆", "grandma"],
+      "permissions": {"self_private": true, "family_summary": true}
+    },
+    {
+      "member_id": "dad",
+      "display_name": "爸爸",
+      "relation": "father",
+      "profile": "adult",
+      "aliases": ["爸爸", "爸", "dad"],
+      "permissions": {"self_private": true, "family_summary": true}
+    },
+    {
+      "member_id": "mom",
+      "display_name": "妈妈",
+      "relation": "mother",
+      "profile": "adult",
+      "aliases": ["妈妈", "妈", "mom"],
+      "permissions": {"self_private": true, "family_summary": true}
+    },
+    {
+      "member_id": "child_12",
+      "display_name": "姐姐",
+      "relation": "child",
+      "age": 12,
+      "profile": "friend",
+      "aliases": ["姐姐", "12岁女孩", "girl"],
+      "permissions": {"self_private": true, "family_summary": false}
+    },
+    {
+      "member_id": "child_9",
+      "display_name": "弟弟",
+      "relation": "child",
+      "age": 9,
+      "profile": "play",
+      "aliases": ["弟弟", "9岁男孩", "boy"],
+      "permissions": {"self_private": true, "family_summary": false}
+    }
+  ]
+}

@@ -3,12 +3,18 @@
 # 糖糖 · 智能说话（接大脑 + 情绪音色）
 # 用法: ./cat-talk.sh <事件> [参数]
 # 大脑决定话术+情绪 → 按情绪选音色 → 更新画面 → 出声
+# 夜间主动提醒受统一 quiet-hours 闸门保护。
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=cat-lib.sh
 . "$SCRIPT_DIR/cat-lib.sh"
-
 MOOD_FILE="$CAT_DIR/cat-mood.txt"
+
+if [ "${TANGTANG_INTERACTIVE:-0}" != "1" ]; then
+  quiet="$(/usr/bin/python3 "$CAT_DIR/tangtang-quiet-hours.py" 2>/dev/null || echo speak)"
+  if [ "$quiet" = "quiet" ]; then
+    exit 0
+  fi
+fi
 
 result="$(/usr/bin/python3 "$CAT_DIR/cat-brain.py" "$@")"
 state="idle"
@@ -45,17 +51,9 @@ speak_with_fallback() {
 }
 
 case "$label" in
-  happy)
-    speak_with_fallback 5 8 6 175 120
-    ;;
-  sleepy)
-    speak_with_fallback -20 3 2 130 110
-    ;;
-  lonely|low)
-    speak_with_fallback -15 5 3 140 115
-    ;;
-  *)
-    speak_with_fallback -10 5 4 150 118
-    ;;
+  happy) speak_with_fallback 5 8 6 175 120 ;;
+  sleepy) speak_with_fallback -20 3 2 130 110 ;;
+  lonely|low) speak_with_fallback -15 5 3 140 115 ;;
+  *) speak_with_fallback -10 5 4 150 118 ;;
 esac
 exit 0
