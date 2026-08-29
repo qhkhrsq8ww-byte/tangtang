@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""客厅语音小回合：能量、关键词分类、短回句、账本、策略闸门。
+"""客厅语音小回合：能量、账本、短回句。分类以 data/child_reactions.json 为准。
 
 糖糖是比熊玩伴，不是监督机器人。一轮最多回一句。
 账本只写标签，不写儿童原话。记忆目录在 Mac Air 本机硬盘。
-听写只用于判定 oppose/wont/stop/joined；PCM 回合结束由调用方删除。
 """
 import array
 import json
@@ -366,49 +365,49 @@ def should_speak_label(label, table=None):
 
 
 def pick_reply(label, profile="play", who="", table=None, kw=None, index=None):
-    """返回一句或空。空=不说话。preview 传 index=0，现场随机。"""
-    if not should_speak_label(label, table):
-        return ""
-    table = table if table is not None else replies_table()
-    kw = kw or keywords()
-    p = (profile or "play").strip().lower()
-    if p not in ("play", "friend", "elder"):
-        p = profile_for_who(who)
-    block = table.get(p) or table.get("play") or {}
-    choices = [c for c in (block.get(label) or []) if isinstance(c, str)]
-    choices = [c.strip() for c in choices if c.strip()]
-    safe = [c for c in choices if not _reply_forbidden(c, who, kw)]
-    pool = safe or choices
-    if not pool:
-        return ""
-    if index is None:
-        text = one_sentence(random.choice(pool))
-    else:
-        text = one_sentence(pool[int(index) % len(pool)])
-    if _reply_forbidden(text, who, kw):
-        return ""
-    return text
+    """从 child_reactions.json 取一句。空=不说话。"""
+    react = _react()
+    spec = react.load_spec()
+    sid = {"stop": "stop_today"}.get(label, label)
+    persona = profile if profile in ("play", "friend", "elder") else profile_for_who(who)
+    audience = normalize_who(who) or ("hanghang" if persona == "play" else "qiaqia")
+    prompt = (os.environ.get("TANGTANG_LAST_PROMPT") or "").strip()
+    return react.pick_reply(
+        spec, sid, persona, audience, prompt, "english",
+        last_joined=False, deterministic=(index is not None),
+    )
 
 
 def canned_reply(profile="play"):
     text = pick_reply("joined", profile=profile, index=0)
     if text:
         return text
-    p = (profile or "play").strip().lower()
-    if p == "friend":
-        return "嗯，糖糖听到了。"
-    if p == "elder":
-        return "好的。"
-    return "汪汪，糖糖听到啦。"
+    return "汪汪～"
 
 
-def decide(energy, stt_status, text="", rms=0, profile="play", who="", index=None):
-    label = classify(energy, stt_status, text=text, rms=rms)
-    reply = pick_reply(label, profile=profile, who=who, index=index)
+def decide(energy, stt_status, text="", rms=0, profile="play", who="", index=None, event="english"):
+    react = _react()
+    spec = react.load_spec()
+    val, timeout = _rms_for(energy, rms)
+    raw = (text or "").strip()
+    stt = (stt_status or "off").strip().lower()
+    if raw.startswith("[STT") or stt == "fail":
+        raw = ""
+    persona = profile if profile in ("play", "friend", "elder") else profile_for_who(who)
+    audience = normalize_who(who) or who or "hanghang"
+    prompt = (os.environ.get("TANGTANG_LAST_PROMPT") or "").strip()
+    d = react.decide(
+        spec, text=raw, rms=val, timeout=timeout, persona=persona,
+        event=event, audience=audience, prompt=prompt,
+        deterministic=(index is not None),
+    )
     return {
-        "result": label,
-        "speak": bool(reply),
-        "reply": reply,
+        "result": d.get("scene") or "silent",
+        "speak": bool(d.get("speak_again") and d.get("reply")),
+        "reply": d.get("reply") or "",
+        "voice": d.get("voice") or "none",
+        "scene": d.get("scene") or "silent",
+        "persona": d.get("persona") or persona,
     }
 
 
@@ -499,16 +498,17 @@ def trailing_cool_streak(rows):
 
 
 def gate_status(event, who, root=None, day=None):
-    """(allow: bool, reason: str, detail: str)"""
-    who = normalize_who(who)
-    event = event or "turn"
-    rows = turns_today(who, event, root=root, day=day)
-    if any((r.get("result") or "") == "stop" for r in rows):
-        return False, "stop", "今天说过到此为止，这类不再开窗"
-    streak = trailing_cool_streak(rows)
-    need = cool_streak_n()
-    if streak >= need:
-        return False, "cool", "连续%d次没应或反对，今晚这类先不说" % streak
+    """(allow: bool, reason: str, detail: str) — 冷却以 child_reactions 账本为准。"""
+    react = _react()
+    muted, reason = react.is_muted(event or "turn", who, root=root)
+    if muted:
+        tag = reason or "cool"
+        if tag in ("silent", "oppose", "stop_today", "defer", "defer_done"):
+            if tag == "silent":
+                tag = "cool"
+            if tag == "stop_today":
+                tag = "stop"
+        return False, tag, "今天这条先不叫了"
     return True, "ok", ""
 
 
@@ -538,44 +538,54 @@ def _notify_habits(row, root=None):
 
 def append_turn(event, who, result, stt, presence, seconds, rms,
                 root=None, ts=None, speak=None, line_id=None, spoke=None):
-    result = result if result in SYSTEM_RESULTS else "silent"
-    presence = presence if presence in ("home", "away", "unknown") else "unknown"
-    if ts is None:
-        from datetime import datetime
-        fake_day = (os.environ.get("TANGTANG_FAKE_TODAY") or "").strip()
-        fake_time = (os.environ.get("TANGTANG_FAKE_TIME") or "").strip()
-        if fake_day and fake_time:
-            ts = "%sT%s:00" % (fake_day, fake_time)
-        else:
-            ts = datetime.now().isoformat(timespec="seconds")
+    react = _react()
+    spec = react.load_spec()
+    sid = {"stop": "stop_today", "joined_soft": "joined"}.get(result, result or "silent")
+    scene_spec = (spec.get("scenes") or {}).get(sid) or {}
     if speak is None and spoke is not None:
         speak = bool(spoke)
-    row = {
-        "ts": ts,
+    decision = {
+        "scene": sid,
+        "ledger": scene_spec.get("ledger") or sid,
+        "speak_again": bool(speak),
+        "cooldown": "none",
+        "persona": profile_for_who(who),
+        "audience": normalize_who(who) or who or "hanghang",
         "event": event or "turn",
-        "who": normalize_who(who) or (who or ""),
-        "result": result,
-        "stt": bool(stt),
-        "presence": presence,
-        "seconds": int(seconds or 0),
-        "rms": int(rms or 0),
+        "reply": "",
     }
+    row, _dec = react.append_decision(decision, root=root, spoke_again=bool(speak))
+    row["stt"] = bool(stt)
+    row["presence"] = presence if presence in ("home", "away", "unknown") else "unknown"
+    row["seconds"] = int(seconds or 0)
+    row["rms"] = int(rms or 0)
     if speak is not None:
         row["speak"] = bool(speak)
         row["spoke"] = bool(speak)
+        row["spoke_again"] = bool(speak)
     lid = (line_id or os.environ.get("TANGTANG_LINE_ID") or "").strip()
     if lid:
         row["line_id"] = lid[:80]
-    for k in FORBIDDEN_KEYS:
-        row.pop(k, None)
-    path = ledger_path(root)
-    data = load_json(path, {"version": 1, "turns": []})
-    data["version"] = 1
-    turns = list(data.get("turns") or [])
-    turns.append(row)
-    data["turns"] = turns[-MAX_TURNS:]
-    save_json(path, data)
-    json.loads(open(path, encoding="utf-8").read())
+    path = react.ledger_path(root)
+    data = react.load_json(path, {"version": 2, "turns": []})
+    if data.get("turns"):
+        extra = {
+            "stt": row["stt"],
+            "presence": row["presence"],
+            "seconds": row["seconds"],
+            "rms": row["rms"],
+        }
+        if speak is not None:
+            extra["speak"] = bool(speak)
+            extra["spoke"] = bool(speak)
+            extra["spoke_again"] = bool(speak)
+        if lid:
+            extra["line_id"] = lid[:80]
+        data["turns"][-1].update(extra)
+        for k in FORBIDDEN_KEYS:
+            data["turns"][-1].pop(k, None)
+        react.save_json(path, data)
+        row = data["turns"][-1]
     _notify_habits(row, root)
     return row
 
@@ -584,149 +594,95 @@ def preview_scenes(event="english", who="hanghang"):
     who = normalize_who(who) or "hanghang"
     profile = profile_for_who(who)
     other = "洽洽" if who == "hanghang" else "航航"
-    kw = keywords()
-    lines = []
-    lines.append("客厅短窗反应预览（不开麦、不录音、不写账本）")
-    lines.append("事件 %s · 当前 %s · 人格 %s · 不提%s的表现" % (
-        event or "english", who, profile, other,
-    ))
-    lines.append("")
-    demo = {
-        "joined": ("好啊", "voiced", "ok"),
-        "oppose": ("不要", "voiced", "ok"),
-        "silent": ("", "silent", "off"),
-        "wont": ("好难", "voiced", "ok"),
-        "unclear": ("", "voiced", "fail"),
-        "stop": ("今天别叫我", "voiced", "ok"),
-        "scratch": ("啊", "voiced", "ok"),
-        "timeout": ("", "silent", "off"),
-    }
-    for scene in kw.get("scenes") or []:
-        sid = scene.get("id") or ""
-        title = scene.get("title") or sid
-        lines.append("【%s】%s" % (title, sid))
-        lines.append("  判定：%s" % (scene.get("signal") or ""))
-        lines.append("  糖糖：%s" % (scene.get("speak") or ""))
-        if sid in demo:
-            text, energy, stt = demo[sid]
-            d = decide(energy, stt, text=text, profile=profile, who=who, index=0)
-            shown = d["reply"] if d["reply"] else "（不说话）"
-            lines.append("  例句：%s → 账本 %s → 糖糖说「%s」" % (
-                text or "（无声/无听写）", d["result"], shown,
-            ))
-            other_p = "friend" if profile == "play" else "play"
-            other_who = "qiaqia" if other_p == "friend" else "hanghang"
-            other_d = decide(
-                energy, stt, text=text, profile=other_p,
-                who=other_who, index=0,
-            )
-            if sid in ("joined", "oppose", "wont", "stop") and other_d["reply"]:
-                lines.append("  另一人格会说：「%s」" % other_d["reply"])
-        lines.append("  账本：%s" % (scene.get("ledger") or ""))
-        lines.append("  下次：%s" % (scene.get("next") or ""))
-        lines.append("")
+    react = _react()
+    spec = react.load_spec()
+    lines = [
+        "客厅短窗反应预览（不开麦、不录音、不写账本）",
+        "事件 %s · 当前 %s · 人格 %s · 不提%s的表现" % (
+            event or "english", who, profile, other,
+        ),
+        "判定顺序: " + " > ".join(spec.get("decision_order") or []),
+        "",
+    ]
+    demos = [
+        ("joined", "好啊", "voiced"),
+        ("oppose", "不要", "voiced"),
+        ("silent", "", "silent"),
+        ("defer", "等会儿", "voiced"),
+        ("wont", "不会", "voiced"),
+        ("unclear", "", "quiet"),
+        ("stop_today", "今天别叫我", "voiced"),
+        ("perfunctory", "嗯", "quiet"),
+        ("timeout", "", "silent"),
+    ]
+    for sid, text, energy in demos:
+        scene = (spec.get("scenes") or {}).get(sid) or {}
+        d = decide(energy, "ok" if text else "off", text=text, rms=0,
+                   profile=profile, who=who, index=0, event=event)
+        shown = d["reply"] if d["reply"] else "（不回）"
+        lines.append("【%s】%s  例句「%s」→ %s  糖糖「%s」" % (
+            scene.get("name") or sid, sid, text or "无声", d["result"], shown,
+        ))
+        other_p = "friend" if profile == "play" else "play"
+        other_who = "qiaqia" if other_p == "friend" else "hanghang"
+        other_d = decide(energy, "ok" if text else "off", text=text, rms=0,
+                         profile=other_p, who=other_who, index=0, event=event)
+        if d["reply"] and other_d["reply"] and other_d["reply"] != d["reply"]:
+            lines.append("  另一人格：「%s」" % other_d["reply"])
     ok, reason, detail = gate_status(event, who)
-    lines.append("当前闸门：%s %s %s" % (
-        "开" if ok else "关", reason, detail,
-    ))
-    fj = pick_reply("joined", "friend", who="qiaqia", index=0)
-    pj = pick_reply("joined", "play", who="hanghang", index=0)
-    lines.append("人格对照 配合：洽洽「%s」 / 航航「%s」" % (fj, pj))
+    lines.append("当前闸门：%s %s %s" % ("开" if ok else "关", reason, detail))
     return "\n".join(lines).rstrip() + "\n"
 
 
 def _selftest():
     tmp = tempfile.mkdtemp(prefix="tangtang-turn-")
     os.environ["TANGTANG_DATA_DIR"] = tmp
+    os.environ["TANGTANG_FAKE_TODAY"] = "2026-09-01"
+    os.environ["TANGTANG_FAKE_TIME"] = "16:20"
     silent = os.path.join(tmp, "silent.pcm")
     tone = os.path.join(tmp, "tone.pcm")
+    quiet = os.path.join(tmp, "quiet.pcm")
     write_pcm("silent", silent)
     write_pcm("tone", tone)
+    write_pcm("quiet", quiet)
     rms_s, lab_s = energy_label(silent, 300)
     rms_t, lab_t = energy_label(tone, 300)
+    rms_q, lab_q = energy_label(quiet, 300)
     assert lab_s == "silent" and rms_s == 0, (rms_s, lab_s)
-    assert lab_t == "joined" and rms_t > 300, (rms_t, lab_t)
+    assert lab_t == "joined" and rms_t > 800, (rms_t, lab_t)
+    assert lab_q == "joined" and rms_q < 800, (rms_q, lab_q)
     assert one_sentence("糖糖听到啦。还要再说吗？") == "糖糖听到啦。"
-    assert one_sentence("今天作业写完了！我们再玩。") == "今天作业写完了！"
-    assert "再玩" not in one_sentence("今天作业写完了！我们再玩。")
 
-    assert classify("voiced", "ok", "好啊") == "joined"
-    assert classify("voiced", "ok", "嗯") == "joined"
     assert classify("voiced", "ok", "不要") == "oppose"
-    assert classify("voiced", "ok", "讨厌") == "oppose"
-    assert classify("voiced", "ok", "别说了") == "oppose"
-    assert classify("voiced", "ok", "烦不烦") == "oppose"
-    assert classify("voiced", "ok", "滚") == "oppose"
-    assert classify("silent", "off", "") == "silent"
+    assert classify("voiced", "ok", "不要叫了") == "stop_today"
+    assert classify("silent", "off", "") == "timeout"
+    assert classify("voiced", "ok", "等会儿") == "defer"
     assert classify("voiced", "ok", "不会") == "wont"
-    assert classify("voiced", "ok", "好难") == "wont"
-    assert classify("voiced", "ok", "明天再学") == "wont"
-    assert classify("voiced", "fail", "") == "unclear"
-    assert classify("voiced", "ok", "今天别叫我") == "stop"
-    assert classify("voiced", "ok", "不想学了") == "stop"
-    assert classify("voiced", "empty", "啊") == "silent"
-    assert classify("voiced", "ok", "啊呃") == "silent"
-    assert classify("silent", "off", "") == "silent"
-    assert classify("voiced", "off", "") == "joined_soft"
-    assert classify("voiced", "ok", "It's a dog") == "joined"
-    assert keyword_label("好难") == "wont"
+    assert classify("voiced", "ok", "好") == "joined"
+    assert classify("quiet", "ok", "嗯", rms=400) == "perfunctory"
+    assert classify("voiced", "ok", "知道了") == "noncoop"
+    assert classify("quiet", "fail", "", rms=400) == "unclear"
 
-    friend_j = pick_reply("joined", "friend", who="qiaqia", index=0)
-    play_j = pick_reply("joined", "play", who="hanghang", index=0)
-    assert friend_j and play_j and friend_j != play_j, (friend_j, play_j)
-    friend_o = pick_reply("oppose", "friend", who="qiaqia", index=0)
-    play_o = pick_reply("oppose", "play", who="hanghang", index=0)
-    assert friend_o and play_o and friend_o != play_o
-    assert "再试" not in friend_o and "再试" not in play_o
-    assert pick_reply("silent", "play") == ""
-    assert pick_reply("unclear", "friend") == ""
-    wont_p = pick_reply("wont", "play", who="hanghang", index=0)
-    assert "不会" in wont_p or "学不会" in wont_p or "没关系" in wont_p
-    for sample in (friend_j, play_j, friend_o, play_o, wont_p):
-        assert "正确" not in sample
-        assert "你必须" not in sample
-        assert "根据系统" not in sample
-        assert "哥哥" not in sample and "弟弟" not in sample
-        assert "洽洽" not in sample and "航航" not in sample
-
-    d = decide("voiced", "ok", "滚", profile="play", who="hanghang", index=0)
-    assert d["result"] == "oppose"
-    assert "滚" not in d["reply"]
-    assert "再试" not in d["reply"]
+    play = decide("voiced", "ok", "不要", profile="play", who="hanghang", index=0)
+    friend = decide("voiced", "ok", "不要", profile="friend", who="qiaqia", index=0)
+    assert play["reply"] and friend["reply"] and play["reply"] != friend["reply"]
+    assert "汪汪" in play["reply"] and "汪汪" in friend["reply"]
+    assert "洽洽" not in play["reply"]
+    assert "航航" not in friend["reply"]
+    silent_d = decide("silent", "off", "", index=0)
+    assert silent_d["speak"] is False
 
     row = append_turn(
-        event="english", who="hanghang", result="silent",
-        stt=False, presence="home", seconds=5, rms=0, root=tmp,
-        ts="2026-09-01T16:20:00",
+        event="english", who="hanghang", result="oppose",
+        stt=True, presence="home", seconds=5, rms=2000, root=tmp, speak=True,
     )
-    assert "text" not in row
-    path = ledger_path(tmp)
-    data = json.loads(open(path, encoding="utf-8").read())
-    assert data["turns"][-1]["result"] == "silent"
-    assert "text" not in data["turns"][-1]
-
-    os.environ["TANGTANG_FAKE_TODAY"] = "2026-09-01"
-    append_turn(
-        event="english", who="hanghang", result="silent",
-        stt=False, presence="home", seconds=5, rms=0, root=tmp,
-        ts="2026-09-01T16:21:00",
-    )
-    ok, reason, _detail = gate_status(
-        "english", "hanghang", root=tmp, day="2026-09-01",
-    )
-    assert not ok and reason == "cool", (ok, reason)
-
-    append_turn(
-        event="english", who="qiaqia", result="stop",
-        stt=True, presence="home", seconds=5, rms=800, root=tmp,
-        ts="2026-09-01T19:10:00", speak=True,
-    )
-    ok_q, reason_q, _ = gate_status(
-        "english", "qiaqia", root=tmp, day="2026-09-01",
-    )
-    assert not ok_q and reason_q == "stop"
-    ok_h2, _, _ = gate_status("english", "hanghang", root=tmp, day="2026-09-02")
-    assert ok_h2
+    assert "text" not in row and "transcript" not in row
+    assert row.get("scene") == "oppose"
+    assert row.get("audience") == "hanghang"
+    ok, reason, _ = gate_status("english", "hanghang", root=tmp)
+    assert ok is False
+    ok_q, _, _ = gate_status("english", "qiaqia", root=tmp)
+    assert ok_q is True
 
     os.environ["TANGTANG_FAKE_TODAY"] = "2026-09-01"
     append_turn(
@@ -744,17 +700,13 @@ def _selftest():
     assert "姐姐" not in rep and "弟弟" not in rep
 
     prev = preview_scenes("english", "hanghang")
-    assert "配合" in prev and "反对" in prev and "不开麦" in prev
-    assert "正确" not in prev
-    assert "糖糖不吵你" in prev
-    assert "糖糖不说了" in prev
-
+    assert "配合" in prev and "反对" in prev
+    assert "糖糖去喝水了" in prev or "好吧" in prev
     print("cat-turn.py selftest ok")
     print("silent", rms_s, lab_s)
     print("tone", rms_t, lab_t)
-    print("friend_joined", friend_j)
-    print("play_joined", play_j)
-
+    print("play_oppose", play["reply"])
+    print("friend_oppose", friend["reply"])
 
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "help"
@@ -796,8 +748,11 @@ def main():
         d = decide(
             energy, stt, text=text, rms=int(float(rms) or 0),
             profile=profile, who=who,
+            event=(os.environ.get("TANGTANG_TURN_EVENT") or "english"),
         )
-        print("%s\t%s\t%s" % (d["result"], "1" if d["speak"] else "0", d["reply"]))
+        print("%s\t%s\t%s\t%s" % (
+            d["result"], "1" if d["speak"] else "0", d["reply"], d.get("voice") or "none",
+        ))
         return
     if cmd == "reply":
         label = sys.argv[2] if len(sys.argv) > 2 else "joined"
