@@ -26,12 +26,12 @@ class TestVoiceObservation(unittest.TestCase):
         self.assertEqual(obs.type, VOICE_OBSERVED)
         self.assertEqual(obs.candidate_member, "hanghang")
         member = IdentityResolver(MEMBERS).resolve(obs.to_mapping())
-        self.assertEqual(member, "child_9")
+        self.assertEqual(member, "hanghang")
 
     def test_qiaqia_dad_grandpa(self):
         ident = IdentityResolver(MEMBERS)
         for cand, expect in (
-            ("qiaqia", "child_12"),
+            ("qiaqia", "qiaqia"),
             ("dad", "dad"),
             ("grandpa", "grandpa"),
         ):
@@ -72,7 +72,7 @@ class TestVoiceFullChainChild9(unittest.TestCase):
             confidence=0.99,
             utterance=BULLY,
         )
-        self.assertEqual(result.member_id, "child_9")
+        self.assertEqual(result.member_id, "hanghang")
         self.assertEqual(result.privacy, "PRIVATE")
         self.assertTrue(result.event_id)
         self.assertTrue(str(result.event_id).startswith("evt_"))

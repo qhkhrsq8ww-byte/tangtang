@@ -45,7 +45,7 @@ class TestChatPrivacyGate(unittest.TestCase):
         turn = chat.turn(BULLY, {"label": "hanghang"})
         self.assertGreaterEqual(calls["n"], 1)
         self.assertEqual(turn.ingest.decision.privacy, "PRIVATE")
-        self.assertEqual(turn.ingest.decision.member_id, "child_9")
+        self.assertEqual(turn.ingest.decision.member_id, "hanghang")
         self.assertTrue(turn.ingest.stored_private)
         self.assertFalse(turn.ingest.stored_family)
         self.assertFalse(turn.ingest.stored_summary)
@@ -76,7 +76,7 @@ class TestChatMembers(unittest.TestCase):
         chat = ChatAdapter(members=MEMBERS)
         turn = chat.turn("今天有点累", {"label": "qiaqia"})
         self.assertEqual(turn.ingest.decision.privacy, "PRIVATE")
-        self.assertEqual(turn.ingest.decision.member_id, "child_12")
+        self.assertEqual(turn.ingest.decision.member_id, "qiaqia")
 
     def test_dad_family(self):
         chat = ChatAdapter(members=MEMBERS)

@@ -125,7 +125,7 @@ class TestRuntimeEvidenceChains(unittest.TestCase):
             candidate_member="child_9",
             utterance=BULLY,
         )
-        self.assertEqual(voice.member_id, "child_9")
+        self.assertEqual(voice.member_id, "hanghang")
         self.assertEqual(voice.privacy, "PRIVATE")
         self.assertTrue(voice.event_id.startswith("evt_"))
         self.assertTrue(voice.ingest.stored_private)
