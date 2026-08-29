@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>糖糖·桌面宠物（绿幕抠像 v2）</title>
+<style>
+  html,body{margin:0;height:100%;background:#2a2320;overflow:hidden;
+    font-family:"PingFang SC","Microsoft YaHei",sans-serif;color:#f0e6d8;}
+  .desktop{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+
+  /* WebGL 画布——真正透明的宠物窗口 */
+  #petCanvas{width:320px;height:320px;border-radius:16px;
+    background:transparent;cursor:grab;touch-action:none;
+    filter:drop-shadow(0 6px 12px rgba(0,0,0,.25));}
+  #petCanvas.drag{cursor:grabbing;}
+
+  /* 气泡 */
+  #bubble{position:absolute;background:#fffef9;color:#7a4a20;font-size:15px;line-height:1.5;
+    max-width:260px;min-width:60px;padding:10px 14px;border-radius:16px;
+    box-shadow:0 6px 18px rgba(0,0,0,.3);opacity:0;transform:scale(.6) translateY(10px);
+    transition:opacity .25s,transform .25s;pointer-events:none;font-weight:700;text-align:center;
+    z-index:10;}
+  #bubble.show{opacity:1;transform:scale(1) translateY(0);}
+  #bubble::after{content:"";position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+    border-left:9px solid transparent;border-right:9px solid transparent;border-top:11px solid #fffef9;}
+
+  /* 控制面板 */
+  .panel{background:rgba(50,42,36,.95);border-radius:14px;padding:12px 16px;
+    box-shadow:0 8px 28px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:10px;
+    max-width:560px;width:90%;}
+  .panel-title{font-size:13px;color:#b08b5e;text-align:center;letter-spacing:1px;}
+  .state-grid{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;}
+  .state-btn{border:0;background:#5a4a3e;color:#f0e6d8;font-size:12px;font-weight:600;
+    padding:5px 9px;border-radius:8px;cursor:pointer;transition:all .15s;}
+  .state-btn:hover{background:#7a6a5e;}
+  .state-btn.active{background:#ffb800;color:#2a2320;}
+
+  /* 抠像参数调试 */
+  .chroma-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .chroma-row label{display:flex;align-items:center;gap:4px;font-size:11px;color:#b08b5e;}
+  .chroma-row input[type=range]{width:80px;accent-color:#ffb800;}
+  .chroma-row span{font-size:10px;color:#807060;width:32px;text-align:right;}
+
+  /* TTS */
+  .tts-row{display:flex;gap:8px;align-items:center;}
+  .tts-row input{flex:1;background:#3a3028;border:1px solid #5a4a3e;border-radius:8px;
+    padding:8px 12px;color:#f0e6d8;font-size:14px;outline:none;}
+  .tts-row input:focus{border-color:#ffb800;}
+  .tts-row button{border:0;background:#ffb800;color:#2a2320;font-weight:700;font-size:13px;
+    padding:8px 16px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .tts-row button:active{transform:scale(.95);}
+  .tts-row button.secondary{background:#5a4a3e;color:#f0e6d8;}
+  .hint{font-size:11px;color:#807060;text-align:center;}
+  #fps{font-size:10px;color:#605040;position:absolute;top:4px;right:8px;}
+
+  /* 大脑联动状态栏 */
+  .brain-row{display:flex;align-items:center;gap:8px;font-size:11px;color:#b08b5e;
+    background:#3a3028;border-radius:8px;padding:6px 10px;}
+  #moodInfo{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .brain-row button{border:0;background:#5a4a3e;color:#f0e6d8;font-size:11px;
+    padding:5px 10px;border-radius:7px;cursor:pointer;font-weight:600;white-space:nowrap;}
+  .brain-row button:hover{background:#7a6a5e;}
+</style>
+</head>
+<body>
+<div class="desktop">
+  <canvas id="petCanvas" width="720" height="720"></canvas>
+  <div id="bubble"></div>
+
+  <div class="panel">
+    <div class="panel-title">🐾 糖糖·桌面宠物 v2 · YUV色度抠像 + 交叉淡入 + TTS</div>
+    <div class="state-grid" id="stateGrid"></div>
+
+    <!-- 抠像参数 -->
+    <div class="chroma-row">
+      <label>阈值 <input id="thr" type="range" min="0.02" max="0.5" step="0.01" value="0.08"><span id="thrVal">0.08</span></label>
+      <label>平滑 <input id="smo" type="range" min="0.01" max="0.2" step="0.01" value="0.06"><span id="smoVal">0.06</span></label>
+      <label>去绿 <input id="dsp" type="range" min="0" max="1" step="0.05" value="0.15"><span id="dspVal">0.15</span></label>
+      <label>过渡 <input id="fade" type="range" min="0.1" max="1.5" step="0.1" value="0.5"><span id="fadeVal">0.5s</span></label>
+    </div>
+
+    <!-- TTS -->
+    <div class="tts-row">
+      <input id="ttsText" type="text" placeholder="输入糖糖要说的话…" value="汪汪～最喜欢你啦！">
+      <button id="speakBtn">说话</button>
+      <button id="stopBtn" class="secondary">停止</button>
+    </div>
+
+    <!-- 大脑联动 -->
+    <div class="brain-row">
+      <span>🧠</span>
+      <span id="moodInfo">等待大脑事件…（轮询 cat-mood.txt）</span>
+      <button id="simBtn">模拟事件</button>
+    </div>
+
+    <div class="hint">点击状态切换 · 说话自动配口型 · 大脑事件自动联动 · 拖动可移动 · 点糖糖撒娇</div>
+  </div>
+</div>
+
+<script>
+/* ====== 17个状态定义 ====== */
+const STATES = [
+  { name:'idle',        label:'待机',   video:'assets/video/tangtang-idle.mp4' },
+  { name:'talk',        label:'说话',   video:'assets/video/tangtang-talk.mp4' },
+  { name:'happy',       label:'开心',   video:'assets/video/tangtang-happy.mp4' },
+  { name:'curious',     label:'好奇',   video:'assets/video/tangtang-curious.mp4' },
+  { name:'thinking',    label:'思考',   video:'assets/video/tangtang-thinking.mp4' },
+  { name:'caring',      label:'关心',   video:'assets/video/tangtang-caring.mp4' },
+  { name:'encouraging', label:'加油',   video:'assets/video/tangtang-encouraging.mp4' },
+  { name:'walking',     label:'走路',   video:'assets/video/tangtang-walking.mp4' },
+  { name:'running',     label:'奔跑',   video:'assets/video/tangtang-running.mp4' },
+  { name:'sitting',     label:'坐着',   video:'assets/video/tangtang-sitting.mp4' },
+  { name:'lying',       label:'趴着',   video:'assets/video/tangtang-lying.mp4' },
+  { name:'sleepy',      label:'困了',   video:'assets/video/tangtang-sleepy.mp4' },
+  { name:'sleeping',    label:'睡觉',   video:'assets/video/tangtang-sleeping.mp4' },
+  { name:'welcome',     label:'欢迎',   video:'assets/video/tangtang-welcome.mp4' },
+  { name:'accompany',   label:'陪伴',   video:'assets/video/tangtang-accompany.mp4' },
+  { name:'wakeup',      label:'醒来',   video:'assets/video/tangtang-wakeup.mp4' },
+  { name:'night',       label:'夜晚',   video:'assets/video/tangtang-night.mp4' },
+];
+
+/* ====== WebGL 专业级 YUV 色度抠像引擎 ====== */
+const canvas = document.getElementById('petCanvas');
+const gl = canvas.getContext('webgl', { alpha:true, premultipliedAlpha:false, antialias:true });
+
+const vsSource = `
+  attribute vec2 a_pos;
+  varying vec2 v_uv;
+  void main(){
+    v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);
+    gl_Position = vec4(a_pos, 0.0, 1.0);
+  }`;
+
+const fsSource = `
+  precision highp float;
+  uniform sampler2D u_videoA;    // 当前视频
+  uniform sampler2D u_videoB;    // 过渡视频（交叉淡入用）
+  uniform float u_mix;           // A→B 混合权重 (0=纯A, 1=纯B)
+  uniform float u_threshold;    // 绿幕判定阈值
+  uniform float u_smoothness;   // 边缘羽化宽度
+  uniform float u_despill;     // 去绿色溢出强度
+  varying vec2 v_uv;
+
+  /* RGB 差值法（第一版） */
+  float chromaKey(vec3 rgb) {
+    float gness = rgb.g - max(rgb.r, rgb.b);
+    float alpha = 1.0 - smoothstep(u_threshold, u_threshold + u_smoothness, gness);
+    return clamp(alpha, 0.0, 1.0);
+  }
+
+  vec3 despill(vec3 rgb) {
+    float overflow = max(0.0, rgb.g - max(rgb.r, rgb.b));
+    rgb.r = min(rgb.g, rgb.r + overflow * u_despill);
+    rgb.b = min(rgb.g, rgb.b + overflow * u_despill);
+    // 亮色区域 tint 成奶油色（纯白→暖奶油白）
+    float brightness = max(rgb.r, max(rgb.g, rgb.b));
+    float whiteMask = smoothstep(0.55, 0.92, brightness);
+    rgb.r = mix(rgb.r, rgb.r * 1.09, whiteMask);
+    rgb.g = mix(rgb.g, rgb.g * 1.01, whiteMask);
+    rgb.b = mix(rgb.b, rgb.b * 0.85, whiteMask);
+    // 饱和度 +12%
+    float gray = dot(rgb.rgb, vec3(0.299, 0.587, 0.114));
+    rgb.rgb = mix(vec3(gray), rgb.rgb, 1.12);
+    return rgb;
+  }
+
+  void main(){
+    // 采样两个视频
+    vec4 cA = texture2D(u_videoA, v_uv);
+    vec4 cB = texture2D(u_videoB, v_uv);
+
+    // 分别抠像
+    float aA = chromaKey(cA.rgb);
+    float aB = chromaKey(cB.rgb);
+
+    // 去绿色溢出
+    cA.rgb = despill(cA.rgb);
+    cB.rgb = despill(cB.rgb);
+
+    // 交叉混合
+    vec3 finalRGB = mix(cA.rgb, cB.rgb, u_mix);
+    float finalA  = mix(aA, aB, u_mix);
+
+    gl_FragColor = vec4(finalRGB, finalA);
+  }`;
+
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+    console.error('Shader error:', gl.getShaderInfoLog(s));
+  return s;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, vsSource));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fsSource));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+// 顶点
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+const aPos = gl.getAttribLocation(prog, 'a_pos');
+gl.enableVertexAttribArray(aPos);
+gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+// Uniforms
+const uVideoA = gl.getUniformLocation(prog, 'u_videoA');
+const uVideoB = gl.getUniformLocation(prog, 'u_videoB');
+const uMix    = gl.getUniformLocation(prog, 'u_mix');
+const uThr    = gl.getUniformLocation(prog, 'u_threshold');
+const uSmo    = gl.getUniformLocation(prog, 'u_smoothness');
+const uDsp    = gl.getUniformLocation(prog, 'u_despill');
+gl.uniform1i(uVideoA, 0);
+gl.uniform1i(uVideoB, 1);
+
+// 参数（可调）
+let params = { threshold: 0.08, smoothness: 0.06, despill: 0.15, fade: 0.5 };
+
+function updateUniforms() {
+  gl.uniform1f(uThr, params.threshold);
+  gl.uniform1f(uSmo, params.smoothness);
+  gl.uniform1f(uDsp, params.despill);
+}
+updateUniforms();
+
+// 双纹理
+const texA = gl.createTexture();
+const texB = gl.createTexture();
+[1, 2].forEach(i => {
+  const tex = i === 1 ? texA : texB;
+  gl.activeTexture(i === 1 ? gl.TEXTURE0 : gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+});
+
+gl.enable(gl.BLEND);
+gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+/* ====== 双视频系统（交叉淡入） ====== */
+const videoA = document.createElement('video');
+const videoB = document.createElement('video');
+[videoA, videoB].forEach(v => {
+  v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true;
+  v.crossOrigin = 'anonymous';
+});
+
+let activeVideo = videoA;   // 当前播放的
+let transitionVideo = null; // 过渡中的
+let transitionStart = 0;
+let transitionDur = 500;
+let isTransitioning = false;
+
+let currentState = 'idle';
+let prevState = 'idle';
+
+function switchState(name, instant) {
+  const s = STATES.find(s => s.name === name);
+  if (!s || currentState === name) return;
+  prevState = currentState;
+  currentState = name;
+
+  // 决定用哪个 video 槽
+  const newV = (activeVideo === videoA) ? videoB : videoA;
+  const oldV = activeVideo;
+  newV.src = s.video;
+  newV.play().catch(()=>{});
+
+  if (instant || params.fade < 0.05) {
+    // 即时切换
+    activeVideo = newV;
+    isTransitioning = false;
+    transitionVideo = null;
+  } else {
+    // 交叉淡入
+    activeVideo = newV;
+    transitionVideo = oldV;
+    transitionStart = performance.now();
+    transitionDur = params.fade * 1000;
+    isTransitioning = true;
+  }
+
+  // 更新按钮
+  document.querySelectorAll('.state-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.state === name);
+  });
+}
+
+/* ====== 渲染循环 ====== */
+let frameCount = 0, fpsTime = 0;
+
+function render(now) {
+  gl.clearColor(0, 0, 0, 0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  // 上传当前视频到 texA
+  if (activeVideo.readyState >= 2) {
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texA);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, activeVideo);
+  }
+
+  // 过渡中：上传旧视频到 texB，计算 mix 权重
+  if (isTransitioning && transitionVideo && transitionVideo.readyState >= 2) {
+    const elapsed = now - transitionStart;
+    const t = Math.min(elapsed / transitionDur, 1);
+    // ease-in-out 曲线让过渡更自然
+    const eased = t * t * (3 - 2 * t);
+    gl.uniform1f(uMix, eased);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, texB);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, transitionVideo);
+
+    if (t >= 1) { isTransitioning = false; transitionVideo = null; }
+  } else {
+    gl.uniform1f(uMix, 0);
+  }
+
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+  // FPS
+  frameCount++;
+  if (now - fpsTime > 1000) {
+    frameCount = 0; fpsTime = now;
+  }
+
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+
+/* ====== 状态按钮 ====== */
+const grid = document.getElementById('stateGrid');
+STATES.forEach(s => {
+  const btn = document.createElement('button');
+  btn.className = 'state-btn'; btn.dataset.state = s.name; btn.textContent = s.label;
+  btn.addEventListener('click', () => switchState(s.name));
+  grid.appendChild(btn);
+});
+
+/* ====== 抠像参数调试 ====== */
+function bindRange(id, key, suffix) {
+  const el = document.getElementById(id);
+  const val = document.getElementById(id + 'Val');
+  el.addEventListener('input', () => {
+    params[key] = parseFloat(el.value);
+    val.textContent = (suffix === 's') ? params[key].toFixed(1) + 's' : params[key].toFixed(2);
+    updateUniforms();
+  });
+}
+bindRange('thr', 'threshold');
+bindRange('smo', 'smoothness');
+bindRange('dsp', 'despill');
+bindRange('fade', 'fade', 's');
+
+/* ====== TTS 语音说话 ====== */
+const ttsText = document.getElementById('ttsText');
+const bubble = document.getElementById('bubble');
+
+function speak(text) {
+  if (!text || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN'; u.rate = 1.0; u.pitch = 1.3; u.volume = 1.0;
+  const voices = window.speechSynthesis.getVoices();
+  const zhVoice = voices.find(v => v.lang.startsWith('zh') && v.name.includes('Female'))
+              || voices.find(v => v.lang.startsWith('zh'));
+  if (zhVoice) u.voice = zhVoice;
+  u.onstart = () => {
+    switchState('talk');
+    bubble.textContent = text;
+    bubble.classList.add('show');
+  };
+  u.onend = () => {
+    bubble.classList.remove('show');
+    switchState(prevState === 'talk' ? 'idle' : prevState);
+  };
+  window.speechSynthesis.speak(u);
+}
+document.getElementById('speakBtn').addEventListener('click', () => speak(ttsText.value));
+document.getElementById('stopBtn').addEventListener('click', () => {
+  window.speechSynthesis.cancel();
+  bubble.classList.remove('show');
+  switchState('idle');
+});
+ttsText.addEventListener('keydown', e => { if (e.key === 'Enter') speak(ttsText.value); });
+if ('speechSynthesis' in window) window.speechSynthesis.onvoiceschanged = () => {};
+
+/* ====== 拖动 ====== */
+let dragging = false, dx = 0, dy = 0;
+canvas.addEventListener('pointerdown', e => {
+  dragging = true; canvas.classList.add('drag');
+  const r = canvas.getBoundingClientRect();
+  dx = e.clientX - r.left; dy = e.clientY - r.top;
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  canvas.style.position = 'fixed';
+  canvas.style.left = (e.clientX - dx) + 'px';
+  canvas.style.top = (e.clientY - dy) + 'px';
+  canvas.style.right = 'auto'; canvas.style.bottom = 'auto';
+  bubble.style.left = (e.clientX - dx + 160) + 'px';
+  bubble.style.top = (e.clientY - dy - 50) + 'px';
+});
+canvas.addEventListener('pointerup', () => { dragging = false; canvas.classList.remove('drag'); });
+
+// 点击撒娇
+const cutePhrases = ['汪汪～', '最喜欢你啦', '摸摸头～', '陪你玩呀', '乖乖喝水哦', '今天也要开心', '糖糖在呢', '抱抱！'];
+canvas.addEventListener('click', () => {
+  speak(cutePhrases[Math.floor(Math.random() * cutePhrases.length)]);
+});
+
+/* ====== 大脑联动：轮询 cat-mood.txt（与 cat-pet.html 同协议） ======
+   cat-talk.sh 调 cat-brain.py 后写入格式：[状态] 话术
+   有话术 → 先播 talk 视频（口型配合服务端 TTS 出声），说完切到大脑指定状态
+   无话术 → 直接切状态
+*/
+const moodInfo = document.getElementById('moodInfo');
+let lastMood = '';
+let brainTimer = null;
+
+function hasState(name) { return STATES.some(s => s.name === name); }
+
+function handleBrainMood(raw) {
+  const t = (raw || '').trim();
+  if (!t || t === lastMood) return;
+  lastMood = t;
+  const m = t.match(/^\[(\w+)\]\s*(.*)$/);
+  const state = m ? m[1] : 'idle';
+  const text  = m ? m[2].trim() : t;
+
+  moodInfo.textContent = '[' + state + '] ' + (text || '(无话术)');
+
+  clearTimeout(brainTimer);
+  if (text) {
+    // 说话：talk 视频 + 气泡，按字数估算时长（中文约3.5字/秒），最少3秒
+    switchState('talk');
+    bubble.textContent = text;
+    bubble.classList.add('show');
+    const dur = Math.max(3000, text.length * 290);
+    brainTimer = setTimeout(() => {
+      bubble.classList.remove('show');
+      switchState(hasState(state) ? state : 'idle');
+    }, dur);
+  } else {
+    switchState(hasState(state) ? state : 'idle');
+  }
+}
+
+async function pollBrain() {
+  try {
+    const r = await fetch('cat-mood.txt?t=' + Date.now());
+    if (r.ok) handleBrainMood(await r.text());
+  } catch (e) { /* 文件不存在或服务器未启动，静默 */ }
+}
+pollBrain();
+setInterval(pollBrain, 3000);
+
+/* 模拟大脑事件（不依赖 Mac 端，验证联动用） */
+const SIM_EVENTS = [
+  { state:'welcome',  text:'来啦～ 糖糖好想你！尾巴都摇成小铃铛啦～' },
+  { state:'happy',    text:'开饭啦！糖糖的肚子已经开始咕噜咕噜了。' },
+  { state:'caring',   text:'眼睛要休息一下啦。来，糖糖挑战你：站起来30秒！' },
+  { state:'wakeup',   text:'早上好！糖糖醒啦！太阳都出来啦，我们也起来啦？' },
+  { state:'thinking', text:'写完作业就能玩啦，糖糖陪你一起想～' },
+  { state:'sleeping', text:'该睡觉啦，糖糖也要闭眼休息啦，做个好梦～' },
+  { state:'running',  text:'出去跑跑跳跳多开心，糖糖陪你去～' },
+];
+document.getElementById('simBtn').addEventListener('click', () => {
+  const e = SIM_EVENTS[Math.floor(Math.random() * SIM_EVENTS.length)];
+  lastMood = '';  // 允许重复触发同一事件
+  handleBrainMood('[' + e.state + '] ' + e.text);
+});
+
+/* ====== 启动 ====== */
+switchState('idle', true);
+</script>
+</body>
+</html>

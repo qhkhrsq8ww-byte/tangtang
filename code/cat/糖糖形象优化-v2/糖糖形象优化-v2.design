@@ -1,0 +1,1819 @@
+{
+  "data": [
+    {
+      "id": "image-001",
+      "title": "idle",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-idle.png"
+      }
+    },
+    {
+      "id": "image-002",
+      "title": "happy",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 480,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-happy.png"
+      }
+    },
+    {
+      "id": "image-003",
+      "title": "curious",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 960,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-curious.png"
+      }
+    },
+    {
+      "id": "image-004",
+      "title": "thinking",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 1440,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-thinking.png"
+      }
+    },
+    {
+      "id": "image-005",
+      "title": "caring",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 1920,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-caring.png"
+      }
+    },
+    {
+      "id": "image-006",
+      "title": "encouraging",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 2400,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-encouraging.png"
+      }
+    },
+    {
+      "id": "image-007",
+      "title": "walking",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 2880,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking.png"
+      }
+    },
+    {
+      "id": "image-008",
+      "title": "running",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 3360,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-running.png"
+      }
+    },
+    {
+      "id": "image-009",
+      "title": "sitting",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 3840,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sitting.png"
+      }
+    },
+    {
+      "id": "image-010",
+      "title": "lying",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 4320,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-lying.png"
+      }
+    },
+    {
+      "id": "image-011",
+      "title": "sleepy",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 4800,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sleepy.png"
+      }
+    },
+    {
+      "id": "image-012",
+      "title": "sleeping",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 5280,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sleeping.png"
+      }
+    },
+    {
+      "id": "image-013",
+      "title": "welcome",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 5760,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-welcome.png"
+      }
+    },
+    {
+      "id": "image-014",
+      "title": "accompany",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 6240,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-accompany.png"
+      }
+    },
+    {
+      "id": "image-015",
+      "title": "wakeup",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 6720,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-wakeup.png"
+      }
+    },
+    {
+      "id": "image-016",
+      "title": "night",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 7200,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-night.png"
+      }
+    },
+    {
+      "id": "image-017",
+      "title": "idle-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 7680,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-idle-frame-0.png"
+      }
+    },
+    {
+      "id": "image-018",
+      "title": "idle-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 8160,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-idle-frame-1.png"
+      }
+    },
+    {
+      "id": "image-019",
+      "title": "idle-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 8640,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-idle-frame-2.png"
+      }
+    },
+    {
+      "id": "image-020",
+      "title": "idle-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 9120,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-idle-frame-3.png"
+      }
+    },
+    {
+      "id": "image-021",
+      "title": "happy-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 9600,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-happy-frame-0.png"
+      }
+    },
+    {
+      "id": "image-022",
+      "title": "happy-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 10080,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-happy-frame-1.png"
+      }
+    },
+    {
+      "id": "image-023",
+      "title": "happy-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 10560,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-happy-frame-2.png"
+      }
+    },
+    {
+      "id": "image-024",
+      "title": "happy-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 11040,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-happy-frame-3.png"
+      }
+    },
+    {
+      "id": "image-025",
+      "title": "curious-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 11520,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-curious-frame-0.png"
+      }
+    },
+    {
+      "id": "image-026",
+      "title": "curious-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 12000,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-curious-frame-1.png"
+      }
+    },
+    {
+      "id": "image-027",
+      "title": "curious-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 12480,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-curious-frame-2.png"
+      }
+    },
+    {
+      "id": "image-028",
+      "title": "curious-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 12960,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-curious-frame-3.png"
+      }
+    },
+    {
+      "id": "image-029",
+      "title": "thinking-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 13440,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-thinking-frame-0.png"
+      }
+    },
+    {
+      "id": "image-030",
+      "title": "thinking-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 13920,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-thinking-frame-1.png"
+      }
+    },
+    {
+      "id": "image-031",
+      "title": "thinking-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 14400,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-thinking-frame-2.png"
+      }
+    },
+    {
+      "id": "image-032",
+      "title": "thinking-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 14880,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-thinking-frame-3.png"
+      }
+    },
+    {
+      "id": "image-033",
+      "title": "caring-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 15360,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-caring-frame-0.png"
+      }
+    },
+    {
+      "id": "image-034",
+      "title": "caring-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 15840,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-caring-frame-1.png"
+      }
+    },
+    {
+      "id": "image-035",
+      "title": "caring-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 16320,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-caring-frame-2.png"
+      }
+    },
+    {
+      "id": "image-036",
+      "title": "caring-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 16800,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-caring-frame-3.png"
+      }
+    },
+    {
+      "id": "image-037",
+      "title": "encouraging-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 17280,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-encouraging-frame-0.png"
+      }
+    },
+    {
+      "id": "image-038",
+      "title": "encouraging-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 17760,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-encouraging-frame-1.png"
+      }
+    },
+    {
+      "id": "image-039",
+      "title": "encouraging-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 18240,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-encouraging-frame-2.png"
+      }
+    },
+    {
+      "id": "image-040",
+      "title": "encouraging-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 18720,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-encouraging-frame-3.png"
+      }
+    },
+    {
+      "id": "image-041",
+      "title": "walking-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 19200,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-frame-0.png"
+      }
+    },
+    {
+      "id": "image-042",
+      "title": "walking-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 19680,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-frame-1.png"
+      }
+    },
+    {
+      "id": "image-043",
+      "title": "walking-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 20160,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-frame-2.png"
+      }
+    },
+    {
+      "id": "image-044",
+      "title": "walking-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 20640,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-frame-3.png"
+      }
+    },
+    {
+      "id": "image-045",
+      "title": "running-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 21120,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-running-frame-0.png"
+      }
+    },
+    {
+      "id": "image-046",
+      "title": "running-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 21600,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-running-frame-1.png"
+      }
+    },
+    {
+      "id": "image-047",
+      "title": "running-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 22080,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-running-frame-2.png"
+      }
+    },
+    {
+      "id": "image-048",
+      "title": "running-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 22560,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-running-frame-3.png"
+      }
+    },
+    {
+      "id": "image-049",
+      "title": "sitting-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 23040,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sitting-frame-0.png"
+      }
+    },
+    {
+      "id": "image-050",
+      "title": "sitting-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 23520,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sitting-frame-1.png"
+      }
+    },
+    {
+      "id": "image-051",
+      "title": "sitting-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 24000,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sitting-frame-2.png"
+      }
+    },
+    {
+      "id": "image-052",
+      "title": "sitting-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 24480,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sitting-frame-3.png"
+      }
+    },
+    {
+      "id": "image-053",
+      "title": "lying-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 24960,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-lying-frame-0.png"
+      }
+    },
+    {
+      "id": "image-054",
+      "title": "lying-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 25440,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-lying-frame-1.png"
+      }
+    },
+    {
+      "id": "image-055",
+      "title": "lying-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 25920,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-lying-frame-2.png"
+      }
+    },
+    {
+      "id": "image-056",
+      "title": "lying-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 26400,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-lying-frame-3.png"
+      }
+    },
+    {
+      "id": "image-057",
+      "title": "sleepy-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 26880,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sleepy-frame-0.png"
+      }
+    },
+    {
+      "id": "image-058",
+      "title": "sleepy-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 27360,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sleepy-frame-1.png"
+      }
+    },
+    {
+      "id": "image-059",
+      "title": "sleepy-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 27840,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sleepy-frame-2.png"
+      }
+    },
+    {
+      "id": "image-060",
+      "title": "sleepy-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 28320,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sleepy-frame-3.png"
+      }
+    },
+    {
+      "id": "image-061",
+      "title": "sleeping-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 28800,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sleeping-frame-0.png"
+      }
+    },
+    {
+      "id": "image-062",
+      "title": "sleeping-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 29280,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sleeping-frame-1.png"
+      }
+    },
+    {
+      "id": "image-063",
+      "title": "sleeping-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 29760,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sleeping-frame-2.png"
+      }
+    },
+    {
+      "id": "image-064",
+      "title": "sleeping-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 30240,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-sleeping-frame-3.png"
+      }
+    },
+    {
+      "id": "image-065",
+      "title": "welcome-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 30720,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-welcome-frame-0.png"
+      }
+    },
+    {
+      "id": "image-066",
+      "title": "welcome-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 31200,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-welcome-frame-1.png"
+      }
+    },
+    {
+      "id": "image-067",
+      "title": "welcome-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 31680,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-welcome-frame-2.png"
+      }
+    },
+    {
+      "id": "image-068",
+      "title": "welcome-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 32160,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-welcome-frame-3.png"
+      }
+    },
+    {
+      "id": "image-069",
+      "title": "accompany-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 32640,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-accompany-frame-0.png"
+      }
+    },
+    {
+      "id": "image-070",
+      "title": "accompany-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 33120,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-accompany-frame-1.png"
+      }
+    },
+    {
+      "id": "image-071",
+      "title": "accompany-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 33600,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-accompany-frame-2.png"
+      }
+    },
+    {
+      "id": "image-072",
+      "title": "accompany-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 34080,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-accompany-frame-3.png"
+      }
+    },
+    {
+      "id": "image-073",
+      "title": "wakeup-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 34560,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-wakeup-frame-0.png"
+      }
+    },
+    {
+      "id": "image-074",
+      "title": "wakeup-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 35040,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-wakeup-frame-1.png"
+      }
+    },
+    {
+      "id": "image-075",
+      "title": "wakeup-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 35520,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-wakeup-frame-2.png"
+      }
+    },
+    {
+      "id": "image-076",
+      "title": "wakeup-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 36000,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-wakeup-frame-3.png"
+      }
+    },
+    {
+      "id": "image-077",
+      "title": "night-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 36480,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-night-frame-0.png"
+      }
+    },
+    {
+      "id": "image-078",
+      "title": "night-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 36960,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-night-frame-1.png"
+      }
+    },
+    {
+      "id": "image-079",
+      "title": "night-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 37440,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-night-frame-2.png"
+      }
+    },
+    {
+      "id": "image-080",
+      "title": "night-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787922000000,
+      "canvasData": {
+        "x": 37920,
+        "y": 0,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-night-frame-3.png"
+      }
+    },
+    {
+      "id": "image-081",
+      "title": "walking-spritesheet",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787926000000,
+      "canvasData": {
+        "x": 0,
+        "y": 1200,
+        "naturalSize": {
+          "width": 8192,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-spritesheet.png"
+      }
+    },
+    {
+      "id": "image-082",
+      "title": "walking-spritesheet-frame-0",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787926000000,
+      "canvasData": {
+        "x": 0,
+        "y": 2400,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-spritesheet-frame-0.png"
+      }
+    },
+    {
+      "id": "image-083",
+      "title": "walking-spritesheet-frame-1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787926000000,
+      "canvasData": {
+        "x": 480,
+        "y": 2400,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-spritesheet-frame-1.png"
+      }
+    },
+    {
+      "id": "image-084",
+      "title": "walking-spritesheet-frame-2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787926000000,
+      "canvasData": {
+        "x": 960,
+        "y": 2400,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-spritesheet-frame-2.png"
+      }
+    },
+    {
+      "id": "image-085",
+      "title": "walking-spritesheet-frame-3",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787926000000,
+      "canvasData": {
+        "x": 1440,
+        "y": 2400,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-spritesheet-frame-3.png"
+      }
+    },
+    {
+      "id": "image-086",
+      "title": "walking-spritesheet-frame-4",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787926000000,
+      "canvasData": {
+        "x": 1920,
+        "y": 2400,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-spritesheet-frame-4.png"
+      }
+    },
+    {
+      "id": "image-087",
+      "title": "walking-spritesheet-frame-5",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787926000000,
+      "canvasData": {
+        "x": 2400,
+        "y": 2400,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-spritesheet-frame-5.png"
+      }
+    },
+    {
+      "id": "image-088",
+      "title": "walking-spritesheet-frame-6",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787926000000,
+      "canvasData": {
+        "x": 2880,
+        "y": 2400,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-spritesheet-frame-6.png"
+      }
+    },
+    {
+      "id": "image-089",
+      "title": "walking-spritesheet-frame-7",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787926000000,
+      "canvasData": {
+        "x": 3360,
+        "y": 2400,
+        "naturalSize": {
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/tangtang-walking-spritesheet-frame-7.png"
+      }
+    },
+    {
+      "id": "image-090",
+      "title": "idle-blink",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 0,
+        "y": 3600,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-idle-blink.png" }
+    },
+    {
+      "id": "image-091",
+      "title": "happy-blink",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 480,
+        "y": 3600,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-happy-blink.png" }
+    },
+    {
+      "id": "image-092",
+      "title": "curious-blink",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 960,
+        "y": 3600,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-curious-blink.png" }
+    },
+    {
+      "id": "image-093",
+      "title": "thinking-blink",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 1440,
+        "y": 3600,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-thinking-blink.png" }
+    },
+    {
+      "id": "image-094",
+      "title": "sitting-blink",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 1920,
+        "y": 3600,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-sitting-blink.png" }
+    },
+    {
+      "id": "image-095",
+      "title": "welcome-blink",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 2400,
+        "y": 3600,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-welcome-blink.png" }
+    },
+    {
+      "id": "image-096",
+      "title": "accompany-blink",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 2880,
+        "y": 3600,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-accompany-blink.png" }
+    },
+    {
+      "id": "image-097",
+      "title": "wakeup-blink",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 3360,
+        "y": 3600,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-wakeup-blink.png" }
+    },
+    {
+      "id": "image-098",
+      "title": "happy-wag-right",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 0,
+        "y": 4800,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-happy-wag.png" }
+    },
+    {
+      "id": "image-099",
+      "title": "happy-wag-left",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 480,
+        "y": 4800,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-happy-wag2.png" }
+    },
+    {
+      "id": "image-100",
+      "title": "welcome-wag-left",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 960,
+        "y": 4800,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-welcome-wag.png" }
+    },
+    {
+      "id": "image-101",
+      "title": "welcome-wag-right",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 1440,
+        "y": 4800,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-welcome-wag2.png" }
+    },
+    {
+      "id": "image-102",
+      "title": "idle-wag-right",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 1920,
+        "y": 4800,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-idle-wag.png" }
+    },
+    {
+      "id": "image-103",
+      "title": "idle-wag-left",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 2400,
+        "y": 4800,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-idle-wag2.png" }
+    },
+    {
+      "id": "image-104",
+      "title": "sitting-wag-left",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 2880,
+        "y": 4800,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-sitting-wag.png" }
+    },
+    {
+      "id": "image-105",
+      "title": "sitting-wag-right",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1787979600000,
+      "canvasData": {
+        "x": 3360,
+        "y": 4800,
+        "naturalSize": { "width": 1024, "height": 1024 }
+      },
+      "devMetadata": { "imageSrc": "assets/tangtang-sitting-wag2.png" }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "freeSize",
+    "projectName": "糖糖形象优化-v2"
+  }
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>糖糖·走路动画</title>
+<style>
+  html,body{margin:0;height:100%;background:#fdf4ec;overflow:hidden;
+    font-family:"PingFang SC","Microsoft YaHei",sans-serif;color:#7a4a20;}
+  .stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;}
+  .ground{position:absolute;left:0;right:0;bottom:0;height:120px;
+    background:linear-gradient(#f6e7d4,#eedcc2);border-top:3px dashed #e0c39a;}
+  .caption{position:relative;z-index:3;font-size:15px;font-weight:700;letter-spacing:.5px;}
+  .video-wrap{position:relative;z-index:2;width:360px;height:360px;
+    border-radius:20px;overflow:hidden;box-shadow:0 8px 28px rgba(122,74,32,.18);
+    background:#fffdf8;}
+  #walkVideo{width:100%;height:100%;object-fit:contain;display:block;}
+  .controls{position:relative;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:14px;
+    background:#fffdf8;padding:12px 18px;border-radius:14px;box-shadow:0 6px 18px rgba(122,74,32,.12);
+    font-size:14px;}
+  .controls button{border:0;background:#ffb800;color:#7a4a20;font-weight:700;font-size:14px;
+    padding:6px 14px;border-radius:9px;cursor:pointer;}
+  .controls button.secondary{background:#ffe9d0;}
+  .controls button:active{transform:scale(.96);}
+  .info{position:relative;z-index:3;font-size:12px;color:#b08b5e;}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="ground"></div>
+  <div class="caption">🐾 糖糖 · 走路动画</div>
+  <div class="video-wrap">
+    <video id="walkVideo" autoplay loop muted playsinline
+           src="assets/tangtang-walk-demo.mp4"></video>
+  </div>
+  <div class="controls">
+    <button id="playPause">暂停</button>
+    <button id="restart" class="secondary">重新播放</button>
+  </div>
+  <div class="info">AI生成视频 · 自动循环播放</div>
+</div>
+<script>
+  const v = document.getElementById('walkVideo');
+  const pp = document.getElementById('playPause');
+  pp.addEventListener('click', () => {
+    if (v.paused) { v.play(); pp.textContent = '暂停'; }
+    else { v.pause(); pp.textContent = '继续'; }
+  });
+  document.getElementById('restart').addEventListener('click', () => {
+    v.currentTime = 0; v.play(); pp.textContent = '暂停';
+  });
+</script>
+</body>
+</html>
