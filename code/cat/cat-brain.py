@@ -16,8 +16,7 @@
   一行：话术<TAB>情绪标签<TAB>画面对应状态
   话术为空表示这次不说话（冷却或 random 静默）
 """
-import json, os, sys, random, datetime
-
+import json, os, sys, random, datetime\n\n# V4 Character State Engine lives at repo root; keep legacy CLI compatible.\nREPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))\nif REPO_ROOT not in sys.path:\n    sys.path.insert(0, REPO_ROOT)\n\ntry:\n    from behavior.character_state import CharacterStateResolver\nexcept ImportError:\n    CharacterStateResolver = None\n\nCHARACTER_STATE_RESOLVER = CharacterStateResolver() if CharacterStateResolver else None\n
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
 STATE_FILE = os.path.join(DATA_DIR, "cat-state.json")
