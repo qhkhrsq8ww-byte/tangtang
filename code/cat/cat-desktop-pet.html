@@ -418,48 +418,68 @@ canvas.addEventListener('click', () => {
   speak(cutePhrases[Math.floor(Math.random() * cutePhrases.length)]);
 });
 
-/* ====== 大脑联动：轮询 cat-mood.txt（与 cat-pet.html 同协议） ======
-   cat-talk.sh 调 cat-brain.py 后写入格式：[状态] 话术
-   有话术 → 先播 talk 视频（口型配合服务端 TTS 出声），说完切到大脑指定状态
-   无话术 → 直接切状态
+/* Desktop pet understands PresentationAction only (17 visual states).
+   It does not interpret homework / exercise / screen / meal.
+   cat-mood.txt is LEGACY ONLY — prefer cat-presentation-action.json.
 */
 const moodInfo = document.getElementById('moodInfo');
-let lastMood = '';
+let lastAction = '';
 let brainTimer = null;
 
 function hasState(name) { return STATES.some(s => s.name === name); }
 
-function handleBrainMood(raw) {
-  const t = (raw || '').trim();
-  if (!t || t === lastMood) return;
-  lastMood = t;
-  const m = t.match(/^\[(\w+)\]\s*(.*)$/);
-  const state = m ? m[1] : 'idle';
-  const text  = m ? m[2].trim() : t;
-
-  moodInfo.textContent = '[' + state + '] ' + (text || '(无话术)');
-
+function applyPresentationAction(action) {
+  if (!action || typeof action !== 'object') return;
+  const state = hasState(action.state) ? action.state : 'idle';
+  const text = action.speak && action.speech_allowed !== false ? (action.text || '') : '';
+  const key = state + '|' + text + '|' + (action.reason || '');
+  if (key === lastAction) return;
+  lastAction = key;
+  moodInfo.textContent = '[' + state + '] ' + (text || action.reason || '');
   clearTimeout(brainTimer);
+  const instant = action.transition === 'hold';
   if (text) {
-    // 说话：talk 视频 + 气泡，按字数估算时长（中文约3.5字/秒），最少3秒
-    switchState('talk');
+    switchState('talk', instant);
     bubble.textContent = text;
     bubble.classList.add('show');
-    const dur = Math.max(3000, text.length * 290);
+    const dur = Number(action.duration_ms) || Math.max(3000, text.length * 290);
     brainTimer = setTimeout(() => {
       bubble.classList.remove('show');
-      switchState(hasState(state) ? state : 'idle');
+      switchState(state);
     }, dur);
   } else {
-    switchState(hasState(state) ? state : 'idle');
+    switchState(state, instant);
+    bubble.classList.remove('show');
   }
+}
+
+function handleBrainMood(raw) {
+  /* legacy only: "[state] text" from cat-mood.txt */
+  const t = (raw || '').trim();
+  if (!t) return;
+  const m = t.match(/^\[(\w+)\]\s*(.*)$/);
+  applyPresentationAction({
+    state: m ? m[1] : 'idle',
+    text: m ? m[2].trim() : t,
+    speak: !!(m && m[2].trim()),
+    speech_allowed: true,
+    transition: 'crossfade',
+    reason: 'legacy-mood'
+  });
 }
 
 async function pollBrain() {
   try {
+    const actionRes = await fetch('cat-presentation-action.json?t=' + Date.now());
+    if (actionRes.ok) {
+      applyPresentationAction(await actionRes.json());
+      return;
+    }
+  } catch (e) { /* presentation file missing */ }
+  try {
     const r = await fetch('cat-mood.txt?t=' + Date.now());
     if (r.ok) handleBrainMood(await r.text());
-  } catch (e) { /* 文件不存在或服务器未启动，静默 */ }
+  } catch (e) { /* legacy file missing — stay idle */ }
 }
 pollBrain();
 setInterval(pollBrain, 3000);
@@ -470,14 +490,17 @@ const SIM_EVENTS = [
   { state:'happy',    text:'开饭啦！糖糖的肚子已经开始咕噜咕噜了。' },
   { state:'caring',   text:'眼睛要休息一下啦。来，糖糖挑战你：站起来30秒！' },
   { state:'wakeup',   text:'早上好！糖糖醒啦！太阳都出来啦，我们也起来啦？' },
-  { state:'thinking', text:'写完作业就能玩啦，糖糖陪你一起想～' },
+  { state:'thinking', text:'糖糖陪你一起想～' },
   { state:'sleeping', text:'该睡觉啦，糖糖也要闭眼休息啦，做个好梦～' },
   { state:'running',  text:'出去跑跑跳跳多开心，糖糖陪你去～' },
 ];
 document.getElementById('simBtn').addEventListener('click', () => {
   const e = SIM_EVENTS[Math.floor(Math.random() * SIM_EVENTS.length)];
-  lastMood = '';  // 允许重复触发同一事件
-  handleBrainMood('[' + e.state + '] ' + e.text);
+  lastAction = '';
+  applyPresentationAction({
+    state: e.state, text: e.text, speak: true, speech_allowed: true,
+    duration_ms: 3000, transition: 'crossfade', reason: 'simulate'
+  });
 });
 
 /* ====== 启动 ====== */
