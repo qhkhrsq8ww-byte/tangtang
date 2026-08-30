@@ -198,6 +198,11 @@ if [ -n "$out" ]; then
   printf '%s\t%s\t%s\t%s\t%s\n' "$ts" "$EVENT" "${ARG:-}" "${TANGTANG_PRESENT_KIDS:-}" "$out" >> "$TANGTANG_REMIND_LOG"
 fi
 
+# 上学闹铃：Glass 短铃（上面）→ 糖糖说话 → 同一只音箱轻音乐。不另开音箱。
+if [ "$PRINT" != "1" ] && [ "$EVENT" = "alarm" ] && [ -n "$out" ]; then
+  tangtang_alarm_music
+fi
+
 # 出声完成（cat-talk 已等 afplay）后再决定是否开客厅窗。--print 不会走到这里。
 # 默认只给 english 开窗；其它提醒单向，除非 TANGTANG_TURN_ALL=1。
 # 没真正出声（冷却空话）就不开麦。

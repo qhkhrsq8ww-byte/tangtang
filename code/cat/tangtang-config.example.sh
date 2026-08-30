@@ -35,6 +35,10 @@ export TANGTANG_HOME_QIAQIA="18:00"
 # 麦在客厅 Mac 旁（MAONO AU-BM10）。不要做第二只音箱。
 # 若音箱仍放在儿童房，客厅听不见糖糖回话。
 # 用户闹铃（对糖糖说「明早七点叫我」「取消闹铃」）也走这只默认音箱；到期仍响。
+# 响铃：短 Glass → 糖糖说话 → 轻音乐（默认仓库合成的 alarm_light.wav，约 24 秒）。
+# 可改成本机文件（mp3/wav）。不要填网上下载的商业铃声。
+# export TANGTANG_ALARM_MUSIC="$HOME/Music/tangtang-alarm-light.wav"
+# export TANGTANG_ALARM_MUSIC_SECONDS="30"
 
 # 糖糖口头称呼。语音识别到家人后会改成对方的 display_name。
 export TANGTANG_CHILD_NAME="小朋友"

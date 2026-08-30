@@ -400,6 +400,22 @@ tangtang_alarm_chime() {
   afplay "$s" >/dev/null 2>&1 || true
 }
 
+# 闹铃轻音乐：同一只默认蓝牙音箱（tangtang_play_audio / afplay）。
+# 默认 assets/alarm_light.wav（本仓库合成的轻铃，无第三方采样，非商业铃声）。
+# 也可设 TANGTANG_ALARM_MUSIC 指向本机 mp3/wav。
+tangtang_alarm_music_path() {
+  /usr/bin/python3 "$CAT_DIR/cat-alarm.py" music-path
+}
+
+tangtang_alarm_music() {
+  [ "${TANGTANG_TTS:-1}" = "0" ] && return 0
+  local f
+  f="$(tangtang_alarm_music_path)"
+  [ -n "$f" ] && [ -f "$f" ] || return 0
+  local limit="${TANGTANG_ALARM_MUSIC_SECONDS:-30}"
+  tangtang_play_audio "$f" "$limit"
+}
+
 tangtang_ffmpeg() {
   if [ -x "$CAT_DIR/bin/ffmpeg" ]; then
     printf '%s\n' "$CAT_DIR/bin/ffmpeg"

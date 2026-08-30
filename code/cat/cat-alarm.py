@@ -3,6 +3,7 @@
 """糖糖用户闹铃：本地 JSON + 确定性解析，不走 LLM，不改 crontab。
 
 到期出声必须走 cat-say.sh（客厅默认输出 / 同一只蓝牙音箱）。
+响铃顺序：短 Glass 铃 → 糖糖说话 → 轻音乐。不另开音箱、不新开守护进程。
 夜间静默不挡响铃。上学闹铃仍在 tangtang-schedule.conf，互不抢。
 """
 from __future__ import annotations
@@ -11,6 +12,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import uuid
@@ -23,7 +25,13 @@ from tangtang_paths import data_dir  # noqa: E402
 
 STORE_NAME = "cat-alarms.json"
 SAY_SCRIPT = os.path.join(CAT_DIR, "cat-say.sh")
+LIB_SCRIPT = os.path.join(CAT_DIR, "cat-lib.sh")
 MOOD_FILE = os.path.join(CAT_DIR, "cat-mood.txt")
+BUNDLED_MUSIC = os.path.join(CAT_DIR, "assets", "alarm_light.wav")
+WAKE_MUSIC = os.path.join(CAT_DIR, "assets", "wake_music_3min.mp3")
+
+# Last ring() plan (chime / say / music). Tests inspect this; playback is skipped when TANGTANG_TTS=0.
+last_ring_plan = None
 
 # 设/定/叫我/闹铃/闹钟 — 取消优先。明早+时刻也算设。
 SET_MARK = re.compile(r"(设(个|一个|定)?|定(个|一个)|叫我|闹铃|闹钟|明早|明天)")
@@ -422,6 +430,161 @@ def ring_line(alarm=None):
     return "汪汪～ 该起床了"
 
 
+def write_alarm_light_wav(path, seconds=24, rate=22050):
+    """Original soft pentatonic bells + pad. No third-party / commercial samples.
+
+    Not a downloaded ringtone. Safe to ship; keep under 1.5MB.
+    """
+    import math
+    import struct
+    import wave
+
+    seconds = max(8, min(int(seconds), 40))
+    n = int(rate * seconds)
+    samples = [0.0] * n
+    # C major pentatonic (Hz)
+    notes = (523.25, 587.33, 659.25, 783.99, 880.00, 783.99, 659.25, 587.33)
+
+    def add_bell(t0, freq, dur=1.85, amp=0.17):
+        length = int(dur * rate)
+        for i in range(length):
+            idx = t0 + i
+            if idx >= n:
+                break
+            t = i / rate
+            env = math.exp(-t * 2.35) * (1.0 - math.exp(-t * 70.0))
+            sig = (
+                math.sin(2 * math.pi * freq * t)
+                + 0.32 * math.sin(2 * math.pi * freq * 2.01 * t)
+                + 0.10 * math.sin(2 * math.pi * freq * 3.02 * t)
+            )
+            samples[idx] += amp * env * sig
+
+    t0 = int(0.28 * rate)
+    step = int(1.42 * rate)
+    i = 0
+    while t0 < n - int(0.5 * rate):
+        add_bell(t0, notes[i % len(notes)], amp=0.20 if i % 4 == 0 else 0.15)
+        t0 += step
+        i += 1
+
+    fade_in = int(1.2 * rate)
+    fade_out = int(1.6 * rate)
+    for i in range(n):
+        t = i / rate
+        edge = 1.0
+        if i < fade_in:
+            edge = i / fade_in
+        elif i > n - fade_out:
+            edge = max(0.0, (n - i) / fade_out)
+        pad = 0.035 * edge * (
+            0.55 * math.sin(2 * math.pi * 130.81 * t)
+            + 0.35 * math.sin(2 * math.pi * 196.00 * t)
+        )
+        samples[i] = samples[i] * edge + pad
+
+    delay = int(0.20 * rate)
+    wet = samples[:]
+    for i in range(delay, n):
+        wet[i] += 0.20 * samples[i - delay]
+    samples = wet
+
+    peak = max(1e-9, max(abs(x) for x in samples))
+    scale = 0.52 / peak
+    frames = b"".join(
+        struct.pack("<h", max(-32767, min(32767, int(x * scale * 32767))))
+        for x in samples
+    )
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with wave.open(path, "w") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(frames)
+    return path
+
+
+def alarm_music_path():
+    """Local light music: TANGTANG_ALARM_MUSIC → bundled wav → wake_music → synthesize."""
+    env = (os.environ.get("TANGTANG_ALARM_MUSIC") or "").strip()
+    if env and os.path.isfile(env):
+        return os.path.abspath(env)
+    if os.path.isfile(BUNDLED_MUSIC):
+        return BUNDLED_MUSIC
+    if os.path.isfile(WAKE_MUSIC):
+        return WAKE_MUSIC
+    dest = BUNDLED_MUSIC
+    try:
+        write_alarm_light_wav(dest)
+        if os.path.isfile(dest):
+            return dest
+    except OSError:
+        dest = os.path.join("/tmp", "tangtang_alarm_light.wav")
+        write_alarm_light_wav(dest)
+        return dest
+    return dest
+
+
+def ring_plan(alarm=None):
+    """Describe the one-speaker ring: Glass → cat-say → light music."""
+    return {
+        "chime": "glass",
+        "say": ring_line(alarm),
+        "say_script": SAY_SCRIPT,
+        "music": alarm_music_path(),
+        "order": ("chime", "say", "music"),
+        "speaker": "default",
+    }
+
+
+def _tts_enabled():
+    return os.environ.get("TANGTANG_TTS", "1") != "0"
+
+
+def play_alarm_chime():
+    """Brief existing Glass.aiff via tangtang_alarm_chime. Same default output."""
+    if not _tts_enabled():
+        return
+    if not os.path.isfile(LIB_SCRIPT):
+        return
+    subprocess.run(
+        ["/bin/bash", "-c", ". " + shlex.quote(LIB_SCRIPT) + " && tangtang_alarm_chime"],
+        timeout=20,
+        check=False,
+    )
+
+
+def play_alarm_music(path=None):
+    """Play light music through tangtang_play_audio (afplay / default Bluetooth)."""
+    if not _tts_enabled():
+        return
+    path = path or alarm_music_path()
+    if not path or not os.path.isfile(path):
+        return
+    if not os.path.isfile(LIB_SCRIPT):
+        return
+    seconds = (os.environ.get("TANGTANG_ALARM_MUSIC_SECONDS") or "30").strip() or "30"
+    try:
+        limit = max(8, min(int(seconds), 40))
+    except ValueError:
+        limit = 30
+    cmd = (
+        ". "
+        + shlex.quote(LIB_SCRIPT)
+        + " && tangtang_play_audio "
+        + shlex.quote(path)
+        + " "
+        + str(limit)
+    )
+    subprocess.run(
+        ["/bin/bash", "-c", cmd],
+        timeout=limit + 20,
+        check=False,
+    )
+
+
 def emit_wakeup_mood(text):
     """Reuse existing cat-mood.txt wakeup hook; do not invent visual states."""
     try:
@@ -433,7 +596,7 @@ def emit_wakeup_mood(text):
 
 def speak_via_say(text, mode="cute"):
     """Same speaker path as 糖糖 speech. TANGTANG_TTS=0 skips playback (tests)."""
-    if os.environ.get("TANGTANG_TTS", "1") == "0":
+    if not _tts_enabled():
         return text
     if not os.path.isfile(SAY_SCRIPT):
         return text
@@ -459,12 +622,22 @@ def _mark_rung(alarm, now):
 
 
 def ring(alarm, now=None, speak_fn=None):
-    """Play through cat-say.sh. Quiet hours must not block this."""
+    """Glass chime → cat-say.sh → light music. Quiet hours must not block this.
+
+    Sequential on the same default speaker. speak_fn / TANGTANG_TTS=0 skip afplay.
+    """
+    global last_ring_plan
     now = now or now_dt()
-    line = ring_line(alarm)
+    plan = ring_plan(alarm)
+    last_ring_plan = plan
+    line = plan["say"]
     emit_wakeup_mood(line)
     fn = speak_fn or speak_via_say
+    if speak_fn is None:
+        play_alarm_chime()
     fn(line)
+    if speak_fn is None:
+        play_alarm_music(plan["music"])
     _mark_rung(alarm, now)
     return line
 
@@ -577,6 +750,8 @@ def main(argv=None):
     p_ring = sub.add_parser("ring")
     p_ring.add_argument("id", nargs="?")
 
+    sub.add_parser("music-path")
+
     args = ap.parse_args(argv)
     cmd = args.cmd
     if not cmd:
@@ -636,6 +811,9 @@ def main(argv=None):
         if not target:
             return 1
         print(ring(target))
+        return 0
+    if cmd == "music-path":
+        print(alarm_music_path())
         return 0
     return 2
 
