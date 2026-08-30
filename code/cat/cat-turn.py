@@ -694,7 +694,7 @@ def _selftest():
     assert "=== today-report ===" in rep
     assert "hanghang" in rep
     assert "ask\tjoined" in rep
-    assert "english\tsilent" in rep
+    assert "english\toppose" in rep
     assert "move\tskip" in rep
     assert "transcript" not in rep and "utterance" not in rep
     assert "姐姐" not in rep and "弟弟" not in rep
