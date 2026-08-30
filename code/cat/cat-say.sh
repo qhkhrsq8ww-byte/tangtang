@@ -14,6 +14,15 @@ TEXT="${1:-汪汪}"
 MODE="${2:-cute}"
 TTS_MP3="/tmp/cat_tts.mp3"
 
+if [ "${TANGTANG_TTS:-1}" = "0" ]; then
+  echo "[tts-dry] $TEXT"
+  exit 0
+fi
+if [ "${TANGTANG_TTS}" = "dry" ] || [ "$(uname -s)" != "Darwin" ]; then
+  echo "[tts-dry] $TEXT"
+  exit 0
+fi
+
 speak_with_fallback() {
   local rate="$1"
   local pitch="$2"

@@ -23,7 +23,7 @@ import json, os, sys, random, datetime, importlib.util
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CAT_DIR not in sys.path:
     sys.path.insert(0, CAT_DIR)
-from tangtang_paths import data_dir  # noqa: E402
+from tangtang_paths import data_dir, now_dt  # noqa: E402
 
 DATA_DIR = data_dir()
 STATE_FILE = os.path.join(DATA_DIR, "cat-state.json")
@@ -42,6 +42,8 @@ EVENT_STATE = {
     "meal": "happy", "pat": "happy",
     "homework": "thinking", "tidy": "thinking", "thinking": "thinking",
     "english": "thinking",
+    "ask": "welcome",
+    "move": "running",
     "curious": "curious",
     "accompany": "accompany",
     "night": "night",
@@ -67,6 +69,8 @@ EVENT_SCENE = {
     "pet_food": "pet_food",
     "pet_groom": "pet_groom",
     "english": "english",
+    "ask": "greet",
+    "move": "exercise",
 }
 
 # 主动提醒冷却（分钟）。点名/摸摸/指定说不冷却。
@@ -79,7 +83,7 @@ COOLDOWN_MINUTES = {
     "pet_walk": 90, "pet_water": 90, "pet_food": 180, "pet_groom": 240,
     "english": 90,
 }
-USER_EVENTS = {"greet", "pat", "say", "status"}
+USER_EVENTS = {"greet", "pat", "say", "status", "ask"}
 
 REPLY = {
     "greet": {
@@ -184,11 +188,27 @@ REPLY = {
     "english": {
         "_": ["糖糖想学一个英语词。你要不要当小老师？不学也行。"],
     },
+    "ask": {
+        "happy":  ["汪汪～ 航航，糖糖在客厅等你呢。跟糖糖说一句话好不好？不说也行。",
+                   "汪汪～ 糖糖在这儿。想说一句就说，不说也没关系。"],
+        "calm":   ["汪汪～ 糖糖在客厅。跟糖糖说一句话好不好？不说也行。",
+                   "你来啦，糖糖一直在等你～"],
+        "lonely": ["你终于来啦……糖糖一个人等了好久，想死你啦～",
+                   "汪汪……你不在的时候，糖糖总觉得空落落的，快来抱抱！"],
+        "sleepy": ["汪汪……糖糖刚才打了个盹，你来啦～",
+                   "哈欠～ 你来啦，糖糖揉揉眼睛陪你～"],
+        "low":    ["汪汪……糖糖今天有点没精神，能陪陪我吗？",
+                   "糖糖有点蔫蔫的，抱一下就好啦～"],
+    },
+    "move": {
+        "_": ["汪汪～ 糖糖想伸伸腿。你带糖糖在客厅走两步，你也动一动？不想动也没关系。",
+              "糖糖先走起来啦，你要不要一起来？"],
+    },
 }
 
 
 def now():
-    return datetime.datetime.now()
+    return now_dt()
 
 
 def current_profile():
@@ -550,11 +570,12 @@ def main():
         print(f"\t{label}\t{visual}")
         return
 
-    if event in ("greet", "pat", "home"):
-        state = interact(state, memory, event)
+    if event in ("greet", "pat", "home", "ask"):
+        state = interact(state, memory, "greet" if event == "ask" else event)
     elif event in ("wake", "alarm", "sleep", "rest", "meal", "say", "play",
                    "homework", "tidy", "exercise", "emotion", "weather", "water",
-                   "pet_walk", "pet_water", "pet_food", "pet_groom", "english"):
+                   "pet_walk", "pet_water", "pet_food", "pet_groom", "english",
+                   "move"):
         state = interact(state, memory, "care")
 
     text, label = compose(state, memory, event, arg)

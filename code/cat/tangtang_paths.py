@@ -10,8 +10,34 @@ import glob
 import os
 import shutil
 import sys
+from datetime import datetime
 
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def now_dt():
+    """客厅钟：CAT_NOW / TANGTANG_NOW / TANGTANG_FAKE_TODAY+TIME，否则墙上时钟。"""
+    raw = (os.environ.get("CAT_NOW") or os.environ.get("TANGTANG_NOW") or "").strip()
+    if raw:
+        raw = raw.replace("T", " ", 1)
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+            try:
+                return datetime.strptime(raw, fmt)
+            except ValueError:
+                pass
+    fake_day = (os.environ.get("TANGTANG_FAKE_TODAY") or "").strip()
+    fake_time = (os.environ.get("TANGTANG_FAKE_TIME") or "").strip()
+    if fake_day:
+        t = fake_time or "12:00"
+        if len(t) == 5:
+            t = t + ":00"
+        elif len(t) == 4:
+            t = "0" + t + ":00"
+        try:
+            return datetime.strptime(fake_day + " " + t, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            pass
+    return datetime.now().replace(microsecond=0)
 
 MEMORY_FILES = (
     "cat-state.json",
@@ -126,6 +152,11 @@ def _selftest():
 
         explicit = data_dir(env=dest_override, legacy_dir=legacy, warn=False)
         assert explicit == os.path.abspath(dest_override)
+
+        os.environ["CAT_NOW"] = "2026-08-28 14:05:00"
+        n = now_dt()
+        assert n.strftime("%Y-%m-%d %H:%M") == "2026-08-28 14:05", n
+        os.environ.pop("CAT_NOW", None)
 
         auto = data_dir(env="", legacy_dir=legacy, platform="darwin", home=home, warn=False)
         assert auto == mac

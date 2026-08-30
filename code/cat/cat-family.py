@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CAT_DIR not in sys.path:
     sys.path.insert(0, CAT_DIR)
-from tangtang_paths import data_dir  # noqa: E402
+from tangtang_paths import data_dir, now_dt  # noqa: E402
 
 DATA_DIR = data_dir()
 REPO_DATA = os.path.abspath(os.path.join(CAT_DIR, "..", "..", "data"))
@@ -55,7 +55,7 @@ CLASSIFY_RULES = (
 
 
 def now():
-    return datetime.now()
+    return now_dt()
 
 
 def load_json(path, default):
@@ -198,6 +198,10 @@ def _habit_store_text(who, text):
 
 
 def observe(who, text="", source="voice", event_type=None, confidence=None):
+    # 自测夹具听写不是孩子原话，不进家庭习惯流水
+    if (os.environ.get("TANGTANG_FIXTURE") or "").strip().lower() in ("1", "yes", "true", "on"):
+        if source in ("voice", "stt", "listen"):
+            return None
     member = resolve_member(who)
     member_id = (member or {}).get("member_id") or "unknown"
     raw_text = text or ""

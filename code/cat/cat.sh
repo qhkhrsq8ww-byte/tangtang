@@ -12,6 +12,7 @@
 #   ./cat.sh preview          # 打印今日语音提醒文案（不发声）
 #   ./cat.sh today            # 今日休息四步（问糖糖→学英语→锻炼→休息）
 #   ./cat.sh today --preview  # 只看四句话，不开麦不发声
+#   ./cat.sh today-selftest   # 云上四步自测（夹具听窗，不按回车）
 #   ./cat.sh today-report     # 账本标签摘要（无原话）
 #   ./cat.sh hwcheck          # 软硬件自检（Linux 跳过实声）
 #   ./cat.sh openclaw --preview
@@ -64,6 +65,15 @@ while [ $# -gt 0 ]; do
     today)
       shift
       exec "$CAT_DIR/cat-today.sh" "$@"
+      ;;
+    today-selftest)
+      shift
+      export TANGTANG_FIXTURE=1
+      export TANGTANG_TTS="${TANGTANG_TTS:-0}"
+      export TANGTANG_TURN_STT=0
+      export TANGTANG_TURN_LLM=0
+      export TANGTANG_TODAY_GAP="${TANGTANG_TODAY_GAP:-2}"
+      exec "$CAT_DIR/cat-today.sh" --auto "$@"
       ;;
     openclaw)
       shift

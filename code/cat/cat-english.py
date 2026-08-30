@@ -83,6 +83,11 @@ def companion_line(text, who=""):
 
 
 def current_when():
+    try:
+        from tangtang_paths import now_dt
+        return now_dt()
+    except Exception:
+        pass
     fake = (os.environ.get("TANGTANG_FAKE_TODAY") or "").strip()
     if fake:
         try:
