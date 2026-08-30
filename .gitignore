@@ -9,6 +9,7 @@ code/cat/cat-chat-history-*.json
 code/cat/cat-state.json
 code/cat/cat-memory.json
 code/cat/cat-mood.txt
+code/cat/cat-presentation-action.json
 code/cat/cat-remind-log.txt
 code/cat/voices.json
 code/cat/sofa_index.js
