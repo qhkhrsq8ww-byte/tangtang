@@ -256,8 +256,8 @@
         ]
       },
       "english_helper": {
-        "template_friend": "汪汪～{hint}。跟糖糖说一句就行。",
-        "template_play": "汪汪～{hint}。跟糖糖说一句就行。",
+        "template_friend": "汪汪～{hint}。愿意再说一句也行，不说也没事。",
+        "template_play": "汪汪～{hint}。愿意再说一句也行，不说也没事。",
         "fallback_hint": "这个词糖糖也刚学",
         "note": "只给这一句的中文意思一次，不是上课。"
       },

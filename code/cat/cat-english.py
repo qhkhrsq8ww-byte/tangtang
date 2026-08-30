@@ -34,16 +34,52 @@ def load_library():
         return json.load(f)
 
 
+QIAQIA_ALIASES = ("qiaqia", "洽洽", "6", "grade6", "g6", "姐姐")
+HANGHANG_ALIASES = ("hanghang", "航航", "2", "grade2", "g2", "弟弟")
+# 测验腔：命中则退回伴读句。不匹配「不听写」这类否定。
+QUIZ_MARKERS = (
+    "现在开始测试",
+    "开始测验",
+    "跟我读",
+    "repeat after me",
+    "你的分数",
+    "打分",
+    "答对了",
+    "我来检查",
+    "必须跟读",
+    "再说一遍我检查",
+)
+
+
 def resolve_who(who=""):
-    w = (who or os.environ.get("TANGTANG_MEMBER_ID") or "").strip().lower()
-    if w in ("qiaqia", "洽洽", "6", "grade6", "g6"):
+    """时刻表参数 / TANGTANG_MEMBER_ID 优先。口吻 friend 不能把航航改成洽洽。"""
+    w = (
+        who
+        or os.environ.get("TANGTANG_MEMBER_ID")
+        or os.environ.get("TANGTANG_SPEAKER")
+        or ""
+    ).strip().lower()
+    if w in QIAQIA_ALIASES:
         return "qiaqia"
-    if w in ("hanghang", "航航", "2", "grade2", "g2"):
+    if w in HANGHANG_ALIASES:
         return "hanghang"
-    profile = (os.environ.get("TANGTANG_PROFILE") or "").strip().lower()
-    if profile == "friend":
-        return "qiaqia"
     return "hanghang"
+
+
+def looks_like_quiz(text):
+    t = (text or "").strip()
+    if not t:
+        return False
+    low = t.lower()
+    return any(m in t or m in low for m in QUIZ_MARKERS)
+
+
+def companion_line(text, who=""):
+    """弱伴读：去掉测验/督学腔，保留给选择的短句。"""
+    t = (text or "").strip()
+    if not t or looks_like_quiz(t):
+        return fallback_line(who)
+    return t
 
 
 def current_when():
@@ -96,12 +132,12 @@ def pick_with_id(who="", when=None, preferred_id=None):
     pref = (preferred_id or "").strip()
     if pref:
         for lid, item in rows:
-            text = (item.get("say") or "").strip()
+            text = companion_line((item.get("say") or "").strip(), who)
             if lid == pref and text:
                 return text, lid
     idx = when.timetuple().tm_yday % len(rows)
     lid, item = rows[idx]
-    return (item.get("say") or "").strip(), lid
+    return companion_line((item.get("say") or "").strip(), who), lid
 
 
 def pick_line(who="", when=None, preferred_id=None):
@@ -112,12 +148,30 @@ def pick_line(who="", when=None, preferred_id=None):
 def _selftest():
     lib = load_library()
     assert lib.get("grade2") and lib.get("grade6"), "missing grades"
+    assert resolve_who("洽洽") == "qiaqia"
+    assert resolve_who("qiaqia") == "qiaqia"
+    assert resolve_who("g6") == "qiaqia"
+    assert resolve_who("hanghang") == "hanghang"
+    os.environ["TANGTANG_MEMBER_ID"] = "qiaqia"
+    os.environ["TANGTANG_PROFILE"] = "play"
+    assert resolve_who("") == "qiaqia", "explicit member must win over play default"
+    os.environ["TANGTANG_MEMBER_ID"] = "hanghang"
+    os.environ["TANGTANG_PROFILE"] = "friend"
+    assert resolve_who("") == "hanghang", "friend mouth must not remap hanghang"
+    os.environ.pop("TANGTANG_MEMBER_ID", None)
+    os.environ.pop("TANGTANG_PROFILE", None)
     a = pick_line("hanghang", datetime(2026, 9, 1))
     b = pick_line("qiaqia", datetime(2026, 9, 1))
     assert a and b and a != b, (a, b)
     assert "aunt" in a.lower() or "dog" in a.lower() or "rabbit" in a.lower() or "tail" in a.lower() or "autumn" in a.lower() or "juice" in a.lower() or "school" in a.lower() or "clean" in a.lower() or "doctor" in a.lower()
     feb = pick_line("hanghang", datetime(2027, 3, 1))
     assert feb
+    for lid, item in list(iter_items("hanghang", datetime(2026, 9, 1))) + list(iter_items("qiaqia", datetime(2026, 9, 1))):
+        say = (item.get("say") or "")
+        assert not looks_like_quiz(say), (lid, say)
+        assert "正确" not in say and "打分" not in say
+    assert looks_like_quiz("跟我读 apple，我来检查")
+    assert companion_line("跟我读 apple，我来检查", "hanghang") == fallback_line("hanghang")
     print("cat-english selftest ok")
     print("hanghang Sep1:", a)
     print("qiaqia Sep1:", b)

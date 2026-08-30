@@ -117,10 +117,7 @@ case "$CMD" in
       hwho=""
       case "$TANGTANG_SCHED_EVENT" in
         english)
-          case "${TANGTANG_SCHED_ARG:-hanghang}" in
-            qiaqia|洽洽) hwho="qiaqia" ;;
-            *) hwho="hanghang" ;;
-          esac
+          hwho="$(tangtang_english_who "${TANGTANG_SCHED_ARG}")"
           ;;
       esac
       hnote=""
@@ -207,6 +204,9 @@ case "$CMD" in
     tangtang_child_at_school qiaqia || { echo "fail qiaqia still at school 16:00"; fail=1; }
     TANGTANG_FAKE_TIME=18:00
     if tangtang_child_at_school qiaqia; then echo "fail qiaqia should be home 18:00"; fail=1; fi
+    [ "$(tangtang_english_who qiaqia)" = "qiaqia" ] || { echo "fail english_who qiaqia"; fail=1; }
+    [ "$(TANGTANG_MEMBER_ID=qiaqia tangtang_english_who "")" = "qiaqia" ] \
+      || { echo "fail english_who member qiaqia"; fail=1; }
     TANGTANG_FAKE_TODAY=2026-09-25 TANGTANG_FAKE_TIME=12:00
     if tangtang_is_school_day; then echo "fail mid-autumn should not be school"; fail=1; fi
     TANGTANG_FAKE_TODAY=2026-09-20

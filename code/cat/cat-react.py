@@ -111,9 +111,9 @@ def pair_key(event, audience):
 
 def normalize_audience(who):
     w = (who or "").strip().lower()
-    if w in ("qiaqia", "洽洽", "6", "grade6", "g6"):
+    if w in ("qiaqia", "洽洽", "6", "grade6", "g6", "姐姐"):
         return "qiaqia"
-    if w in ("hanghang", "航航", "2", "grade2", "g2"):
+    if w in ("hanghang", "航航", "2", "grade2", "g2", "弟弟"):
         return "hanghang"
     if w in ELDER_AUDIENCE or w in ("爷爷", "奶奶"):
         return "elder"

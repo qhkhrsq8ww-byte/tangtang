@@ -496,28 +496,63 @@ tangtang_turn_event_enabled() {
   return 1
 }
 
+# 英语听众：时刻表参数 / 显式成员优先。洽洽不改成航航。
+tangtang_english_who() {
+  local arg="${1:-}"
+  case "$arg" in
+    qiaqia|洽洽|6|grade6|g6|姐姐) printf '%s\n' "qiaqia"; return 0 ;;
+    hanghang|航航|2|grade2|g2|弟弟) printf '%s\n' "hanghang"; return 0 ;;
+  esac
+  case "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}" in
+    qiaqia|洽洽|6|grade6|g6|姐姐) printf '%s\n' "qiaqia"; return 0 ;;
+    hanghang|航航|2|grade2|g2|弟弟) printf '%s\n' "hanghang"; return 0 ;;
+  esac
+  printf '%s\n' "hanghang"
+}
+
+# 0=在网 1=不在网 2=没配 IP / 不是小朋友。只看这一人，不把兄妹对调。
+tangtang_child_presence_state() {
+  local who="$1"
+  local ip=""
+  case "$who" in
+    hanghang|航航) ip="${TANGTANG_HOST_HANGHANG:-}" ;;
+    qiaqia|洽洽) ip="${TANGTANG_HOST_QIAQIA:-}" ;;
+    *) printf '%s\n' "unknown"; return 2 ;;
+  esac
+  if [ -z "$ip" ]; then
+    printf '%s\n' "unknown"
+    return 2
+  fi
+  if tangtang_host_on_lan "$ip"; then
+    printf '%s\n' "home"
+    return 0
+  fi
+  printf '%s\n' "away"
+  return 1
+}
+
 tangtang_turn_who() {
   local event="${1:-}"
   local arg="${2:-}"
   case "$arg" in
-    qiaqia|洽洽|6|grade6) printf '%s\n' "qiaqia"; return 0 ;;
-    hanghang|航航|2|grade2|g2) printf '%s\n' "hanghang"; return 0 ;;
+    qiaqia|洽洽|6|grade6|g6|姐姐) printf '%s\n' "qiaqia"; return 0 ;;
+    hanghang|航航|2|grade2|g2|弟弟) printf '%s\n' "hanghang"; return 0 ;;
   esac
   case "$event" in
     english)
-      printf '%s\n' "hanghang"
+      tangtang_english_who "$arg"
       return 0
       ;;
     ask|move|rest)
       case "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}" in
-        qiaqia|洽洽) printf '%s\n' "qiaqia"; return 0 ;;
+        qiaqia|洽洽|6|grade6|g6|姐姐) printf '%s\n' "qiaqia"; return 0 ;;
         *) printf '%s\n' "hanghang"; return 0 ;;
       esac
       ;;
   esac
   case "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}" in
-    qiaqia|洽洽) printf '%s\n' "qiaqia"; return 0 ;;
-    hanghang|航航) printf '%s\n' "hanghang"; return 0 ;;
+    qiaqia|洽洽|6|grade6|g6|姐姐) printf '%s\n' "qiaqia"; return 0 ;;
+    hanghang|航航|2|grade2|g2|弟弟) printf '%s\n' "hanghang"; return 0 ;;
   esac
   if ! tangtang_child_at_school hanghang; then
     printf '%s\n' "hanghang"

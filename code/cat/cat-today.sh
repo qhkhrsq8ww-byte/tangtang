@@ -57,7 +57,7 @@ while [ $# -gt 0 ]; do
 done
 
 case "$WHO" in
-  qiaqia|洽洽|6|grade6)
+  qiaqia|洽洽|6|grade6|g6|姐姐)
     WHO="qiaqia"
     PROFILE="friend"
     DISPLAY="洽洽"

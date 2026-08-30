@@ -89,34 +89,37 @@ if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ]; then
     exit 0
   fi
   if [ "$EVENT" = "english" ]; then
+    ewho="$(tangtang_english_who "${ARG}")"
     if ! tangtang_is_school_day; then
       log_skip "周末/放假，英语小伴读休息"
       exit 0
     fi
-    case "${ARG:-hanghang}" in
-      qiaqia|洽洽|6|grade6)
-        if tangtang_child_at_school qiaqia; then
-          log_skip "洽洽还没到家，英语小伴读跳过"
-          exit 0
-        fi
-        export TANGTANG_PROFILE=friend
-        export TANGTANG_CHILD_NAME="洽洽"
-        export TANGTANG_MEMBER_ID="${TANGTANG_MEMBER_ID:-qiaqia}"
-        export TANGTANG_SPEAKER="${TANGTANG_SPEAKER:-qiaqia}"
-        ;;
-      *)
-        if tangtang_child_at_school hanghang; then
-          log_skip "航航还没到家，英语小伴读跳过"
-          exit 0
-        fi
-        export TANGTANG_PROFILE=play
-        export TANGTANG_CHILD_NAME="航航"
-        export TANGTANG_MEMBER_ID="${TANGTANG_MEMBER_ID:-hanghang}"
-        export TANGTANG_SPEAKER="${TANGTANG_SPEAKER:-hanghang}"
-        ;;
-    esac
+    if tangtang_child_at_school "$ewho"; then
+      if [ "$ewho" = "qiaqia" ]; then
+        log_skip "洽洽还没到家，英语小伴读跳过"
+      else
+        log_skip "航航还没到家，英语小伴读跳过"
+      fi
+      exit 0
+    fi
+    if [ "$ewho" = "qiaqia" ]; then
+      export TANGTANG_PROFILE=friend
+      export TANGTANG_CHILD_NAME="洽洽"
+    else
+      export TANGTANG_PROFILE=play
+      export TANGTANG_CHILD_NAME="航航"
+    fi
+    export TANGTANG_MEMBER_ID="$ewho"
+    export TANGTANG_SPEAKER="$ewho"
+    # 配了这个孩子的 Wi‑Fi 却不在网：不要开口。作息「到家」不能盖过真实不在场。
+    tangtang_child_presence_state "$ewho" >/dev/null
+    eprc=$?
+    if [ "$eprc" = "1" ]; then
+      log_skip "客厅没检测到${TANGTANG_CHILD_NAME}，英语小伴读跳过"
+      exit 0
+    fi
     # 当天说过「到此为止」，或连续沉默/反对：这类先不说，不加重
-    if ! tangtang_turn_gate_open english "$(tangtang_turn_who english "${ARG:-hanghang}")"; then
+    if ! tangtang_turn_gate_open english "$ewho"; then
       log_skip "今天这类先不说了"
       exit 0
     fi
@@ -124,7 +127,9 @@ if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ]; then
 fi
 
 # 周末/节假日：仍看出门。上学日白天对爷爷奶奶说，不要求小朋友手机。
-if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ] && [ "${TANGTANG_REQUIRE_PRESENCE:-1}" = "1" ]; then
+# 英语已按「这一个孩子」过闸，这里不要因另一人在场改号。
+if [ "$PRINT" != "1" ] && [ "$FORCE" != "1" ] && [ "${TANGTANG_REQUIRE_PRESENCE:-1}" = "1" ] \
+   && [ "$EVENT" != "english" ]; then
   present="$(tangtang_kids_present)"
   prc=$?
   if [ "$prc" = "2" ]; then
@@ -153,10 +158,7 @@ if [ "$FORCE" != "1" ]; then
   hwho=""
   case "$EVENT" in
     english)
-      case "${ARG:-hanghang}" in
-        qiaqia|洽洽|6|grade6) hwho="qiaqia" ;;
-        *) hwho="hanghang" ;;
-      esac
+      hwho="$(tangtang_english_who "${ARG}")"
       ;;
     *)
       hwho="${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}"

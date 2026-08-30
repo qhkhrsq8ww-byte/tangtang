@@ -54,6 +54,12 @@ if [ "${TANGTANG_TTS:-1}" = "0" ]; then
   exit 0
 fi
 
+# 英语小伴读与闹铃同一条出声路径（cat-say → 默认蓝牙音箱）。不另开音箱。
+if [ "${1:-}" = "english" ]; then
+  "$CAT_DIR/cat-say.sh" "$text" cute
+  exit 0
+fi
+
 speak_with_fallback() {
   local rate="$1"
   local pitch="$2"

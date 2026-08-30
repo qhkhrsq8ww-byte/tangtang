@@ -80,7 +80,7 @@ echo "$(reply_of "$d")" | grep -qE "等一会儿|不急|等你" || { echo "fail 
 w="$(classify hanghang play 不会 2000)"
 check E-scene "$(scene_of "$w")" wont
 check E-speak "$(speak_of "$w")" True
-echo "$(reply_of "$w")" | grep -qE "说一句就行|陪你|不会也" || { echo "fail E reply: $w"; fail=1; }
+echo "$(reply_of "$w")" | grep -qE "说一句|陪你|不会也|不说也" || { echo "fail E reply: $w"; fail=1; }
 
 # F 听不清
 u="$(classify hanghang play "" 400)"

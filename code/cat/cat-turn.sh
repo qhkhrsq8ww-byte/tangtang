@@ -149,6 +149,15 @@ run_turn() {
     return 0
   fi
 
+  if [ "$FORCE" != "1" ] && [ "$EVENT" = "english" ]; then
+    tangtang_child_presence_state "$WHO" >/dev/null
+    eprc=$?
+    if [ "$eprc" = "1" ]; then
+      turn_log "wont 客厅未检测到 不开麦 who=$WHO event=$EVENT"
+      return 0
+    fi
+  fi
+
   if [ "$FORCE" != "1" ] && ! tangtang_turn_gate_open "$EVENT" "$WHO"; then
     return 0
   fi
@@ -247,6 +256,19 @@ run_selftest() {
   bash -n "$CAT_DIR/cat-remind.sh" || { echo "fail bash -n cat-remind.sh"; fail=1; }
 
   /usr/bin/python3 "$CAT_DIR/cat-turn.py" selftest || { echo "fail cat-turn.py"; fail=1; }
+  /usr/bin/python3 "$CAT_DIR/cat-english.py" --selftest || { echo "fail cat-english.py"; fail=1; }
+
+  # 选人：洽洽参数 / MEMBER_ID 不被默认航航盖掉
+  who="$(tangtang_english_who qiaqia)"
+  [ "$who" = "qiaqia" ] || { echo "fail english_who qiaqia: $who"; fail=1; }
+  who="$(tangtang_english_who 洽洽)"
+  [ "$who" = "qiaqia" ] || { echo "fail english_who 洽洽: $who"; fail=1; }
+  who="$(tangtang_turn_who english qiaqia)"
+  [ "$who" = "qiaqia" ] || { echo "fail turn_who english qiaqia: $who"; fail=1; }
+  who="$(TANGTANG_MEMBER_ID=qiaqia tangtang_turn_who english "")"
+  [ "$who" = "qiaqia" ] || { echo "fail turn_who honors MEMBER_ID qiaqia: $who"; fail=1; }
+  who="$(TANGTANG_MEMBER_ID=hanghang TANGTANG_PROFILE=friend tangtang_english_who "")"
+  [ "$who" = "hanghang" ] || { echo "fail friend mouth must not remap hanghang: $who"; fail=1; }
 
   silent="$tmp/silent.pcm"
   tone="$tmp/tone.pcm"
@@ -283,6 +305,14 @@ run_selftest() {
     "$CAT_DIR/cat-turn.sh" --follow english hanghang 2>&1)"
   echo "$out" | grep -q "wont 上学未归 不开麦" || { echo "fail noon should wont: $out"; fail=1; }
   echo "$out" | grep -qE "开麦 [0-9]+s" && { echo "fail noon opened mic"; fail=1; }
+
+  # 到家后：配了 Wi‑Fi 却不在网，不要对这个孩子开口（不改成另一个孩子）
+  out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=19:10 TANGTANG_DATA_DIR="$tmp" \
+    TANGTANG_TTS=0 TANGTANG_TURN_PCM="$tone" TANGTANG_HOST_QIAQIA=203.0.113.9 \
+    "$CAT_DIR/cat-turn.sh" --follow english qiaqia 2>&1)"
+  echo "$out" | grep -q "wont 客厅未检测到 不开麦" || { echo "fail qiaqia away should skip: $out"; fail=1; }
+  echo "$out" | grep -qE "开麦 [0-9]+s" && { echo "fail qiaqia away opened mic"; fail=1; }
+  echo "$out" | grep -q "hanghang" && { echo "fail away qiaqia remapped: $out"; fail=1; }
   if [ -f "$tmp/cat-turn-ledger.json" ]; then
     echo "fail noon should not write child-reaction ledger"
     fail=1
@@ -344,7 +374,7 @@ print('ledger json ok', row.get('audience') or row.get('who'), row['event'])
     TANGTANG_TTS=0 TANGTANG_TURN_PCM="$tone" TANGTANG_TURN_TEXT="好难" \
     "$CAT_DIR/cat-turn.sh" --force --follow english hanghang 2>&1)"
   echo "$out" | grep -q "wont" || { echo "fail wont: $out"; fail=1; }
-  echo "$out" | grep -qE "陪你|说一句就行|不会也" || { echo "fail wont reply: $out"; fail=1; }
+  echo "$out" | grep -qE "陪你|说一句|不会也|不说也" || { echo "fail wont reply: $out"; fail=1; }
 
   # 听不清：有一点声 + 听写失败。不当成反对，不让再说一遍。
   out="$(TANGTANG_FAKE_TODAY=2026-09-01 TANGTANG_FAKE_TIME=16:28 TANGTANG_DATA_DIR="$tmp" \
