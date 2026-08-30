@@ -24,10 +24,14 @@ echo "【语法】JSON"
 if /usr/bin/python3 -m json.tool data/family.json > /dev/null 2>&1; then check 0 "JSON family.json"; else check 1 "JSON family.json"; fi
 
 # ---- 2. 家庭人格与权限 ----
-echo "【人格】六人家庭"
-for who in grandpa grandma dad mom child_12 child_9 unknown; do
+echo "【人格】五口之家（爷爷/奶奶/爸爸/洽洽/航航）"
+for who in grandpa grandma dad qiaqia hanghang unknown; do
   out=$(/usr/bin/python3 code/cat/tangtang-profile.py --speaker "$who" 2>/dev/null || echo "{}")
   echo "$out" | grep -q '"member_id"' && check 0 "$who 解析" || check 1 "$who 解析"
+done
+for who in 爸爸 洽洽 航航 姐姐 弟弟; do
+  out=$(/usr/bin/python3 code/cat/tangtang-profile.py --speaker "$who" 2>/dev/null || echo "{}")
+  echo "$out" | grep -q '"member_id"' && check 0 "$who 别名解析" || check 1 "$who 别名解析"
 done
 
 echo "【权限】PRIVATE 成员原话不得落盘"

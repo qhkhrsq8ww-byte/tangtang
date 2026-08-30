@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -108,6 +109,54 @@ class TestAdultFamilyMayStore(unittest.TestCase):
         self.assertEqual(result.decision.privacy, "FAMILY")
         self.assertTrue(result.stored_family)
         self.assertTrue(pipe.stores.family.contains_text("晚饭做好了"))
+
+
+def _load_family_mod(tmp: str):
+    import importlib.util
+
+    os.environ["TANGTANG_DATA_DIR"] = tmp
+    spec = importlib.util.spec_from_file_location(
+        "tangtang_family_observe", ROOT / "code" / "cat" / "cat-family.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod.DATA_DIR = tmp
+    mod.HABIT_FILE = str(Path(tmp) / "cat-habits.json")
+    return mod
+
+
+class TestV3HabitObserveOmitsChildText(unittest.TestCase):
+    """cat-family.py observe is the V3 habit write path used by cat-voice.sh."""
+
+    def test_child_observe_does_not_persist_raw_text(self):
+        raw = "我今天被同学欺负了，别告诉爸爸。"
+        with tempfile.TemporaryDirectory() as tmp:
+            fam = _load_family_mod(tmp)
+            for who in (
+                "hanghang", "航航", "弟弟",
+                "qiaqia", "洽洽", "姐姐",
+                "child_9", "child_12",
+            ):
+                fam.observe(who, raw)
+            path = Path(tmp) / "cat-habits.json"
+            self.assertTrue(path.is_file())
+            blob = path.read_text(encoding="utf-8")
+            self.assertNotIn(raw, blob)
+            self.assertNotIn("被同学欺负", blob)
+            self.assertNotIn("别告诉爸爸", blob)
+            data = json.loads(blob)
+            texts = [e.get("text") or "" for e in data.get("events") or []]
+            self.assertTrue(texts)
+            self.assertTrue(all(t == "" for t in texts))
+
+    def test_dad_observe_may_keep_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fam = _load_family_mod(tmp)
+            fam.observe("dad", "晚饭做好了")
+            fam.observe("爸爸", "晚上加班到九点")
+            blob = (Path(tmp) / "cat-habits.json").read_text(encoding="utf-8")
+            self.assertIn("晚饭做好了", blob)
+            self.assertIn("晚上加班到九点", blob)
 
 
 if __name__ == "__main__":
