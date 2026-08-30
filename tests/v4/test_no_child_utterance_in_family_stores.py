@@ -128,6 +128,15 @@ def _load_family_mod(tmp: str):
 class TestV3HabitObserveOmitsChildText(unittest.TestCase):
     """cat-family.py observe is the V3 habit write path used by cat-voice.sh."""
 
+    def setUp(self):
+        self._fixture = os.environ.pop("TANGTANG_FIXTURE", None)
+
+    def tearDown(self):
+        if self._fixture is None:
+            os.environ.pop("TANGTANG_FIXTURE", None)
+        else:
+            os.environ["TANGTANG_FIXTURE"] = self._fixture
+
     def test_child_observe_does_not_persist_raw_text(self):
         raw = "我今天被同学欺负了，别告诉爸爸。"
         with tempfile.TemporaryDirectory() as tmp:

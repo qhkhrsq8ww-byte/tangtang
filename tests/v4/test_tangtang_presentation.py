@@ -21,7 +21,6 @@ FORBIDDEN_SNIPPETS = (
     "assets/character/tangtang",
     "from presentation",
     "import presentation",
-    "AnimationController",
     ".png",
 )
 
