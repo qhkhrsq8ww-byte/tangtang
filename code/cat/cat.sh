@@ -5,7 +5,7 @@
 #   ./cat.sh                  # 上糖糖（投影开着->全屏舞台；没开->语音报平安）
 #   ./cat.sh "想说的话"       # 说一句话（带人设语气包装）
 #   ./cat.sh -f               # 强制仅声音（不管投影）
-#   ./cat.sh -p               # 强制透明宠物浮现
+#   ./cat.sh -p               # 强制桌面 MP4 宠物（cat-desktop-pet.html，需 :8080）
 #   ./cat.sh -s               # 强制全屏舞台
 #   ./cat.sh status           # 查看糖糖当前心情状态
 #   ./cat.sh habits [成员]    # 习惯摘要（客厅 Mac，不记小朋友原话）
@@ -237,9 +237,7 @@ case "$MODE" in
     echo "[糖糖] 投影在线 → 全屏舞台 + 智能说话"
     ;;
   pet)
-    tangtang_ensure_server
-    open "http://127.0.0.1:8080/cat-pet.html"
-    osascript -e "tell application \"Safari\" to if (count of windows) > 0 then set URL of front document to \"http://127.0.0.1:8080/cat-pet.html\"" 2>/dev/null
+    tangtang_ensure_pet
     if ! system_profiler SPDisplaysDataType 2>/dev/null | grep -q "Mirror: On"; then
       echo "提示：未检测到镜像。点菜单栏『屏幕镜像』选投影；连上后糖糖自动上屏，不弹窗遮挡。"
     fi
@@ -248,7 +246,7 @@ case "$MODE" in
     else
       brain_say "greet"
     fi
-    echo "[糖糖] 投影在线 → 透明浮现宠物 + 智能说话"
+    echo "[糖糖] 投影在线 → 桌面视频宠物 http://127.0.0.1:8080/cat-desktop-pet.html + 智能说话"
     ;;
   voice)
     if [ -n "$TEXT" ]; then

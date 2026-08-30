@@ -588,6 +588,9 @@ def _resolve_character_state(event, arg, text, label):
     action = CharacterPresenter().present(decision, text=text)
     try:
         write_presentation_action(action, DATA_DIR)
+        # 桌面宠物从 :8080 读本目录；DATA_DIR 在 Application Support 时再写一份给 http.server。
+        if os.path.abspath(CAT_DIR) != os.path.abspath(DATA_DIR):
+            write_presentation_action(action, CAT_DIR)
     except OSError:
         pass
     return action.state, action.text if action.speak else text

@@ -434,6 +434,8 @@ tangtang_play_audio() {
 }
 
 tangtang_ensure_server() {
+  # 必须走 http://127.0.0.1:8080（本目录 python -m http.server），不要 file://。
+  # 桌面宠物相对路径要读 assets/video/*.mp4 与 cat-presentation-action.json。
   if ! curl -s -o /dev/null --max-time 3 "http://127.0.0.1:8080/cat-stage.html"; then
     nohup /usr/bin/python3 -m http.server 8080 --bind 127.0.0.1 --directory "$CAT_DIR" >/tmp/cathttp.log 2>&1 &
     sleep 2
@@ -445,6 +447,18 @@ tangtang_ensure_stage() {
   if ! pgrep -f "Safari.*cat-stage" >/dev/null 2>&1; then
     open "http://127.0.0.1:8080/cat-stage.html"
     ( osascript -e "tell application \"Safari\" to if (count of windows) > 0 then set URL of front document to \"http://127.0.0.1:8080/cat-stage.html\"" 2>/dev/null & )
+  fi
+}
+
+# 默认宠物：17 状态 MP4（cat-desktop-pet.html）。cat-pet.html 是旧 PNG，保留文件但不作入口。
+tangtang_ensure_pet() {
+  tangtang_ensure_server
+  if ! pgrep -f "Safari.*cat-desktop-pet" >/dev/null 2>&1; then
+    open "http://127.0.0.1:8080/cat-desktop-pet.html"
+    # 舞台已开时只加页，不改前台 URL，避免把投影舞台顶掉。
+    if ! pgrep -f "Safari.*cat-stage" >/dev/null 2>&1; then
+      ( osascript -e "tell application \"Safari\" to if (count of windows) > 0 then set URL of front document to \"http://127.0.0.1:8080/cat-desktop-pet.html\"" 2>/dev/null & )
+    fi
   fi
 }
 
