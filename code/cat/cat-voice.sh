@@ -1,9 +1,9 @@
 #!/bin/bash
 # 糖糖 · 语音对话 v3
-# 链路：听 → 辨（五口之家）→ 记习惯 → 懂 → 答 → 说
-# 时刻表不要接本脚本（先录满再声纹再 LLM）。客厅短回合请用 cat-turn.sh：
-# 先看作息再开麦，不先声纹；只在客厅；沉默不追问。
-# 声纹/习惯数据仅写入本地，不提交 Git。
+# 链路：听 → 在场（WiFi/ARP，必要时短窗能量）→ 辨 → 记习惯 → 懂 → 答 → 说
+# 时刻表不要接本脚本（先录满再 LLM）。客厅短回合请用 cat-turn.sh：
+# 先看作息再开麦；声纹不当主路径；只在客厅；沉默不追问。
+# 声纹/习惯数据仅写入本地，不提交 Git。不给小朋友建声纹。
 set -u
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
@@ -13,6 +13,8 @@ export TANGTANG_V4_PIPELINE=1
 
 DUR="${1:-5}"
 PCM="/tmp/tangtang_voice.pcm"
+# 显式 MEMBER_ID / -p 指定的人不被在场层覆盖
+EXPLICIT_MEMBER="${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}"
 
 echo "🎤 糖糖在听...（${DUR}秒）"
 if ! "$CAT_DIR/cat-listen.sh" "$DUR" "$PCM" >/dev/null 2>&1; then
@@ -20,8 +22,32 @@ if ! "$CAT_DIR/cat-listen.sh" "$DUR" "$PCM" >/dev/null 2>&1; then
   exit 1
 fi
 
-WHO_LINE=$(/usr/bin/python3 "$CAT_DIR/cat-family.py" who "$PCM" 2>/dev/null | tail -1)
-IFS=$'\t' read -r MEMBER_ID DISPLAY PROFILE SCORE <<< "$WHO_LINE"
+MEMBER_ID="unknown"
+DISPLAY=""
+PROFILE="play"
+SCORE=""
+
+if [ -n "$EXPLICIT_MEMBER" ] && [ "$EXPLICIT_MEMBER" != "unknown" ]; then
+  WHO_LINE=$(/usr/bin/python3 "$CAT_DIR/cat-family.py" resolve "$EXPLICIT_MEMBER" 2>/dev/null | tail -1)
+  IFS=$'\t' read -r MEMBER_ID DISPLAY PROFILE <<< "$WHO_LINE"
+  MEMBER_ID="${MEMBER_ID:-$EXPLICIT_MEMBER}"
+  PROFILE="${PROFILE:-play}"
+  echo "👤 指定: ${DISPLAY:-$MEMBER_ID}（${PROFILE}）"
+else
+  # 未指定时：WiFi/ARP 只在恰好一名可互动成人时认人；多个手机不猜；不自动对小朋友开口
+  SUGGEST=$(/usr/bin/python3 "$CAT_DIR/cat-presence.py" suggest --clip "$PCM" 2>/dev/null | tail -1)
+  SUGGEST="${SUGGEST:-unknown}"
+  if [ -n "$SUGGEST" ] && [ "$SUGGEST" != "unknown" ]; then
+    WHO_LINE=$(/usr/bin/python3 "$CAT_DIR/cat-family.py" resolve "$SUGGEST" 2>/dev/null | tail -1)
+    IFS=$'\t' read -r MEMBER_ID DISPLAY PROFILE <<< "$WHO_LINE"
+    MEMBER_ID="${MEMBER_ID:-$SUGGEST}"
+    PROFILE="${PROFILE:-play}"
+    echo "👤 在场: ${DISPLAY:-$MEMBER_ID}（${PROFILE}）"
+  else
+    WHO_LINE=$(/usr/bin/python3 "$CAT_DIR/cat-family.py" who "$PCM" 2>/dev/null | tail -1)
+    IFS=$'\t' read -r MEMBER_ID DISPLAY PROFILE SCORE <<< "$WHO_LINE"
+  fi
+fi
 MEMBER_ID="${MEMBER_ID:-unknown}"
 PROFILE="${PROFILE:-play}"
 case "$PROFILE" in
@@ -43,7 +69,9 @@ if [ "$MEMBER_ID" = "unknown" ] || [ -z "$MEMBER_ID" ]; then
   fi
   export TANGTANG_PROFILE="$PROFILE"
 else
-  echo "👤 识别: ${DISPLAY}（${PROFILE}，置信 ${SCORE}）"
+  if [ -n "${SCORE:-}" ]; then
+    echo "👤 识别: ${DISPLAY}（${PROFILE}，置信 ${SCORE}）"
+  fi
   if tangtang_child_at_school "$MEMBER_ID"; then
     echo "[糖糖] 上学期间不跟${DISPLAY}互动（按作息还没到家）"
     rm -f "$PCM"

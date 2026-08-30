@@ -32,6 +32,12 @@ else
 fi
 
 echo
+echo "客厅在场（WiFi/ARP 认人；短窗能量只判断有没有人说话；声纹不作主路径）："
+if [ -f "$CAT_DIR/cat-presence.py" ]; then
+  /usr/bin/python3 "$CAT_DIR/cat-presence.py" hint --no-log 2>/dev/null || true
+fi
+
+echo
 echo "手机网段："
 if [ -z "${TANGTANG_HOST_QIAQIA:-}" ] && [ -z "${TANGTANG_HOST_HANGHANG:-}" ]; then
   echo "  未配置手机 IP。周末提醒仍需要填写才能看出门。"

@@ -277,6 +277,17 @@ class TestNoNewMicDaemon(unittest.TestCase):
         self.assertNotIn("while True", src)
         self.assertIn("already-captured", src)
 
+    def test_example_config_is_placeholders(self):
+        path = ROOT / "config" / "tangtang-presence.example.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        self.assertIn("devices", data)
+        self.assertIn("grandpa", data["devices"])
+        self.assertNotIn("mom", data["devices"])
+        self.assertNotIn("妈妈", data["devices"])
+        blob = path.read_text(encoding="utf-8")
+        self.assertIn("00:11:22:33:44:01", blob)
+        self.assertIn("never commit real family addresses", blob)
+
 
 if __name__ == "__main__":
     unittest.main()

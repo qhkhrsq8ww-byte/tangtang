@@ -23,6 +23,7 @@ check "unknown stays unknown" "$PY" "$ROOT/code/cat/tangtang-profile.py" --speak
 check "chat syntax" "$PY" -m py_compile "$ROOT/code/cat/cat-chat.py"
 check "resolver syntax" "$PY" -m py_compile "$ROOT/code/cat/tangtang-profile.py"
 check "quiet syntax" "$PY" -m py_compile "$ROOT/code/cat/tangtang-quiet-hours.py"
+check "presence syntax" "$PY" -m py_compile "$ROOT/code/cat/cat-presence.py"
 check "voice syntax" bash -n "$ROOT/code/cat/cat-voice.sh"
 check "talk syntax" bash -n "$ROOT/code/cat/cat-talk.sh"
 

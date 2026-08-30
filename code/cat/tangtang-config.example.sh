@@ -47,6 +47,10 @@ export TANGTANG_CHILD_NAME="小朋友"
 export TANGTANG_HOST_QIAQIA=""
 export TANGTANG_HOST_HANGHANG=""
 export TANGTANG_REQUIRE_PRESENCE=1
+# 五口在场设备（MAC/hostname/IP）见仓库 config/tangtang-presence.example.json
+# 复制到本机数据目录 tangtang-presence.json，只填占位示例以外的真地址，不要提交 Git。
+# 声纹不当主路径，也不给小朋友建声纹。
+# export TANGTANG_PRESENCE_CONFIG="$HOME/Library/Application Support/Tangtang/tangtang-presence.json"
 
 # 投影 AirPlay（按家里局域网修改；这轮语音提醒不用）
 export TANGTANG_PROJECTOR_IP="192.168.31.104"

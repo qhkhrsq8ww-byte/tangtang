@@ -24,7 +24,7 @@
 #   ./cat.sh english qiaqia   # 试洽洽六年级英语小伴读
 #   ./cat.sh turn             # 客厅试听：说一句 → 录音窗 → 回或不回
 #   ./cat.sh reactions        # 预览各场景糖糖怎么反应（不开麦）
-#   ./cat.sh presence         # 看洽洽/航航是否在客厅网段
+#   ./cat.sh presence         # 客厅在场：WiFi/ARP + 作息（声纹不作主路径）
 #   ./cat.sh data             # 看记忆文件写在本机哪
 #   ./cat.sh chat "想聊的"     # 云端真对话
 # ============================================================
@@ -94,7 +94,8 @@ while [ $# -gt 0 ]; do
    ./cat.sh "想说的话"    ./cat.sh chat "聊几句"
 
 2. 认人与习惯
-   声纹只回答「是谁」；习惯按爷爷/奶奶/爸爸/洽洽/航航分开记。
+   客厅在场先看 WiFi/ARP，短窗能量只判断有没有人说话；声纹不当主路径。
+   习惯按爷爷/奶奶/爸爸/洽洽/航航分开记。
    习惯会记在客厅 Mac，不记小朋友原话。
    糖糖根据配合/沉默/反对，自己少说、说得更准时；不上传训练。
    ./cat.sh habits
@@ -164,7 +165,7 @@ EOF
     data)
       echo "记忆目录（Mac Air 本机硬盘，不写路由器）"
       echo "$TANGTANG_DATA_DIR"
-      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|habit-growth|voiceprints|chat-history|remind-log|turn-ledger)' || true
+      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|habit-growth|voiceprints|presence|chat-history|remind-log|turn-ledger)' || true
       exit 0
       ;;
     chat) CHAT_REQ=1; shift;;

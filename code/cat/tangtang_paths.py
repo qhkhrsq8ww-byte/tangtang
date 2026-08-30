@@ -22,6 +22,8 @@ MEMORY_FILES = (
     "cat-remind-log.txt",
     "cat-turn-ledger.json",
     "cat-habit-growth.json",
+    "cat-presence.json",
+    "cat-presence-seen.json",
 )
 
 
