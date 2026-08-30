@@ -8,6 +8,8 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
 . "$SCRIPT_DIR/cat-lib.sh"
+# 客厅生产对话走 V4 PrivacyPolicy / TangTangRuntime（LLM 不决定隐私）
+export TANGTANG_V4_PIPELINE=1
 
 DUR="${1:-5}"
 PCM="/tmp/tangtang_voice.pcm"

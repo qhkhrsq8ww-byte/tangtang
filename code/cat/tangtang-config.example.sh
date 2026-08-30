@@ -2,6 +2,9 @@
 # 复制为 tangtang-config.sh 后按家庭填写。tangtang-config.sh 不入库。
 #   cp tangtang-config.example.sh tangtang-config.sh
 
+# 客厅生产对话走 V4 PrivacyPolicy，不让 LLM 决定隐私/权限。单测 V3 拼接可设 =0。
+export TANGTANG_V4_PIPELINE=1
+
 # play=航航对话；friend=洽洽对话。语音识别成功后按名册覆盖。
 export TANGTANG_PROFILE="play"
 

@@ -198,6 +198,7 @@ if tangtang_is_school_day && tangtang_child_at_school hanghang && tangtang_child
 fi
 
 if [ "$CHAT_REQ" = "1" ]; then
+  export TANGTANG_V4_PIPELINE=1
   if tangtang_projector_on; then
     tangtang_ensure_stage
   fi

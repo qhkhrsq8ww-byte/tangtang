@@ -6,7 +6,7 @@
 - 声纹只回答「是谁」
 - 习惯库回答「这个人今天/最近发生了什么」
 - unknown 不绑定到任何成员
-- 儿童原话默认可进本机私有记录，但不进入家庭共享摘要
+- 儿童原话不进入家庭共享摘要，也不写入 cat-habits.json（PrivacyPolicy）
 - 习惯流水只写本机硬盘，不入库、不写路由器盘（cat-habits.json）
 
 用法:
@@ -176,17 +176,40 @@ def _parse_ts(ts):
         return None
 
 
+def _habit_store_text(who, text):
+    """Reuse PrivacyPolicy: child / PRIVATE / no-habit-store omit raw utterance."""
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+    try:
+        root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        from core.policy.privacy_policy import PrivacyPolicy
+
+        decision = PrivacyPolicy().classify(member_id=who, utterance=raw)
+        if not decision.allow_habit_store or decision.is_child or decision.privacy == "PRIVATE":
+            return ""
+    except Exception:
+        member = resolve_member(who)
+        if member and member.get("relation") == "child":
+            return ""
+    return raw[:200]
+
+
 def observe(who, text="", source="voice", event_type=None, confidence=None):
     member = resolve_member(who)
     member_id = (member or {}).get("member_id") or "unknown"
+    raw_text = text or ""
     if member_id == "unknown":
-        text = ""
+        stored_text = ""
         event_type = "conversation"
         privacy = "public"
     else:
-        event_type = event_type if event_type in EVENT_TYPES else classify_text(text)
+        event_type = event_type if event_type in EVENT_TYPES else classify_text(raw_text)
         share = bool((member.get("permissions") or {}).get("family_summary"))
         privacy = "family" if share else "private"
+        stored_text = _habit_store_text(who or member_id, raw_text)
     ts = now()
     entry = {
         "event_id": "evt_" + uuid.uuid4().hex[:12],
@@ -196,7 +219,7 @@ def observe(who, text="", source="voice", event_type=None, confidence=None):
         "source": source,
         "confidence": confidence,
         "privacy": privacy,
-        "text": (text or "")[:200],
+        "text": stored_text,
     }
     data = load_habits()
     data["events"].append(entry)
