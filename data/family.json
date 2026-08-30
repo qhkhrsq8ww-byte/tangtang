@@ -1,0 +1,61 @@
+{
+  "version": "2.0",
+  "family_id": "home",
+  "note": "五口之家名册。声纹与习惯流水只存在客厅 Mac Air 本机硬盘（~/Library/Application Support/Tangtang），不入库，不写路由器硬盘。正式名：爷爷/奶奶/爸爸/洽洽/航航。姐姐→qiaqia、弟弟→hanghang 只作别名。",
+  "members": [
+    {
+      "member_id": "grandpa",
+      "display_name": "爷爷",
+      "relation": "grandfather",
+      "age": null,
+      "profile": "elder",
+      "aliases": ["爷爷", "grandpa", "grandfather", "外公"],
+      "permissions": {"self_private": true, "family_summary": true},
+      "preferences": {"preferred_greeting": "爷爷"}
+    },
+    {
+      "member_id": "grandma",
+      "display_name": "奶奶",
+      "relation": "grandmother",
+      "age": null,
+      "profile": "elder",
+      "aliases": ["奶奶", "grandma", "grandmother", "外婆"],
+      "permissions": {"self_private": true, "family_summary": true},
+      "preferences": {"preferred_greeting": "奶奶"}
+    },
+    {
+      "member_id": "dad",
+      "display_name": "爸爸",
+      "relation": "father",
+      "age": null,
+      "profile": "adult",
+      "aliases": ["爸爸", "爸", "dad", "父亲"],
+      "permissions": {"self_private": true, "family_summary": true},
+      "preferences": {"preferred_greeting": "爸爸"}
+    },
+    {
+      "member_id": "qiaqia",
+      "display_name": "洽洽",
+      "relation": "child",
+      "age": 12,
+      "profile": "friend",
+      "aliases": ["洽洽", "qiaqia", "姐姐", "child_12", "12岁姐姐", "12岁女孩", "girl"],
+      "permissions": {"self_private": true, "family_summary": false},
+      "preferences": {"preferred_greeting": "洽洽", "english_grade": 6, "english_book": "译林牛津"}
+    },
+    {
+      "member_id": "hanghang",
+      "display_name": "航航",
+      "relation": "child",
+      "age": 9,
+      "profile": "play",
+      "aliases": ["航航", "hanghang", "弟弟", "child_9", "9岁弟弟", "9岁男孩", "boy"],
+      "permissions": {"self_private": true, "family_summary": false},
+      "preferences": {"preferred_greeting": "航航", "english_grade": 2, "english_book": "译林牛津"}
+    }
+  ],
+  "behavior_event_types": [
+    "wake", "sleep", "meal", "water", "exercise", "screen",
+    "study", "work", "outdoor", "home", "away", "chore", "conversation", "mood_signal"
+  ]
+}

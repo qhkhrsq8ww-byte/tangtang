@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/cat-lib.sh"
 
 tangtang_ensure_stage
+tangtang_ensure_pet
 
 echo "🐾 糖糖全屏舞台已启动。"
 echo "   1) 菜单栏『屏幕镜像』选投影（不弹窗、不遮挡）。"

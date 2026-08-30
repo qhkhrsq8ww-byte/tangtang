@@ -1,0 +1,25 @@
+# ===== 猫咪小橘 · 主动陪伴时刻表 =====
+# 早安 7:30
+30 7 * * * /Users/lv/.qclaw/workspace/cat/cat-remind.sh wake >/dev/null 2>&1
+# 午饭 12:00
+0 12 * * * /Users/lv/.qclaw/workspace/cat/cat-remind.sh meal lunch >/dev/null 2>&1
+# 随机撒娇 15:00（大脑约60%概率开口，不烦人）
+0 15 * * * /Users/lv/.qclaw/workspace/cat/cat-remind.sh random >/dev/null 2>&1
+# 晚饭 18:30
+30 18 * * * /Users/lv/.qclaw/workspace/cat/cat-remind.sh meal dinner >/dev/null 2>&1
+# 晚8点起每40分钟：提醒休息眼睛
+*/40 20-21 * * * /Users/lv/.qclaw/workspace/cat/cat-remind.sh rest >/dev/null 2>&1
+# 晚10:30：睡觉提醒
+30 22 * * * /Users/lv/.qclaw/workspace/cat/cat-remind.sh sleep >/dev/null 2>&1
+30 17 * * 1-5 /Users/lv/.qclaw/workspace/cat/cat-remind.sh play >/dev/null 2>&1
+30 14 * * 6,0 /Users/lv/.qclaw/workspace/cat/cat-remind.sh play >/dev/null 2>&1
+0 16 * * * /Users/lv/.qclaw/workspace/cat/cat-remind.sh homework >/dev/null 2>&1
+40 16 * * * /Users/lv/.qclaw/workspace/cat/cat-remind.sh tidy >/dev/null 2>&1
+30 15 * * * /Users/lv/.qclaw/workspace/cat/cat-remind.sh water >/dev/null 2>&1
+0 11 * * * /Users/lv/.qclaw/workspace/cat/cat-remind.sh exercise >/dev/null 2>&1
+# 2026-08-28 07:00 糖糖唤醒音乐（3分钟）
+# 2026-08-28 07:03 糖糖喊航航起床
+# 2026-08-28 07:00 糖糖唤醒音乐（1分钟）
+0 7 28 8 * /Users/lv/.qclaw/workspace/cat/wake-music.sh >/dev/null 2>&1
+# 2026-08-28 07:01 糖糖喊航航起床
+1 7 28 8 * /Users/lv/.qclaw/workspace/cat/cat-say.sh "航航～糖糖喊你起床啦！太阳都晒屁股咯，新的一天开始啦～" cute >/dev/null 2>&1

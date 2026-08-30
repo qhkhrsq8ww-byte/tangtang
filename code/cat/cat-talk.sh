@@ -2,13 +2,35 @@
 # ============================================================
 # 糖糖 · 智能说话（接大脑 + 情绪音色）
 # 用法: ./cat-talk.sh <事件> [参数]
+#   事件含: greet/wake/alarm/english/sleep/rest/meal/water/exercise/play/pet_walk/pet_water/pet_food/pet_groom ...
 # 大脑决定话术+情绪 → 按情绪选音色 → 更新画面 → 出声
+# 夜间主动提醒受统一 quiet-hours 闸门保护（22:30–07:00，speech_allowed=false）。
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
 . "$SCRIPT_DIR/cat-lib.sh"
 
 MOOD_FILE="$CAT_DIR/cat-mood.txt"
+
+# 互动设/取消闹铃：在静默闸门和大脑之前。响铃本身走 cat-alarm.py → cat-say.sh。
+if [ "${1:-}" = "say" ] && [ -n "${2:-}" ]; then
+  alarm_line="$(/usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$2" 2>/dev/null || true)"
+  if [ -n "$alarm_line" ]; then
+    echo "[idle] $alarm_line" > "$MOOD_FILE"
+    echo "$alarm_line"
+    if [ "${TANGTANG_TTS:-1}" != "0" ]; then
+      "$CAT_DIR/cat-say.sh" "$alarm_line" cute
+    fi
+    exit 0
+  fi
+fi
+
+if [ "${TANGTANG_INTERACTIVE:-0}" != "1" ]; then
+  quiet="$(/usr/bin/python3 "$CAT_DIR/tangtang-quiet-hours.py" 2>/dev/null || echo speak)"
+  if [ "$quiet" = "quiet" ]; then
+    exit 0
+  fi
+fi
 
 result="$(/usr/bin/python3 "$CAT_DIR/cat-brain.py" "$@")"
 state="idle"
@@ -26,6 +48,17 @@ if [ -z "$text" ]; then
 fi
 
 echo "[$state] $text" > "$MOOD_FILE"
+echo "$text"
+
+if [ "${TANGTANG_TTS:-1}" = "0" ]; then
+  exit 0
+fi
+
+# 英语小伴读与闹铃同一条出声路径（cat-say → 默认蓝牙音箱）。不另开音箱。
+if [ "${1:-}" = "english" ]; then
+  "$CAT_DIR/cat-say.sh" "$text" cute
+  exit 0
+fi
 
 speak_with_fallback() {
   local rate="$1"

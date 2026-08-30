@@ -1,0 +1,29 @@
+{
+  "comment": "Copy to the living-room Mac data dir as tangtang-presence.json (not git). Placeholder MAC/IP/hostname only — never commit real family addresses. WiFi/ARP is the identity path. Mic RMS only answers speech-in-room on the current cat-listen clip. Voiceprint is not used; do not enroll children.",
+  "rms_threshold": 300,
+  "devices": {
+    "grandpa": {
+      "mac": "00:11:22:33:44:01",
+      "hostname": "grandpa-phone.local",
+      "ip": "192.168.31.21"
+    },
+    "grandma": {
+      "comment": "grandparents often have no phone; omit or leave empty"
+    },
+    "dad": {
+      "mac": "00:11:22:33:44:03",
+      "hostname": "dad-phone.local",
+      "ip": "192.168.31.23"
+    },
+    "qiaqia": {
+      "mac": "00:11:22:33:44:04",
+      "hostname": "qiaqia-iphone.local",
+      "ip": "192.168.31.24"
+    },
+    "hanghang": {
+      "mac": "00:11:22:33:44:05",
+      "hostname": "hanghang-iphone.local",
+      "ip": "192.168.31.25"
+    }
+  }
+}

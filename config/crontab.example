@@ -1,0 +1,17 @@
+# 糖糖用户 crontab 示例（当前用户 crontab，不要 root）
+# 安装前把 $TANGTANG_HOME 换成本机路径，或 envsubst
+# 所有路径必须在 $TANGTANG_HOME 下。禁止写死旧工作区绝对路径。
+#
+SHELL=/bin/bash
+# 工作日起床提醒
+30 7 * * 1-5 $TANGTANG_HOME/code/cat/cat-remind.sh wake >/dev/null 2>&1
+# 午饭
+0 12 * * * $TANGTANG_HOME/code/cat/cat-remind.sh meal lunch >/dev/null 2>&1
+# 晚饭
+30 18 * * * $TANGTANG_HOME/code/cat/cat-remind.sh meal dinner >/dev/null 2>&1
+# 睡觉
+30 22 * * * $TANGTANG_HOME/code/cat/cat-remind.sh sleep >/dev/null 2>&1
+# 用户闹铃（cat-alarms.json）：每分钟看一眼，到期走 cat-say（同一只蓝牙音箱=系统默认输出）
+# 夜间 22:30–07:00 静默不挡这只响铃。不要在本仓库 Linux 上 crontab -e。
+# Mac launchd 也可用 StartInterval 60 调同一条 due --ring。
+* * * * * $TANGTANG_HOME/code/cat/cat-alarm.py due --ring >/dev/null 2>&1

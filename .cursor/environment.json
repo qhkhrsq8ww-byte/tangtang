@@ -1,0 +1,17 @@
+{
+  "name": "糖糖 AI (TangTang AI)",
+  "install": "cd code/cat && npm install",
+  "terminals": [
+    {
+      "name": "stage-server",
+      "command": "cd code/cat && python3 -m http.server 8080 --bind 127.0.0.1",
+      "description": "糖糖投影舞台静态服务器：浏览器打开 http://127.0.0.1:8080/cat-desktop-pet.html 预览 17 状态视频宠物（cat-stage.html、tangtang-states.html 同目录）。"
+    }
+  ],
+  "ports": [
+    {
+      "name": "stage",
+      "port": 8080
+    }
+  ]
+}
