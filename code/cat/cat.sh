@@ -17,6 +17,7 @@
 #   ./cat.sh openclaw --preview
 #   ./cat.sh openclaw --now --submit   # 四步自测并提交 GitHub 报告
 #   ./cat.sh openclaw-report
+#   ./cat.sh openclaw-today   # 等到 14/15/16/17 整点再做四步
 #   ./cat.sh schedule         # 今天时刻表会响哪些
 #   ./cat.sh features         # 糖糖有哪些功能
 #   ./cat.sh alarm            # 用户闹铃到期检查并响（走 cat-say）
@@ -66,6 +67,7 @@ while [ $# -gt 0 ]; do
       ;;
     openclaw)
       shift
+<<<<<<< HEAD
       exec "$CAT_DIR/cat-openclaw.sh" "$@"
       ;;
     openclaw-report)
@@ -79,6 +81,17 @@ while [ $# -gt 0 ]; do
     today-report)
       shift
       exec /usr/bin/python3 "$CAT_DIR/cat-turn.py" today-report "$@"
+=======
+      exec "$CAT_DIR/openclaw-today.sh" "$@"
+      ;;
+    hwcheck)
+      shift
+      exec "$CAT_DIR/openclaw-today.sh" hwcheck "$@"
+      ;;
+    today-report)
+      shift
+      exec "$CAT_DIR/openclaw-today.sh" today-report "$@"
+>>>>>>> origin/cursor/openclaw-plan-449b
       ;;
     schedule)
       shift
@@ -138,6 +151,7 @@ while [ $# -gt 0 ]; do
    小朋友在家时，客厅依次完成四项：打招呼听一句、译林英语一句、动一动、歇一会儿。
    一步一句，再听窗，不连着念。默认航航玩伴；洽洽用 --who qiaqia。
    试：./cat.sh today    ./cat.sh today hanghang    ./cat.sh today --preview
+<<<<<<< HEAD
    标签摘要（无原话）：./cat.sh today-report
 
 9. OpenClaw 田间报告（只含标签，不含小朋友原话）
@@ -146,6 +160,16 @@ while [ $# -gt 0 ]; do
    ./cat.sh openclaw --now --submit
    ./cat.sh openclaw-report
    自检：./cat.sh hwcheck
+=======
+
+9. OpenClaw 客厅下午实测（2013 MacBook Air）
+   休息日 · 航航 · 14:00问糖糖 → 15:00英语 → 16:00锻炼 → 17:00休息
+   先 hwcheck，再一步一句一听窗。沉默不追问。账本只写标签。
+   ./cat.sh openclaw --preview
+   ./cat.sh openclaw --now          # 已是下午、一次跑完
+   ./cat.sh openclaw                # 没到点等到那个整点
+   ./cat.sh hwcheck    ./cat.sh today-report
+>>>>>>> origin/cursor/openclaw-plan-449b
 EOF
       exit 0
       ;;
