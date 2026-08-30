@@ -13,7 +13,7 @@
 V4: 新对话路径是 core.adapters.chat_adapter.ChatAdapter（必经 PrivacyPolicy）。
 本 CLI 默认仍是 V3 拼接 prompt；TANGTANG_V4_PIPELINE=1 走新路径。不要删除本文件。
 """
-import os, sys, json, urllib.request, argparse, subprocess, re
+import os, sys, json, urllib.request, argparse, subprocess, re, importlib.util
 
 BASE = os.environ.get("QCLAW_LLM_BASE_URL", "http://127.0.0.1:19000/proxy/llm")
 KEY = os.environ.get("QCLAW_LLM_API_KEY", "")
@@ -193,6 +193,17 @@ def brain_fallback(user_text):
     return sanitize_output((r.stdout or FALLBACK_REPLY).strip().split("\t")[0])
 
 
+def _alarm_reply(text):
+    """Deterministic set/cancel before any LLM. None if not an alarm intent."""
+    path = os.path.join(CAT_DIR, "cat-alarm.py")
+    if not os.path.isfile(path):
+        return None
+    spec = importlib.util.spec_from_file_location("tangtang_alarm_chat", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.handle_utterance(text)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("text", nargs="?", default="", help="小朋友说的话")
@@ -201,6 +212,12 @@ def main():
 
     if not args.text.strip():
         args.text = "糖糖，我来啦"
+
+    # 闹铃设/取消：本地解析 + JSON，LLM 不决定 crontab / TTS / 隐私。
+    alarm_line = _alarm_reply(args.text)
+    if alarm_line:
+        print(alarm_line)
+        return
 
     # V3 CLI concatenates prompts from local JSON and can skip V4 PrivacyPolicy.
     # New path: ChatAdapter / TangTangRuntime (cannot skip the privacy gate).

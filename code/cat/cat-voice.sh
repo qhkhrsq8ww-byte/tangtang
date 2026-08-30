@@ -92,6 +92,16 @@ if [ -z "$TEXT" ]; then
 fi
 
 echo "   你说: $TEXT"
+# 闹铃设/取消在 LLM 之前：本地解析，固定汪汪回复。不把原话当习惯。
+ALARM_LINE=$(/usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$TEXT" 2>/dev/null || true)
+if [ -n "$ALARM_LINE" ]; then
+  echo "   糖糖: $ALARM_LINE"
+  printf '%s\n' "[idle] $ALARM_LINE" > "$CAT_DIR/cat-mood.txt"
+  "$CAT_DIR/cat-say.sh" "$ALARM_LINE" cute
+  rm -f "$PCM"
+  exit 0
+fi
+
 if [ "$MEMBER_ID" != "unknown" ]; then
   /usr/bin/python3 "$CAT_DIR/cat-family.py" observe "$MEMBER_ID" "$TEXT" >/dev/null 2>&1 || true
 else

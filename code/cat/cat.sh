@@ -19,7 +19,10 @@
 #   ./cat.sh openclaw-report
 #   ./cat.sh schedule         # 今天时刻表会响哪些
 #   ./cat.sh features         # 糖糖有哪些功能
-#   ./cat.sh alarm            # 立刻试上学闹铃（跳过日期）
+#   ./cat.sh alarm            # 用户闹铃到期检查并响（走 cat-say）
+#   ./cat.sh alarm list       # 列出用户闹铃
+#   ./cat.sh alarm cancel     # 取消用户闹铃
+#   ./cat.sh alarm school     # 立刻试上学闹铃（跳过日期）
 #   ./cat.sh english          # 试航航二年级英语小伴读
 #   ./cat.sh english qiaqia   # 试洽洽六年级英语小伴读
 #   ./cat.sh turn             # 客厅试听：说一句 → 录音窗 → 回或不回
@@ -105,10 +108,13 @@ while [ $# -gt 0 ]; do
    上学日白天只跟爷爷奶奶说（航航16:00到、洽洽18:00到）。
    周末/晚上才看出门。  ./cat.sh preview    ./cat.sh presence
 
-4. 上学闹铃
+4. 上学闹铃 + 用户闹铃
    上学日 06:30 铃+说话；周末和节假日休息；调休上课日也响。
    卧室也要听到，不看出门检测。开学前 07:30 仍用普通早安。
-   试听：./cat.sh alarm
+   也可以对糖糖说「明早七点叫我」「设个7:30的闹铃」「取消闹铃」。
+   用户闹铃走同一只蓝牙音箱（系统默认输出）；夜间静默不挡响铃。
+   试听上学闹铃：./cat.sh alarm school
+   用户闹铃：./cat.sh alarm list    ./cat.sh alarm cancel
 
 5. 本机记性
    状态/习惯/声纹/对话只写 Mac Air 硬盘，不写路由器盘。
@@ -144,7 +150,29 @@ EOF
       exit 0
       ;;
     alarm)
-      exec "$CAT_DIR/cat-schedule.sh" fire --force alarm school
+      shift
+      case "${1:-}" in
+        school)
+          exec "$CAT_DIR/cat-schedule.sh" fire --force alarm school
+          ;;
+        list)
+          exec /usr/bin/python3 "$CAT_DIR/cat-alarm.py" list
+          ;;
+        cancel)
+          shift
+          exec /usr/bin/python3 "$CAT_DIR/cat-alarm.py" cancel "${1:-all}"
+          ;;
+        set)
+          shift
+          exec /usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$*"
+          ;;
+        due|ring|"")
+          exec /usr/bin/python3 "$CAT_DIR/cat-alarm.py" due --ring
+          ;;
+        *)
+          exec /usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$*"
+          ;;
+      esac
       ;;
     english)
       shift
@@ -165,7 +193,7 @@ EOF
     data)
       echo "记忆目录（Mac Air 本机硬盘，不写路由器）"
       echo "$TANGTANG_DATA_DIR"
-      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|habit-growth|voiceprints|presence|chat-history|remind-log|turn-ledger)' || true
+      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|habit-growth|voiceprints|presence|chat-history|remind-log|turn-ledger|alarms)' || true
       exit 0
       ;;
     chat) CHAT_REQ=1; shift;;

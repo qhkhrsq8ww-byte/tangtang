@@ -29,6 +29,7 @@ code/cat/tangtang-presence.json
 code/cat/cat-habits.json
 code/cat/cat-habit-growth.json
 code/cat/cat-turn-ledger.json
+code/cat/cat-alarms.json
 .env
 __pycache__/
 *.pyc

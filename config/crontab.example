@@ -11,3 +11,7 @@ SHELL=/bin/bash
 30 18 * * * $TANGTANG_HOME/code/cat/cat-remind.sh meal dinner >/dev/null 2>&1
 # 睡觉
 30 22 * * * $TANGTANG_HOME/code/cat/cat-remind.sh sleep >/dev/null 2>&1
+# 用户闹铃（cat-alarms.json）：每分钟看一眼，到期走 cat-say（同一只蓝牙音箱=系统默认输出）
+# 夜间 22:30–07:00 静默不挡这只响铃。不要在本仓库 Linux 上 crontab -e。
+# Mac launchd 也可用 StartInterval 60 调同一条 due --ring。
+* * * * * $TANGTANG_HOME/code/cat/cat-alarm.py due --ring >/dev/null 2>&1

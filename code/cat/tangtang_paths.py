@@ -24,6 +24,7 @@ MEMORY_FILES = (
     "cat-habit-growth.json",
     "cat-presence.json",
     "cat-presence-seen.json",
+    "cat-alarms.json",
 )
 
 

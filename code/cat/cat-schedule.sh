@@ -152,6 +152,8 @@ case "$CMD" in
     echo "TANGTANG_REMIND_PROFILE=friend"
     echo "TANGTANG_SCHOOL_START=2026-09-01"
     echo "TANGTANG_TURN_EVENTS=english"
+    echo "# 用户闹铃：每分钟读 cat-alarms.json，到期走 cat-say（默认输出/蓝牙音箱）。静默不挡响。"
+    echo "* * * * * $CAT_DIR/cat-alarm.py due --ring"
     while read -r line; do
       [ -n "$line" ] || continue
       tangtang_parse_schedule_line "$line"

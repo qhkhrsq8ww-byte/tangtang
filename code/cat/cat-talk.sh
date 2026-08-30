@@ -12,6 +12,19 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 MOOD_FILE="$CAT_DIR/cat-mood.txt"
 
+# 互动设/取消闹铃：在静默闸门和大脑之前。响铃本身走 cat-alarm.py → cat-say.sh。
+if [ "${1:-}" = "say" ] && [ -n "${2:-}" ]; then
+  alarm_line="$(/usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$2" 2>/dev/null || true)"
+  if [ -n "$alarm_line" ]; then
+    echo "[idle] $alarm_line" > "$MOOD_FILE"
+    echo "$alarm_line"
+    if [ "${TANGTANG_TTS:-1}" != "0" ]; then
+      "$CAT_DIR/cat-say.sh" "$alarm_line" cute
+    fi
+    exit 0
+  fi
+fi
+
 if [ "${TANGTANG_INTERACTIVE:-0}" != "1" ]; then
   quiet="$(/usr/bin/python3 "$CAT_DIR/tangtang-quiet-hours.py" 2>/dev/null || echo speak)"
   if [ "$quiet" = "quiet" ]; then

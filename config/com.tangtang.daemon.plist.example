@@ -4,6 +4,7 @@
 <dict>
   <key>Label</key><string>com.tangtang.daemon</string>
   <!-- 部署时把 __TANGTANG_HOME__ 换成本机 TANGTANG_HOME 绝对路径。只装用户 LaunchAgent。 -->
+  <!-- 用户闹铃每分钟检查请用 crontab.example 的 due --ring，或另建 StartInterval 60；不要接到本 KeepAlive 守护。 -->
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
