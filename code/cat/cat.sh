@@ -250,7 +250,14 @@ if [ "$CHAT_REQ" = "1" ]; then
   if [ -z "$TEXT" ]; then
     TEXT="糖糖，我来啦"
   fi
+  who="${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}"
+  if [ "$(/usr/bin/python3 "$CAT_DIR/tangtang-speak-gate.py" --channel chat --member "$who")" != "speak" ]; then
+    exit 0
+  fi
   reply="$(/usr/bin/python3 "$CAT_DIR/cat-chat.py" "$TEXT")"
+  if [ -z "$reply" ]; then
+    exit 0
+  fi
   echo "[idle] $reply" > "$MOOD_FILE"
   "$CAT_DIR/cat-say.sh" "$reply" cute
   echo "[糖糖·云端对话] 回复：$reply"

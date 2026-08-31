@@ -15,12 +15,14 @@ from __future__ import annotations
 import importlib.util
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from core.adapters.family_loader import load_members
 from core.ingest import IngestResult, PrivacyPipeline
 from core.policy.injection import InjectionGuard
+from core.policy.speak_gate import decide as speak_decide, may_call_llm
 from core.response.orchestrator import PresentationAction
 from core.runtime.isolate import isolate
 
@@ -52,7 +54,7 @@ def _filtered_prompt(context: Mapping[str, Any]) -> str:
     member_id = who.get("member_id") if isinstance(who, Mapping) else None
     scope = context.get("privacy_scope") or "PRIVATE"
     family = context.get("family") if isinstance(context.get("family"), Mapping) else {}
-    # Family snapshot must already be structured / non-PRIVATE.
+    # Family snapshot must already be structured / non-PRIVATE. No raw history.
     family_bits = []
     for key in ("mood", "interaction_count", "summary"):
         if key in family and family[key] not in (None, ""):
@@ -65,6 +67,17 @@ def _filtered_prompt(context: Mapping[str, Any]) -> str:
         parts.append("family[" + ",".join(str(b) for b in family_bits) + "]")
     parts.append("utterance=" + utterance)
     return "\n".join(parts)
+
+
+def _llm_payload(context: Mapping[str, Any], utterance: str, who: Mapping[str, Any], scope: str) -> dict[str, Any]:
+    """Slim dict only. No memory / recent / child raw history."""
+    return {
+        "_filtered_prompt": _filtered_prompt(context),
+        "utterance": utterance,
+        "who": dict(who),
+        "privacy_scope": scope,
+        "scene": context.get("scene"),
+    }
 
 
 @dataclass
@@ -114,6 +127,29 @@ class ChatAdapter:
         ingested = self.pipeline.ingest(text, obs)
         who_id = viewer_id or ingested.decision.member_id
         who = {"member_id": who_id}
+        now = obs.get("now")
+        when = now if isinstance(now, datetime) else None
+        decision = speak_decide(
+            obs,
+            now=when,
+            channel="chat",
+            policy=self.pipeline.interrupt,
+            live=bool(obs.get("live")),
+        )
+        if not may_call_llm(decision):
+            ctx = {
+                "who": who,
+                "utterance": text,
+                "policy_decision": decision,
+                "privacy_scope": ingested.decision.privacy,
+            }
+            return ChatTurn(
+                action=self.pipeline.orchestrator.run(
+                    decision=decision, context=ctx, action="idle"
+                ),
+                ingest=ingested,
+                context=ctx,
+            )
         if self._injection.is_injection(text):
             ctx = {
                 "who": who,
@@ -145,11 +181,9 @@ class ChatAdapter:
         ctx["utterance"] = text
         ctx["scene"] = obs.get("scene")
         ctx["event_id"] = ingested.event.id
-        decision = self.pipeline.interrupt.decide(obs)
-        if self._llm is not None and decision == "SPEAK":
+        if self._llm is not None and may_call_llm(decision):
             ctx["skip_persona"] = True
-            prompt_ctx = dict(ctx)
-            prompt_ctx["_filtered_prompt"] = _filtered_prompt(ctx)
+            prompt_ctx = _llm_payload(ctx, text, who, scope)
 
             def _call_llm() -> str:
                 return str(self._llm(prompt_ctx))

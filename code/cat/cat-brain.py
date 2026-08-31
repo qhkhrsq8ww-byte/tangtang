@@ -454,11 +454,34 @@ def _turn_gate_ok(event, arg=""):
 # V4 Round 1: core.compat.should_interrupt is the future policy port.
 # This cooldown gate stays. Do not delete. cat-* may later also consult:
 #   from core.compat import should_interrupt
+def _policy_may_speak(event, arg=""):
+    """Unified quiet / school gate. Alarm always may speak (ring is separate)."""
+    if event == "alarm":
+        return True
+    path = os.path.join(CAT_DIR, "tangtang-speak-gate.py")
+    spec = importlib.util.spec_from_file_location("tangtang_speak_gate_brain", path)
+    if not spec or not spec.loader:
+        return True
+    try:
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        who = habit_who(event, arg)
+        return mod.check_speak(channel="remind", member=who, event=event) == "SPEAK"
+    except Exception:
+        return True
+
+
 def should_speak(state, event, arg=""):
-    if event in USER_EVENTS:
+    if event == "alarm":
+        pass
+    elif event in USER_EVENTS:
+        if not _policy_may_speak(event, arg):
+            return False
         return True
     if not arg:
         arg = sys.argv[2] if len(sys.argv) > 2 else ""
+    if event != "alarm" and not _policy_may_speak(event, arg):
+        return False
     if not _turn_gate_ok(event, arg):
         return False
     if not habits_should_speak(event, arg):

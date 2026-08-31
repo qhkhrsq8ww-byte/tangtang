@@ -14,6 +14,7 @@ V4: 新对话路径是 core.adapters.chat_adapter.ChatAdapter（必经 PrivacyPo
 本 CLI 默认仍是 V3 拼接 prompt；TANGTANG_V4_PIPELINE=1 走新路径。不要删除本文件。
 """
 import os, sys, json, urllib.request, argparse, subprocess, re, importlib.util
+from datetime import datetime
 
 BASE = os.environ.get("QCLAW_LLM_BASE_URL", "http://127.0.0.1:19000/proxy/llm")
 KEY = os.environ.get("QCLAW_LLM_API_KEY", "")
@@ -204,6 +205,27 @@ def _alarm_reply(text):
     return mod.handle_utterance(text)
 
 
+def _live_obs():
+    path = os.path.join(CAT_DIR, "tangtang-speak-gate.py")
+    spec = importlib.util.spec_from_file_location("tangtang_speak_gate_chat", path)
+    if spec is None or spec.loader is None:
+        return {"label": speaker_id(), "live": True}
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.live_observation(speaker_id())
+
+
+def _may_speak_now(obs):
+    """Quiet / school / SILENT → do not spawn V3 or V4 LLM."""
+    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from core.policy.speak_gate import decide, may_call_llm
+
+    now = obs.get("now") if isinstance(obs.get("now"), datetime) else None
+    return may_call_llm(decide(obs, now=now, channel="chat", live=True))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("text", nargs="?", default="", help="小朋友说的话")
@@ -219,20 +241,26 @@ def main():
         print(alarm_line)
         return
 
+    obs = _live_obs()
+    if not _may_speak_now(obs):
+        return
+
     # V3 CLI concatenates prompts from local JSON and can skip V4 PrivacyPolicy.
     # New path: ChatAdapter / TangTangRuntime (cannot skip the privacy gate).
     # Keep this CLI for the living-room Mac; set TANGTANG_V4_PIPELINE=1 to use V4.
+    # V4 must not assemble the V3 persona prompt or history — one brain only.
     if os.environ.get("TANGTANG_V4_PIPELINE") == "1":
         root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
         if root not in sys.path:
             sys.path.insert(0, root)
         from tangtang_runtime import TangTangRuntime
 
-        result = TangTangRuntime().handle_utterance(
-            args.text, {"label": speaker_id()}
-        )
-        text = (result.action.text if result.action else "") or FALLBACK_REPLY
-        print(text)
+        result = TangTangRuntime().handle_utterance(args.text, obs)
+        if result.decision != "SPEAK":
+            return
+        text = (result.action.text if result.action else "")
+        if text:
+            print(text)
         return
 
     if looks_risky(args.text):

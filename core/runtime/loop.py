@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 from core.adapters.animation import AnimationAction, AnimationController
@@ -25,6 +26,7 @@ from core.events.event_bus import EventBus, PublishResult
 from core.identity.resolver import IdentityResolver
 from core.ingest import IngestResult, PrivacyPipeline
 from core.logging.safe import SafeLogger
+from core.policy.speak_gate import decide as speak_decide, may_call_llm
 from core.response.orchestrator import PresentationAction
 from core.runtime.isolate import isolate
 from core.runtime.presentation import DeliveryResult, PresentationRuntime
@@ -200,6 +202,40 @@ class TangTangRuntime:
         """Mic → STT → Observation → Identity → Event → Brain → Response → TTS."""
         errors: list[str] = []
         extra = dict(observation or {})
+        when = extra.get("now")
+        has_signal = (
+            isinstance(when, datetime)
+            or extra.get("school_hours")
+            or extra.get("at_school")
+            or extra.get("sleeping")
+            or extra.get("asleep")
+            or extra.get("live")
+        )
+        if has_signal:
+            gate = speak_decide(
+                extra,
+                now=when if isinstance(when, datetime) else None,
+                channel="voice",
+                policy=self.pipeline.interrupt,
+                live=bool(extra.get("live")),
+            )
+            if not may_call_llm(gate):
+                return RuntimeResult(
+                    event=None,
+                    member_id=extra.get("member_id") or extra.get("label"),
+                    privacy=None,
+                    decision=gate,
+                    action=PresentationAction(
+                        decision=gate,
+                        text="",
+                        action="idle",
+                        member_id=extra.get("member_id"),
+                        sink="none",
+                    ),
+                    delivery=DeliveryResult(event_id="", event_kept=True),
+                    observation=extra,
+                    errors=errors,
+                )
         transcript = utterance
         if transcript is None and self.stt is not None and audio is not None:
             heard = isolate(lambda: self.stt(audio), fallback="")
@@ -300,6 +336,31 @@ class TangTangRuntime:
         else:
             obs.pop("member_id", None)
         obs.setdefault("interactive", True)
+        when = obs.get("now")
+        gate = speak_decide(
+            obs,
+            now=when if isinstance(when, datetime) else None,
+            channel="chat",
+            policy=self.pipeline.interrupt,
+            live=bool(obs.get("live")),
+        )
+        if not may_call_llm(gate):
+            return RuntimeResult(
+                event=None,
+                member_id=str(member_id) if member_id else None,
+                privacy=None,
+                decision=gate,
+                action=PresentationAction(
+                    decision=gate,
+                    text="",
+                    action="idle",
+                    member_id=str(member_id) if member_id else None,
+                    sink="none",
+                ),
+                delivery=DeliveryResult(event_id="", event_kept=True),
+                observation=obs,
+                errors=errors,
+            )
         turned = isolate(
             lambda: self.chat.turn(utterance, obs, viewer_id=viewer_id)
         )
