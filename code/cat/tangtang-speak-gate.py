@@ -75,6 +75,11 @@ def check_speak(channel="chat", member=None, event=None, extra=None):
         return "SPEAK"
     from core.policy.speak_gate import decide
 
+    extra = dict(extra or {})
+    if ch in ("chat", "voice"):
+        extra.setdefault("interactive", True)
+    elif ch == "remind":
+        extra.setdefault("interactive", False)
     obs = live_observation(member, extra)
     return decide(obs, now=obs.get("now"), channel=ch, live=True)
 

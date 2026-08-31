@@ -1,7 +1,7 @@
 """One speak-or-not path for live chat / voice / remind.
 
-Consults InterruptPolicy. Live chat/voice do not speak during quiet
-hours (22:30–07:00) even if the caller marked the turn interactive.
+Consults InterruptPolicy. Proactive remind stays silent 22:30–07:00.
+User-initiated chat/voice (interactive) may answer once — 少打扰 ≠ 不理人.
 Alarm ringing is never gated here — use channel='alarm'.
 
 Deterministic. No LLM, TTS, files, or shell.
@@ -34,8 +34,8 @@ def decide(
     """Return SPEAK / SILENT / DELAY / LOG_ONLY.
 
     channel='alarm' always SPEAK (cat-alarm rings on its own path).
-    channel='chat'|'voice' + (live or explicit now) → quiet hours SILENT.
-    Otherwise InterruptPolicy.decide.
+    channel='remind' (or chat/voice without interactive): quiet hours SILENT.
+    channel='chat'|'voice' + interactive: InterruptPolicy (night answer allowed).
     """
     if channel == "alarm":
         return "SPEAK"
@@ -47,9 +47,10 @@ def decide(
     if not isinstance(when, datetime):
         when = None
 
-    # Live / explicit-clock chat: no night talking. Do not wait for LLM.
+    interactive = bool(obs.get("interactive"))
     apply_quiet = bool(live or when is not None)
-    if channel in _QUIET_CHANNELS and apply_quiet:
+    # Proactive only: 夜里不主动叫。人先开口不算打扰。
+    if channel == "remind" or (channel in _QUIET_CHANNELS and apply_quiet and not interactive):
         tick = when or gate._clock()  # noqa: SLF001 — same clock as the policy
         if gate.is_quiet_hours(tick):
             return "SILENT"

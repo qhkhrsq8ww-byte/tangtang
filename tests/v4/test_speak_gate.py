@@ -38,14 +38,24 @@ class TestSpeakGateDecide(unittest.TestCase):
         self.assertEqual(decide({}, now=_dt("23:00"), channel="alarm"), "SPEAK")
         self.assertTrue(may_speak({}, now=_dt("23:00"), channel="alarm"))
 
-    def test_chat_quiet_hours_silent_even_interactive(self):
+    def test_chat_quiet_hours_silent_when_not_interactive(self):
         self.assertEqual(
-            decide({"interactive": True, "label": "dad"}, now=_dt("23:00"), channel="chat"),
+            decide({"interactive": False, "label": "dad"}, now=_dt("23:00"), channel="chat"),
+            "SILENT",
+        )
+        self.assertEqual(
+            decide({"label": "dad"}, now=_dt("23:00"), channel="remind"),
             "SILENT",
         )
         self.assertFalse(may_call_llm("SILENT"))
         self.assertFalse(may_call_llm("LOG_ONLY"))
         self.assertTrue(may_call_llm("SPEAK"))
+
+    def test_chat_quiet_hours_interactive_may_speak(self):
+        self.assertEqual(
+            decide({"interactive": True, "label": "dad"}, now=_dt("23:00"), channel="chat"),
+            "SPEAK",
+        )
 
     def test_without_now_does_not_use_wall_clock_quiet(self):
         # Existing handle_utterance tests stay SPEAK when interactive.
@@ -77,7 +87,7 @@ class TestNoLlmWhenSilent(unittest.TestCase):
         rt = TangTangRuntime(members=MEMBERS, llm=_boom)
         result = rt.handle_utterance(
             "糖糖在吗",
-            {"label": "dad", "now": _dt("23:00")},
+            {"label": "dad", "now": _dt("23:00"), "interactive": False},
         )
         self.assertEqual(result.decision, "SILENT")
         self.assertEqual((result.action.text if result.action else ""), "")
@@ -107,7 +117,10 @@ class TestNoLlmWhenSilent(unittest.TestCase):
 
     def test_chat_adapter_quiet_skips_llm(self):
         chat = ChatAdapter(members=MEMBERS, llm=_boom)
-        turn = chat.turn("你好", {"label": "dad", "now": _dt("23:10"), "live": True})
+        turn = chat.turn(
+            "你好",
+            {"label": "dad", "now": _dt("23:10"), "live": True, "interactive": False},
+        )
         self.assertEqual(turn.action.decision, "SILENT")
         self.assertEqual(turn.action.text, "")
 
@@ -139,14 +152,18 @@ class TestV4NoDoubleBrain(unittest.TestCase):
         self.assertLess(main.find("_alarm_reply"), main.find("TANGTANG_V4_PIPELINE"))
         self.assertLess(main.find("_may_speak_now"), main.find("TANGTANG_V4_PIPELINE"))
 
-    def test_v4_cli_quiet_prints_nothing(self):
+    def test_v4_cli_school_child_prints_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
             env = os.environ.copy()
             env["TANGTANG_DATA_DIR"] = tmp
             env["TANGTANG_V4_PIPELINE"] = "1"
-            env["TANGTANG_FAKE_TODAY"] = "2026-08-31"
-            env["TANGTANG_FAKE_TIME"] = "23:00"
+            env["TANGTANG_MEMBER_ID"] = "hanghang"
+            env["TANGTANG_SPEAKER"] = "hanghang"
+            env["TANGTANG_SCHOOL_START"] = "2026-09-01"
+            env["TANGTANG_FAKE_TODAY"] = "2026-09-02"
+            env["TANGTANG_FAKE_TIME"] = "12:00"
             env["TANGTANG_TTS"] = "0"
+            env.pop("TANGTANG_HOST_HANGHANG", None)
             env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
             r = subprocess.run(
                 [sys.executable, str(CAT / "cat-chat.py"), "糖糖在吗"],
@@ -205,7 +222,7 @@ class TestLiveWrappersUseGate(unittest.TestCase):
         env["TANGTANG_FAKE_TIME"] = "23:40"
         env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
         r = subprocess.run(
-            [sys.executable, str(CAT / "tangtang-speak-gate.py"), "--channel", "chat"],
+            [sys.executable, str(CAT / "tangtang-speak-gate.py"), "--channel", "remind"],
             capture_output=True,
             text=True,
             env=env,
@@ -214,6 +231,23 @@ class TestLiveWrappersUseGate(unittest.TestCase):
         )
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stdout.strip(), "silent")
+
+    def test_speak_gate_cli_chat_night_is_interactive(self):
+        env = os.environ.copy()
+        env["TANGTANG_FAKE_TODAY"] = "2026-08-31"
+        env["TANGTANG_FAKE_TIME"] = "23:40"
+        env["TANGTANG_MEMBER_ID"] = "dad"
+        env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
+        r = subprocess.run(
+            [sys.executable, str(CAT / "tangtang-speak-gate.py"), "--channel", "chat", "--member", "dad"],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=15,
+            cwd=str(ROOT),
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), "speak")
 
     def test_speak_gate_cli_alarm_speak(self):
         env = os.environ.copy()

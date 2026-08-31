@@ -212,7 +212,7 @@ def _live_obs():
         return {"label": speaker_id(), "live": True}
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod.live_observation(speaker_id())
+    return mod.live_observation(speaker_id(), extra={"interactive": True})
 
 
 def _may_speak_now(obs):
