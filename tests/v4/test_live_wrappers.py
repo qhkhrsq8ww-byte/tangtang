@@ -45,11 +45,20 @@ class TestLiveWrappersSetV4(unittest.TestCase):
         src = (CAT / "tangtang-config.example.sh").read_text(encoding="utf-8")
         self.assertIn("export TANGTANG_V4_PIPELINE=1", src)
 
-    def test_cat_chat_cli_stays_opt_in(self):
+    def test_cat_chat_cli_defaults_v4_opt_out(self):
         src = (CAT / "cat-chat.py").read_text(encoding="utf-8")
-        self.assertIn('os.environ.get("TANGTANG_V4_PIPELINE") == "1"', src)
+        self.assertIn('os.environ.get("TANGTANG_V4_PIPELINE") or "1"', src)
+        self.assertIn('v4_flag not in ("0", "false", "no", "off")', src)
         self.assertIn("def chat(", src)
         self.assertIn("def build_persona(", src)
+
+    def test_cat_living_cli_exists(self):
+        src = (CAT / "cat-living.py").read_text(encoding="utf-8")
+        self.assertIn("handle_living_room", src)
+        self.assertIn("LivingRoomAdapter", src)
+        remind = (CAT / "cat-remind.sh").read_text(encoding="utf-8")
+        self.assertIn("cat-living.py", remind)
+        self.assertIn("TANGTANG_LIVING_V4", remind)
 
 
 if __name__ == "__main__":

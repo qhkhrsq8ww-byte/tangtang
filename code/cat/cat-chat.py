@@ -11,7 +11,7 @@
 输出: 糖糖的回复（纯文本，一行）
 
 V4: 新对话路径是 core.adapters.chat_adapter.ChatAdapter（必经 PrivacyPolicy）。
-本 CLI 默认仍是 V3 拼接 prompt；TANGTANG_V4_PIPELINE=1 走新路径。不要删除本文件。
+本 CLI 默认走 V4 PrivacyPipeline（TangTangRuntime）；设 TANGTANG_V4_PIPELINE=0 回退 V3 拼 prompt。不要删除本文件。
 """
 import os, sys, json, urllib.request, argparse, subprocess, re, importlib.util
 from datetime import datetime
@@ -387,25 +387,28 @@ def main():
     if not _may_speak_now(obs):
         return
 
-    # V3 CLI concatenates prompts from local JSON and can skip V4 PrivacyPolicy.
-    # New path: ChatAdapter / TangTangRuntime (cannot skip the privacy gate).
-    # Keep this CLI for the living-room Mac; set TANGTANG_V4_PIPELINE=1 to use V4.
+    # V4 is default. Opt out with TANGTANG_V4_PIPELINE=0 (legacy V3 prompt path).
     # V4 must not assemble the V3 persona prompt or history — one brain only.
-    if os.environ.get("TANGTANG_V4_PIPELINE") == "1":
+    v4_flag = (os.environ.get("TANGTANG_V4_PIPELINE") or "1").strip().lower()
+    if v4_flag not in ("0", "false", "no", "off"):
         root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
         if root not in sys.path:
             sys.path.insert(0, root)
-        from tangtang_runtime import TangTangRuntime
+        try:
+            from tangtang_runtime import TangTangRuntime
 
-        result = TangTangRuntime().handle_utterance(args.text, obs)
-        if result.decision != "SPEAK":
+            result = TangTangRuntime().handle_utterance(args.text, obs)
+            if result.decision != "SPEAK":
+                return
+            text = (result.action.text if result.action else "")
+            if text:
+                emit_character_state(args.text, text)
+                _learn_turn(args.text, kind="care")
+                print(text)
             return
-        text = (result.action.text if result.action else "")
-        if text:
-            emit_character_state(args.text, text)
-            _learn_turn(args.text, kind="care")
-            print(text)
-        return
+        except Exception:
+            # Fail open to V3 only when V4 import/runtime blows up.
+            pass
 
     if looks_risky(args.text):
         _escalate_risk(args.text)

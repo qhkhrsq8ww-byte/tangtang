@@ -182,10 +182,28 @@ if [ "$FORCE" != "1" ]; then
   fi
 fi
 
-if [ -n "$ARG" ]; then
-  out="$("$CAT_DIR/cat-talk.sh" "$EVENT" "$ARG")"
-else
-  out="$("$CAT_DIR/cat-talk.sh" "$EVENT")"
+# 客厅 V4：可映射场景优先 LivingRoomAdapter + InterruptPolicy（默认开；TANGTANG_LIVING_V4=0 关）
+out=""
+living_ok=0
+case "$EVENT" in
+  rest|exercise|play|sleep|home|meal|phone|screen|away)
+    if [ "${TANGTANG_LIVING_V4:-1}" != "0" ]; then
+      living_who="${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}"
+      if [ -n "$living_who" ]; then
+        out="$(/usr/bin/python3 "$CAT_DIR/cat-living.py" "$EVENT" "$living_who" 2>/dev/null || true)"
+      else
+        out="$(/usr/bin/python3 "$CAT_DIR/cat-living.py" "$EVENT" 2>/dev/null || true)"
+      fi
+      living_ok=1
+    fi
+    ;;
+esac
+if [ "$living_ok" != "1" ]; then
+  if [ -n "$ARG" ]; then
+    out="$("$CAT_DIR/cat-talk.sh" "$EVENT" "$ARG")"
+  else
+    out="$("$CAT_DIR/cat-talk.sh" "$EVENT")"
+  fi
 fi
 
 if [ "$PRINT" = "1" ]; then

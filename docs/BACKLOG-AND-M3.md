@@ -32,3 +32,11 @@
 - `cat-chat.py`：成功回复 / 风险回复后 `_learn_turn`
 - `family_memory_v2.py`：读取 `habits/habit-trends.json`
 - `cat-memory.py`：`trends` / `emotion` 子命令
+- **`cat-chat` 默认 V4**（`TANGTANG_V4_PIPELINE=0` 回退）
+- **`cat-living.py` + `cat-remind` 客厅 V4 路径**（`TANGTANG_LIVING_V4=0` 关）
+
+## 仍未完成
+1. V3 第四阶段清理重复 `cat-*`
+2. living-room 产品栈（English/rest-day 全量）仍不 dump-merge
+3. VAD/ASR / Key 环境变量 / Mac 实机运维
+4. 旧 HTML 静态图对齐
