@@ -386,6 +386,7 @@ def canned_reply(profile="play"):
 
 
 def decide(energy, stt_status, text="", rms=0, profile="play", who="", index=None, event="english"):
+    # TANGTANG_TURN_LLM is ignored. Never call cat-chat / cloud. Local classify only.
     react = _react()
     spec = react.load_spec()
     val, timeout = _rms_for(energy, rms)

@@ -30,6 +30,11 @@ if [ "${TANGTANG_INTERACTIVE:-0}" != "1" ]; then
   if [ "$quiet" = "quiet" ]; then
     exit 0
   fi
+  if [ "${1:-}" != "alarm" ]; then
+    if [ "$(/usr/bin/python3 "$CAT_DIR/tangtang-speak-gate.py" --channel remind --event "${1:-}" --member "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}" 2>/dev/null || echo speak)" != "speak" ]; then
+      exit 0
+    fi
+  fi
 fi
 
 result="$(/usr/bin/python3 "$CAT_DIR/cat-brain.py" "$@")"

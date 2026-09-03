@@ -16,6 +16,15 @@ PCM="/tmp/tangtang_voice.pcm"
 # 显式 MEMBER_ID / -p 指定的人不被在场层覆盖
 EXPLICIT_MEMBER="${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}"
 
+# 已知必须静默（夜间 / 指定孩子还在上学）时不开麦、不 STT、不 LLM
+GATE_MEMBER=""
+if [ -n "$EXPLICIT_MEMBER" ] && [ "$EXPLICIT_MEMBER" != "unknown" ]; then
+  GATE_MEMBER="$EXPLICIT_MEMBER"
+fi
+if [ "$(/usr/bin/python3 "$CAT_DIR/tangtang-speak-gate.py" --channel voice --member "$GATE_MEMBER")" != "speak" ]; then
+  exit 0
+fi
+
 echo "🎤 糖糖在听...（${DUR}秒）"
 if ! "$CAT_DIR/cat-listen.sh" "$DUR" "$PCM" >/dev/null 2>&1; then
   echo "❌ 麦克风录音失败"
@@ -86,7 +95,7 @@ fi
 echo "🧠 识别中..."
 TEXT=$("$CAT_DIR/cat-stt-baidu.sh" "$PCM" 2>/dev/null | tr -d '\n')
 if [ -z "$TEXT" ]; then
-  "$CAT_DIR/cat-say.sh" "没听清，再说一次好不好？" cute
+  # 没听清：不追问、不开第二轮
   rm -f "$PCM"
   exit 0
 fi
@@ -115,7 +124,8 @@ REPLY=$(TANGTANG_PROFILE="$TANGTANG_PROFILE" \
   TANGTANG_CHILD_NAME="$TANGTANG_CHILD_NAME" \
   /usr/bin/python3 "$CAT_DIR/cat-chat.py" "$TEXT" 2>/dev/null | tr -d '\n')
 if [ -z "$REPLY" ]; then
-  REPLY="糖糖刚才有点走神啦，我们再聊聊？"
+  rm -f "$PCM"
+  exit 0
 fi
 
 echo "   糖糖: $REPLY"

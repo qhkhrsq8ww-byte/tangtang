@@ -4,7 +4,7 @@ Visual PresentationAction lives in core.presentation and must not import Memory.
 Speech/decision PresentationAction lives in core.response.orchestrator.
 """
 
-from core.compat import should_interrupt
+from core.compat import decide_speak, may_speak, should_interrupt
 from core.context.builder import ContextBuilder
 from core.errors import (
     ActionError,
@@ -88,5 +88,7 @@ __all__ = [
     "Stores",
     "WALK_SUGGESTION",
     "require_v4",
+    "decide_speak",
+    "may_speak",
     "should_interrupt",
 ]
