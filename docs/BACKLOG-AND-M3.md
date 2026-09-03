@@ -8,35 +8,29 @@
 | m2 情绪漂移 + 习惯趋势 | ✅ |
 | V3/`core` 接入 + 顶层门面 | ✅ |
 | 分支合入 + 推远程 | ✅ |
-| **m3 聊天 → LearningMemory** | ✅ 本轮 |
-| **HabitTrends → FM2 today/recent** | ✅ 本轮 |
+| **m3 聊天 → LearningMemory** | ✅ |
+| **HabitTrends → FM2 today/recent** | ✅ |
+| **`cat-chat` 默认 V4** | ✅ |
+| **`cat-living` + remind 客厅 V4** | ✅ |
+| **m4 V3 回退路径隐私收口** | ✅ 本轮 |
 
 ## 仍未完成（按价值）
 
 ### P1 产品/架构
-1. **`TANGTANG_V4_PIPELINE` 默认仍关闭** — cat-chat 默认 V3 prompt 拼接；应评估默认开 V4 或双跑。
-2. **客厅 living-room 旧栈未 dump-merge** — 仅有 `LivingRoomAdapter`；rest-day / English buddy 等产品场景在历史分支。
-3. **V3 第四阶段清理** — 不删 `cat-*`，重复路径仍在。
+1. **客厅 living-room 旧栈未 dump-merge** — 仅有 `LivingRoomAdapter`；rest-day / English buddy 等产品场景在历史分支（故意不 dump-merge）。
+2. **V3 第四阶段清理** — 不删 `cat-*`，重复路径仍在（需完整家庭场景稳定后再谈）。
 
 ### P2 体验/运维（多需 Mac 实机）
-4. VAD / ASR 体验（静音停录、提示音）
-5. 百度 Key 轮换与环境变量化
-6. launchd / 合盖 / 24h 运转（硬件）
-7. `test_alarm.py` 在 Windows 上因 `/bin/bash` 假设失败（环境差，非功能回归）
+3. VAD / ASR 体验（静音停录、提示音）
+4. 百度 Key 轮换与环境变量化（脚本已优先读 env，运维侧轮换）
+5. launchd / 合盖 / 24h 运转（硬件）
+6. `test_alarm.py` 在 Windows 上因 `/bin/bash` 假设失败（环境差，非功能回归）
 
 ### P2 表现
-8. 旧页 `cat-stage` / `tangtang-states` 静态图路径对齐视频主线
-9. Asset Registry 真正驱动所有 HTML（部分仍手写 STATES）
+7. 旧页 `cat-stage` / `tangtang-states` 静态图路径对齐视频主线
+8. Asset Registry 真正驱动所有 HTML（部分仍手写 STATES）
 
-## 本轮改动
-- `cat-chat.py`：成功回复 / 风险回复后 `_learn_turn`
-- `family_memory_v2.py`：读取 `habits/habit-trends.json`
-- `cat-memory.py`：`trends` / `emotion` 子命令
-- **`cat-chat` 默认 V4**（`TANGTANG_V4_PIPELINE=0` 回退）
-- **`cat-living.py` + `cat-remind` 客厅 V4 路径**（`TANGTANG_LIVING_V4=0` 关）
-
-## 仍未完成
-1. V3 第四阶段清理重复 `cat-*`
-2. living-room 产品栈（English/rest-day 全量）仍不 dump-merge
-3. VAD/ASR / Key 环境变量 / Mac 实机运维
-4. 旧 HTML 静态图对齐
+## 本轮改动（m4）
+- `cat-chat.py`：`TANGTANG_V4_PIPELINE=0` / V4 异常 → `_private_cli_reply`（`ChatAdapter`）
+- 不再把 `cat-chat-history-*.json` 原话拼进 LLM
+- 风险路径仍 escalate + `SAFE_REPLY`，不调 LLM

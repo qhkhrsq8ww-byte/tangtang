@@ -11,7 +11,8 @@
 输出: 糖糖的回复（纯文本，一行）
 
 V4: 新对话路径是 core.adapters.chat_adapter.ChatAdapter（必经 PrivacyPolicy）。
-本 CLI 默认走 V4 PrivacyPipeline（TangTangRuntime）；设 TANGTANG_V4_PIPELINE=0 回退 V3 拼 prompt。不要删除本文件。
+本 CLI 默认走 TangTangRuntime；设 TANGTANG_V4_PIPELINE=0（或 V4 异常）回退时仍走 ChatAdapter
+（InjectionGuard + PrivacyPipeline），不再把 cat-chat-history 原话拼进 LLM。不要删除本文件。
 """
 import os, sys, json, urllib.request, argparse, subprocess, re, importlib.util
 from datetime import datetime
@@ -368,6 +369,46 @@ def _escalate_risk(text):
     return row
 
 
+def _private_cli_reply(user_text, obs, model=DEFAULT_MODEL):
+    """m4: opt-out / V4-fail path. Still PrivacyPipeline + InjectionGuard; no history dump."""
+    if looks_risky(user_text):
+        _escalate_risk(user_text)
+        emit_character_state(user_text, SAFE_REPLY)
+        _learn_turn(user_text, event_tag="emotion", kind="care")
+        print(SAFE_REPLY)
+        return
+
+    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from core.adapters.chat_adapter import ChatAdapter
+
+    def llm(ctx):
+        # Filtered prompt only — never reload local chat history into the cloud call.
+        prompt = str((ctx or {}).get("_filtered_prompt") or (ctx or {}).get("utterance") or "")
+        prompt = prompt.strip() or (user_text or "").strip()
+        try:
+            return chat(prompt, model=model, history=None)
+        except Exception:
+            try:
+                return brain_fallback(prompt)
+            except Exception:
+                return FALLBACK_REPLY
+
+    turn = ChatAdapter(
+        llm=llm,
+        looks_risky=looks_risky,
+        sanitize=sanitize_output,
+    ).turn(user_text, obs)
+    if turn.action.decision != "SPEAK":
+        return
+    text = (turn.action.text or "").strip()
+    if text:
+        emit_character_state(user_text, text)
+        _learn_turn(user_text, kind="care")
+        print(text)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("text", nargs="?", default="", help="小朋友说的话")
@@ -387,8 +428,8 @@ def main():
     if not _may_speak_now(obs):
         return
 
-    # V4 is default. Opt out with TANGTANG_V4_PIPELINE=0 (legacy V3 prompt path).
-    # V4 must not assemble the V3 persona prompt or history — one brain only.
+    # V4 Runtime is default. Opt out with TANGTANG_V4_PIPELINE=0.
+    # Must not assemble unfiltered V3 history — one privacy gate only.
     v4_flag = (os.environ.get("TANGTANG_V4_PIPELINE") or "1").strip().lower()
     if v4_flag not in ("0", "false", "no", "off"):
         root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
@@ -407,51 +448,10 @@ def main():
                 print(text)
             return
         except Exception:
-            # Fail open to V3 only when V4 import/runtime blows up.
+            # Fail to ChatAdapter privacy path (not raw history dump).
             pass
 
-    if looks_risky(args.text):
-        _escalate_risk(args.text)
-        emit_character_state(args.text, SAFE_REPLY)
-        _learn_turn(args.text, event_tag="emotion", kind="care")
-        print(SAFE_REPLY)
-        return
-
-    hist_name = speaker_id() if speaker_id() not in ("unknown", "", "访客") else "guest"
-    hist_file = os.path.join(DATA_DIR, f"cat-chat-history-{hist_name}.json")
-    # 兼容旧的单一历史文件：仅 guest 读取一次后不再混用
-    legacy = os.path.join(DATA_DIR, "cat-chat-history.json")
-    history = []
-    if os.path.exists(hist_file):
-        try:
-            with open(hist_file, encoding="utf-8") as f:
-                history = json.load(f)
-        except Exception:
-            history = []
-    elif hist_name == "guest" and os.path.exists(legacy):
-        try:
-            with open(legacy, encoding="utf-8") as f:
-                history = json.load(f)
-        except Exception:
-            history = []
-
-    try:
-        reply = chat(args.text, args.model, history)
-    except Exception:
-        reply = brain_fallback(args.text)
-
-    history.append({"role": "user", "content": args.text})
-    history.append({"role": "assistant", "content": reply})
-    history = history[-20:]
-    os.makedirs(os.path.dirname(hist_file) or ".", exist_ok=True)
-    tmp = hist_file + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False)
-    os.replace(tmp, hist_file)
-
-    emit_character_state(args.text, reply)
-    _learn_turn(args.text, kind="care")
-    print(reply)
+    _private_cli_reply(args.text, obs, model=args.model)
 
 
 if __name__ == "__main__":

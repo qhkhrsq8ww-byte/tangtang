@@ -145,13 +145,24 @@ class TestV4NoDoubleBrain(unittest.TestCase):
     def test_v4_block_does_not_call_v3_chat(self):
         src = (CAT / "cat-chat.py").read_text(encoding="utf-8")
         main = src.split("def main(")[1]
-        v4 = main.split('TANGTANG_V4_PIPELINE')[1].split("if looks_risky")[0]
+        v4 = main.split("TANGTANG_V4_PIPELINE")[1].split("_private_cli_reply")[0]
         self.assertNotIn("chat(args", v4)
         self.assertNotIn("build_persona()", v4)
         self.assertNotIn("cat-chat-history", v4)
         self.assertLess(main.find("_alarm_reply"), main.find("TANGTANG_V4_PIPELINE"))
         self.assertLess(main.find("_may_speak_now"), main.find("TANGTANG_V4_PIPELINE"))
 
+    def test_m4_fallback_uses_chat_adapter_not_history(self):
+        src = (CAT / "cat-chat.py").read_text(encoding="utf-8")
+        priv = src.split("def _private_cli_reply")[1].split("def main(")[0]
+        self.assertIn("ChatAdapter", priv)
+        self.assertIn("history=None", priv)
+        self.assertNotIn("json.dump", priv)
+        self.assertIn("looks_risky", priv)
+        main = src.split("def main(")[1]
+        self.assertIn("_private_cli_reply", main)
+        # main must not dump history files anymore
+        self.assertNotIn("cat-chat-history-", main)
     def test_v4_cli_school_child_prints_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
             env = os.environ.copy()

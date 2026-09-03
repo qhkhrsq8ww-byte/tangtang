@@ -1,8 +1,8 @@
 """Wrap V3 cat-chat. New path cannot skip PrivacyPolicy.
 
-V3 cat-chat.py still concatenates prompts from local JSON. That CLI is
-left in place (opt-in TANGTANG_V4_PIPELINE=1 uses this adapter). The
-adapter path is:
+V3 cat-chat.py still exists for helpers (looks_risky / sanitize / urllib).
+CLI default is TangTangRuntime; opt-out / fail path uses this adapter so LLM
+only sees PrivacyPolicy-filtered context. Adapter path:
 
   STT text → Voice Observation → Identity → Event → PrivacyPolicy
   → Memory → ContextBuilder → LLM (optional) → ResponseOrchestrator → TTSAdapter
