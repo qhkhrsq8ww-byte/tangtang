@@ -376,6 +376,29 @@ class FamilyMemoryV2:
                         rows.append(row)
             elif isinstance(data, list):
                 rows.extend(r for r in data if isinstance(r, dict))
+        # m2 habit-trends.json → synthetic tag rows (no speech)
+        for path in self._candidate_paths(("habits", "habit-trends.json")):
+            data = _load_json(path)
+            if not isinstance(data, dict):
+                continue
+            days = data.get("days") or {}
+            if not isinstance(days, dict):
+                continue
+            for mid, day_map in days.items():
+                if not isinstance(day_map, dict):
+                    continue
+                for day, tags in day_map.items():
+                    if not isinstance(tags, dict):
+                        continue
+                    for tag, count in tags.items():
+                        n = max(1, min(int(count or 1), 12))
+                        for _ in range(n):
+                            rows.append({
+                                "member_id": mid,
+                                "tag": tag,
+                                "timestamp": f"{day}T12:00:00",
+                                "source": "habit_trends",
+                            })
         return rows
 
     def _iter_turns(self) -> list[dict[str, Any]]:

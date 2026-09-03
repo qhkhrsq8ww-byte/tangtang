@@ -11,6 +11,8 @@
   ./cat-memory.py recent
   ./cat-memory.py state
   ./cat-memory.py next
+  ./cat-memory.py trends [成员]
+  ./cat-memory.py emotion
 """
 from __future__ import annotations
 
@@ -73,7 +75,25 @@ def main(argv=None):
         dec = eng.next_accompany(now, observation=obs or None, channel="remind")
         _dump(dec.as_dict())
         return 0
-    print("用法: today | recent | state | next [成员]", file=sys.stderr)
+    if cmd == "trends":
+        from core.memory.habit_trends import HabitTrendStore
+
+        who = args[1] if len(args) > 1 else "hanghang"
+        store = HabitTrendStore(home=_home(), persist=True)
+        _dump({
+            "member_id": who,
+            "today": store.today(who, now=now),
+            "recent_7d": store.recent(who, now=now),
+            "stable": store.stable(who),
+        })
+        return 0
+    if cmd == "emotion":
+        from core.memory.emotion_drift import EmotionDriftStore
+
+        store = EmotionDriftStore(home=_home(), persist=True)
+        _dump(store.current(now=now))
+        return 0
+    print("用法: today | recent | state | next [成员] | trends [成员] | emotion", file=sys.stderr)
     return 1
 
 

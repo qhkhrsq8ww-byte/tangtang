@@ -251,6 +251,49 @@ def emit_character_state(user_text, reply_text):
             continue
 
 
+def _infer_learn_tag(text):
+    """Map chat turn to a habit tag. Never returns raw speech."""
+    blob = (text or "").replace(" ", "")
+    if any(k in blob for k in ("难过", "伤心", "害怕", "委屈", "哭")):
+        return "emotion"
+    if any(k in blob for k in ("作业", "考试", "题目")):
+        return "homework"
+    if any(k in blob for k in ("运动", "跑步", "出去玩")):
+        return "exercise"
+    if any(k in blob for k in ("回家", "我来了", "回来了")):
+        return "home"
+    if any(k in blob for k in ("晚安", "睡觉", "困了")):
+        return "sleep"
+    if any(k in blob for k in ("喝水", "口渴")):
+        return "water"
+    return "conversation"
+
+
+def _learn_turn(user_text, *, event_tag=None, kind="care"):
+    """m2/m3: persist emotion + habit tags; child raw → PrivateMemory only."""
+    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    try:
+        from core.memory.learning import LearningMemoryService
+    except Exception:
+        return None
+    member_id, _display = _resolve_speaker_member()
+    if not member_id:
+        member_id = speaker_id() or "unknown"
+    tag = event_tag or _infer_learn_tag(user_text)
+    try:
+        svc = LearningMemoryService(home=DATA_DIR, persist=True)
+        return svc.on_interaction(
+            member_id=member_id or "unknown",
+            event_tag=tag,
+            kind=kind,
+            utterance=user_text or "",
+        )
+    except Exception:
+        return None
+
+
 RISK_LABELS = {
     "self_harm": "可能有自伤信号",
     "violence": "提到暴力或霸凌",
@@ -360,12 +403,14 @@ def main():
         text = (result.action.text if result.action else "")
         if text:
             emit_character_state(args.text, text)
+            _learn_turn(args.text, kind="care")
             print(text)
         return
 
     if looks_risky(args.text):
         _escalate_risk(args.text)
         emit_character_state(args.text, SAFE_REPLY)
+        _learn_turn(args.text, event_tag="emotion", kind="care")
         print(SAFE_REPLY)
         return
 
@@ -402,6 +447,7 @@ def main():
     os.replace(tmp, hist_file)
 
     emit_character_state(args.text, reply)
+    _learn_turn(args.text, kind="care")
     print(reply)
 
 
