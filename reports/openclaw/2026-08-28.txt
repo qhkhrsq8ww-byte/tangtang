@@ -1,0 +1,10 @@
+OpenClaw 田间报告 2026-09-03
+host=Linux who=hanghang rest_day=True branch=cursor/converge-quiet-449b
+hwcheck os=Linux sox=False ffmpeg=True say=False mic=False out=linux-none rec=False notes=linux-no-mic
+ask hour=14 scene=skip spoke=False window=False reply=False
+english hour=14 scene=skip spoke=False window=False reply=False
+move hour=14 scene=skip spoke=False window=False reply=False
+rest hour=14 scene=skip spoke=False window=False reply=False
+counts joined=0 oppose=0 silent=0 defer=0 wont=0 unclear=0 skip=4
+failures=0
+报告里只许标签，不许小朋友原话。

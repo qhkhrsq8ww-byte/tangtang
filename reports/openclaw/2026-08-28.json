@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-03T10:44:59+08:00",
+  "host": "Linux",
+  "git_head": "6520e51307a7698f71a69e32de81f519566cdffd",
+  "branch": "cursor/converge-quiet-449b",
+  "who": "hanghang",
+  "rest_day": true,
+  "hwcheck": {
+    "os": "Linux",
+    "sox": false,
+    "ffmpeg": true,
+    "say": false,
+    "avfoundation_mic": false,
+    "default_output": "linux-none",
+    "record_ok": false,
+    "notes": "linux-no-mic"
+  },
+  "steps": [
+    {
+      "id": "ask",
+      "scheduled_hour": 14,
+      "ran_at": "2026-09-03T10:44:59+08:00",
+      "spoke": false,
+      "window_opened": false,
+      "scene": "skip",
+      "persona": "play",
+      "reply_spoke": false
+    },
+    {
+      "id": "english",
+      "scheduled_hour": 14,
+      "ran_at": "2026-09-03T10:44:59+08:00",
+      "spoke": false,
+      "window_opened": false,
+      "scene": "skip",
+      "persona": "play",
+      "reply_spoke": false
+    },
+    {
+      "id": "move",
+      "scheduled_hour": 14,
+      "ran_at": "2026-09-03T10:44:59+08:00",
+      "spoke": false,
+      "window_opened": false,
+      "scene": "skip",
+      "persona": "play",
+      "reply_spoke": false
+    },
+    {
+      "id": "rest",
+      "scheduled_hour": 14,
+      "ran_at": "2026-09-03T10:44:59+08:00",
+      "spoke": false,
+      "window_opened": false,
+      "scene": "skip",
+      "persona": "play",
+      "reply_spoke": false
+    }
+  ],
+  "counts": {
+    "joined": 0,
+    "oppose": 0,
+    "silent": 0,
+    "defer": 0,
+    "wont": 0,
+    "unclear": 0,
+    "skip": 4
+  },
+  "failures": []
+}
