@@ -76,3 +76,13 @@ def family_file(home: str | os.PathLike[str], name: str = "family-memory.json") 
 
 def habit_file(home: str | os.PathLike[str], name: str = "cat-habits.json") -> Path:
     return resolve_under(home, "habits", name)
+
+
+def living_room_file(home: str | os.PathLike[str], name: str = "cat-habits.json") -> Path:
+    """V3 living-room JSON at the Application Support root (same TANGTANG_HOME)."""
+    return resolve_under(home, name)
+
+
+def family_state_file(home: str | os.PathLike[str], name: str = "family-state.json") -> Path:
+    """Derived Family Memory 2.0 snapshot. Tags only; not a third event store."""
+    return resolve_under(home, name)

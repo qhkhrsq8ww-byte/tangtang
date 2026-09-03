@@ -9,6 +9,7 @@
 #   ./cat.sh -s               # 强制全屏舞台
 #   ./cat.sh status           # 查看糖糖当前心情状态
 #   ./cat.sh habits [成员]    # 习惯摘要（客厅 Mac，不记小朋友原话）
+#   ./cat.sh memory today|recent|state|next   # Family Memory 2.0（标签，不含原话）
 #   ./cat.sh preview          # 打印今日语音提醒文案（不发声）
 #   ./cat.sh today            # 今日休息四步（问糖糖→学英语→锻炼→休息）
 #   ./cat.sh today --preview  # 只看四句话，不开麦不发声
@@ -52,11 +53,20 @@ while [ $# -gt 0 ]; do
     status) STATUS_REQ=1; shift;;
     habits)
       shift
+      case "${1:-}" in
+        today|recent|state|next|stable)
+          exec /usr/bin/python3 "$CAT_DIR/cat-memory.py" "$@"
+          ;;
+      esac
       /usr/bin/python3 "$CAT_DIR/cat-family.py" summary "$@"
       echo
       echo "本地成长（只记标签，不记原话）"
       /usr/bin/python3 "$CAT_DIR/cat-habits.py" preview "$@"
       exit 0
+      ;;
+    memory)
+      shift
+      exec /usr/bin/python3 "$CAT_DIR/cat-memory.py" "$@"
       ;;
     preview)
       "$CAT_DIR/cat-schedule.sh" preview
@@ -133,7 +143,10 @@ while [ $# -gt 0 ]; do
 
 5. 本机记性
    状态/习惯/声纹/对话只写 Mac Air 硬盘，不写路由器盘。
+   Family Memory 2.0：今天/近期/稳定/家庭状态/下一步陪伴（只标签，不记小朋友原话）。
    ./cat.sh data
+   ./cat.sh memory today    ./cat.sh memory recent
+   ./cat.sh memory state    ./cat.sh memory next
 
 6. 英语小伴读（译林牛津·江苏）
    航航小学二年级，洽洽小学六年级。英语偏弱：中英夹一句，给选择，不督学。
@@ -209,7 +222,7 @@ EOF
     data)
       echo "记忆目录（Mac Air 本机硬盘，不写路由器）"
       echo "$TANGTANG_DATA_DIR"
-      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|habit-growth|voiceprints|presence|chat-history|remind-log|turn-ledger|alarms)' || true
+      ls -1 "$TANGTANG_DATA_DIR" 2>/dev/null | grep -E 'cat-(state|memory|habits|habit-growth|voiceprints|presence|chat-history|remind-log|turn-ledger|alarms)|family-state' || true
       exit 0
       ;;
     chat) CHAT_REQ=1; shift;;
