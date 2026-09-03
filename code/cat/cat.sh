@@ -271,7 +271,7 @@ if [ "$CHAT_REQ" = "1" ]; then
   if [ -z "$reply" ]; then
     exit 0
   fi
-  echo "[idle] $reply" > "$MOOD_FILE"
+  # 情绪状态已由 cat-chat.py 经 CharacterStateEngine 写入 cat-presentation-action.json / cat-mood.txt
   "$CAT_DIR/cat-say.sh" "$reply" cute
   echo "[糖糖·云端对话] 回复：$reply"
   exit 0

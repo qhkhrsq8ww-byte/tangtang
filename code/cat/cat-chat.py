@@ -226,6 +226,105 @@ def _may_speak_now(obs):
     return may_call_llm(decide(obs, now=now, channel="chat", live=True))
 
 
+def emit_character_state(user_text, reply_text):
+    """Chat reply → CharacterStateEngine (single truth) → presentation files.
+
+    Only keyword-derived emotion/intent is used; the raw utterance is never
+    stored or read back by this function. Failures stay silent (chat text
+    already lives in stdout / cat-chat-history)."""
+    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    try:
+        from behavior.legacy_adapter import decide_from_legacy
+        from core.presentation.character_presenter import CharacterPresenter
+        from core.presentation.transport import write_presentation_action
+
+        decision = decide_from_legacy("say", user_text or "")
+        action = CharacterPresenter().present(decision, text=reply_text or "")
+    except Exception:
+        return
+    for directory in (DATA_DIR, CAT_DIR):
+        try:
+            write_presentation_action(action, directory)
+        except OSError:
+            continue
+
+
+RISK_LABELS = {
+    "self_harm": "可能有自伤信号",
+    "violence": "提到暴力或霸凌",
+    "unsafe_contact": "疑似遇到不安全的接触",
+    "secret_keep": "疑似被要求保守危险秘密",
+}
+
+
+def _resolve_speaker_member():
+    """(member_id, display_name)。身份无法确定时返回 (None, None)。"""
+    raw = speaker_id()
+    if raw in ("unknown", "", "访客", "guest", "stranger"):
+        return None, None
+    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    try:
+        from core.adapters.family_loader import load_members
+        from core.identity.resolver import IdentityResolver
+
+        members = load_members()
+        resolver = IdentityResolver(members)
+        mid = resolver.resolve({"label": raw})
+        if not mid or str(mid).lower() in ("unknown", "访客", "guest"):
+            return None, None
+        rec = members.get(mid) or {}
+        return mid, rec.get("display_name") or mid
+    except Exception:
+        return None, None
+
+
+def _apple_escape(text):
+    return (text or "").replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _mac_notify(title, message):
+    """本机 macOS 通知。仅 darwin 推送，失败静默。"""
+    if sys.platform != "darwin":
+        return
+    try:
+        subprocess.Popen(
+            ["/usr/bin/osascript", "-e",
+             'display notification "%s" with title "%s"' % (
+                 _apple_escape(message), _apple_escape(title))],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        return
+
+
+def _notify_parent(category, member_id, display):
+    who = display or member_id or "小朋友"
+    label = RISK_LABELS.get(category, "需要家长关注")
+    _mac_notify("糖糖 · 安全提醒", "%s：%s" % (who, label))
+
+
+def _escalate_risk(text):
+    """确定性分类 + 结构化落日志 + 本地家长通知。绝不记录儿童原话。"""
+    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    try:
+        from core.security.escalation import classify_risk, record_safety_alert
+    except Exception:
+        return None
+    category = classify_risk(text)
+    if not category:
+        return None
+    member_id, display = _resolve_speaker_member()
+    row = record_safety_alert(category, member_id=member_id, home=DATA_DIR)
+    _notify_parent(category, member_id, display)
+    return row
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("text", nargs="?", default="", help="小朋友说的话")
@@ -260,10 +359,13 @@ def main():
             return
         text = (result.action.text if result.action else "")
         if text:
+            emit_character_state(args.text, text)
             print(text)
         return
 
     if looks_risky(args.text):
+        _escalate_risk(args.text)
+        emit_character_state(args.text, SAFE_REPLY)
         print(SAFE_REPLY)
         return
 
@@ -299,6 +401,7 @@ def main():
         json.dump(history, f, ensure_ascii=False)
     os.replace(tmp, hist_file)
 
+    emit_character_state(args.text, reply)
     print(reply)
 
 

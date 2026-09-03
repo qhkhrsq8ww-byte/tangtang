@@ -129,6 +129,6 @@ if [ -z "$REPLY" ]; then
 fi
 
 echo "   糖糖: $REPLY"
-printf '%s\n' "[idle] $REPLY" > "$CAT_DIR/cat-mood.txt"
+# 情绪状态已由 cat-chat.py 经 CharacterStateEngine 写入 cat-presentation-action.json / cat-mood.txt
 "$CAT_DIR/cat-say.sh" "$REPLY" cute
 rm -f "$PCM"
