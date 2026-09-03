@@ -86,3 +86,18 @@ def living_room_file(home: str | os.PathLike[str], name: str = "cat-habits.json"
 def family_state_file(home: str | os.PathLike[str], name: str = "family-state.json") -> Path:
     """Derived Family Memory 2.0 snapshot. Tags only; not a third event store."""
     return resolve_under(home, name)
+
+
+def emotion_state_file(home: str | os.PathLike[str], name: str = "emotion-state.json") -> Path:
+    """Live emotion vector for 糖糖 (no utterances)."""
+    return resolve_under(home, "memory", name)
+
+
+def emotion_snapshot_file(home: str | os.PathLike[str], name: str = "emotion-snapshots.jsonl") -> Path:
+    """Daily emotion snapshots (one line per day)."""
+    return resolve_under(home, "memory", name)
+
+
+def habit_trends_file(home: str | os.PathLike[str], name: str = "habit-trends.json") -> Path:
+    """Day ledger + 7d rollup + 14d stable habit tags (no child raw speech)."""
+    return resolve_under(home, "habits", name)

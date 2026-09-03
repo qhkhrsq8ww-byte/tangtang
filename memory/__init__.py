@@ -14,6 +14,9 @@ from core.memory import (
     recent_change,
     stable_memory,
     today_ledger,
+    EmotionDriftStore,
+    HabitTrendStore,
+    LearningMemoryService,
 )
 
 __all__ = [
@@ -30,4 +33,7 @@ __all__ = [
     "stable_memory",
     "family_state",
     "next_accompany",
+    "EmotionDriftStore",
+    "HabitTrendStore",
+    "LearningMemoryService",
 ]

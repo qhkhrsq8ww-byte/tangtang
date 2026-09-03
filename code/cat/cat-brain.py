@@ -378,7 +378,37 @@ def pick_from_library(event, profile, preferred_id=None):
 
 
 def drift(state):
-    """时间漂移：距上次互动越久越想念；开心缓慢回落；深夜犯困"""
+    """时间漂移：距上次互动越久越想念；开心缓慢回落；深夜犯困。
+    m2：优先走 core.memory.emotion_drift（同参数），并尝试日快照落盘。
+    """
+    try:
+        from core.memory.emotion_drift import apply_drift, EmotionDriftStore
+        drifted = apply_drift(state, now=now())
+        # keep cat-brain keys; merge drift fields
+        state.update({k: drifted[k] for k in (
+            "happiness", "energy", "loneliness", "affection",
+            "today", "interactions_today",
+        ) if k in drifted})
+        # Best-effort daily snapshot under TANGTANG_DATA_DIR / TANGTANG_HOME
+        try:
+            home = os.environ.get("TANGTANG_HOME") or os.environ.get("TANGTANG_DATA_DIR") or DATA_DIR
+            store = EmotionDriftStore(home=home, persist=True)
+            store._state.update({
+                "happiness": state.get("happiness", 70),
+                "energy": state.get("energy", 70),
+                "loneliness": state.get("loneliness", 20),
+                "affection": state.get("affection", 50),
+                "last_interaction": state.get("last_interaction"),
+                "interactions_today": state.get("interactions_today", 0),
+                "today": state.get("today"),
+                "snapshot_day": store._state.get("snapshot_day"),
+            })
+            store.save(now=now())
+        except Exception:
+            pass
+        return state
+    except Exception:
+        pass
     try:
         last = datetime.datetime.fromisoformat(state["last_interaction"])
     except Exception:
@@ -394,6 +424,20 @@ def drift(state):
         state["today"] = today
         state["interactions_today"] = 0
     return state
+
+
+def _habit_trends_record(event, arg=""):
+    """m2: tag-only habit trend persistence (no child raw speech)."""
+    try:
+        from core.memory.habit_trends import HabitTrendStore, ALLOWED_TAGS
+        who = habit_who(event, arg) or "unknown"
+        tag = (event or "conversation").strip().lower()
+        if tag not in ALLOWED_TAGS:
+            tag = "conversation"
+        home = os.environ.get("TANGTANG_HOME") or os.environ.get("TANGTANG_DATA_DIR") or DATA_DIR
+        HabitTrendStore(home=home, persist=True).record(member_id=who, tag=tag, now=now())
+    except Exception:
+        pass
 
 
 def mood_label(state):
@@ -606,6 +650,7 @@ def main():
         state = interact(state, memory, "care")
     if text:
         mark_spoken(state, event)
+    _habit_trends_record(event, arg)
 
     save_state(state)
     save_memory(memory)
