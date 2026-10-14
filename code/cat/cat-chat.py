@@ -373,6 +373,20 @@ def _escalate_risk(text):
     return row
 
 
+def _local_safety_reply(user_text):
+    """Handle risky disclosures locally; never ask the LLM to decide the safety response."""
+    if not looks_risky(user_text):
+        return None
+    try:
+        _escalate_risk(user_text)
+    except Exception:
+        # A notification/logging failure must not block the immediate safe reply.
+        pass
+    emit_character_state(user_text, SAFE_REPLY)
+    _learn_turn(user_text, event_tag="emotion", kind="care")
+    return SAFE_REPLY
+
+
 def _runtime_llm(model=DEFAULT_MODEL):
     """V4 LLM bridge. Only the privacy-filtered current-turn payload may leave the local process."""
     def call(context):
@@ -394,11 +408,9 @@ def _runtime_llm(model=DEFAULT_MODEL):
 
 def _private_cli_reply(user_text, obs, model=DEFAULT_MODEL):
     """m4: opt-out / V4-fail path. Still PrivacyPipeline + InjectionGuard; no history dump."""
-    if looks_risky(user_text):
-        _escalate_risk(user_text)
-        emit_character_state(user_text, SAFE_REPLY)
-        _learn_turn(user_text, event_tag="emotion", kind="care")
-        print(SAFE_REPLY)
+    risk_reply = _local_safety_reply(user_text)
+    if risk_reply:
+        print(risk_reply)
         return
 
     root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
@@ -452,11 +464,9 @@ def main():
         return
 
     # Handle child-safety signals locally before either LLM path.
-    if looks_risky(args.text):
-        _escalate_risk(args.text)
-        emit_character_state(args.text, SAFE_REPLY)
-        _learn_turn(args.text, event_tag="emotion", kind="care")
-        print(SAFE_REPLY)
+    risk_reply = _local_safety_reply(args.text)
+    if risk_reply:
+        print(risk_reply)
         return
 
     # V4 Runtime is default. Opt out with TANGTANG_V4_PIPELINE=0.
