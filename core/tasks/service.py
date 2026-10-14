@@ -277,6 +277,51 @@ class TaskService:
                 due.append(task)
         return due
 
+    def claim_due(self, task_id: str, *, owner_member_id: str, now: datetime | None = None) -> Task | None:
+        """Atomically claim a due reminder within this service instance.
+
+        A claimed task becomes running before delivery, so subsequent scans do not
+        replay it. Deploy one scheduler process per data home; the JSON repository
+        is not a cross-process locking database.
+        """
+        task = self._tasks.get(str(task_id))
+        if task is None or task.owner_member_id != str(owner_member_id or "").strip():
+            return None
+        if task.status != "scheduled" or not task.due_at:
+            return None
+        current = now or self._clock()
+        if current.tzinfo is None:
+            current = current.replace(tzinfo=timezone.utc)
+        due = _parse_aware(task.due_at)
+        if due is None or due > current:
+            return None
+        task.status = "running"
+        task.last_attempt_at = _iso_now(self._clock)
+        task.updated_at = task.last_attempt_at
+        task.result = "delivery_started"
+        self._save()
+        return task
+
+    def finish_delivery(
+        self,
+        task_id: str,
+        *,
+        owner_member_id: str,
+        success: bool,
+        result: str | None = None,
+    ) -> Task:
+        """Record delivery adapter outcome; success means adapter returned success."""
+        task = self._require_owner(task_id, owner_member_id)
+        if task.status != "running":
+            raise ValueError("only a running task can finish delivery")
+        now = _iso_now(self._clock)
+        task.status = "done" if success else "failed"
+        task.updated_at = now
+        task.completed_at = now if success else None
+        task.result = (str(result or ("delivery_command_succeeded" if success else "delivery_failed")).strip()[:300] or None)
+        self._save()
+        return task
+
     def reschedule(self, task_id: str, *, owner_member_id: str, due_at: str, timezone_name: str | None = None) -> Task:
         task = self._require_owner(task_id, owner_member_id)
         if task.status not in {"proposed", "needs_confirmation", "scheduled", "failed"}:
