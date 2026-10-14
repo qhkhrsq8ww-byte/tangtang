@@ -44,7 +44,7 @@ class TestForbiddenSurveillance(unittest.TestCase):
         )
         self.assertNotIn("宝宝", action.text)
         self.assertNotIn("吃饭饭", action.text)
-        self.assertTrue(action.text.startswith("汪汪～"))
+        self.assertEqual(action.text, "糖糖在呢。")
 
     def test_sister_not_toddler(self):
         orch = ResponseOrchestrator(responder=lambda ctx: "宝宝乖哦，我们去觉觉")
