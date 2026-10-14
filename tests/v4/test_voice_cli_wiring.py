@@ -27,7 +27,7 @@ class TestVoiceCliLlmBridge(unittest.TestCase):
         try:
             bridge = CAT._runtime_llm(model="test-model")
             result = bridge({
-                "_filtered_prompt": "member=dad\nprivacy=PRIVATE\nutterance=今天好累。",
+                "_filtered_prompt": "member=dad\nprivacy=FAMILY\nutterance=今天好累。",
                 "privacy_scope": "FAMILY",
                 "utterance": "今天好累。",
                 "history": [{"role": "user", "content": "不应发送的旧对话"}],
@@ -37,7 +37,7 @@ class TestVoiceCliLlmBridge(unittest.TestCase):
 
         self.assertEqual(result, "听起来你今天有点累。要不要先歇一会儿？")
         self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0][0], "member=dad\nprivacy=PRIVATE\nutterance=今天好累。")
+        self.assertEqual(calls[0][0], "member=dad\nprivacy=FAMILY\nutterance=今天好累。")
         self.assertEqual(calls[0][1], "test-model")
         self.assertIsNone(calls[0][2])
         self.assertNotIn("不应发送的旧对话", calls[0][0])
