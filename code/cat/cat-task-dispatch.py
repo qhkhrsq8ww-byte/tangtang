@@ -29,10 +29,20 @@ def main() -> int:
         return 2
     service = TaskService(home=tangtang_home(), persist=True, members=members)
 
-    def deliver(task):
-        if not args.deliver:
+    if not args.deliver:
+        due = []
+        seen = set()
+        for viewer_id in members:
+            for task in service.due_tasks(viewer_id=viewer_id):
+                if task.owner_member_id == viewer_id and task.task_id not in seen:
+                    seen.add(task.task_id)
+                    due.append(task)
+        for task in due:
             print(f"[预览] {task.owner_member_id}: {task.title} ({task.task_id})")
-            return False
+        print(f"到期任务 {len(due)} 项；预览模式未更改任务状态。实际播放请加 --deliver。")
+        return 0
+
+    def deliver(task):
         if not SAY.is_file():
             print("未找到 cat-say.sh；提醒未播放。", file=sys.stderr)
             return False
