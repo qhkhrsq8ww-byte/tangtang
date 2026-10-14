@@ -68,7 +68,7 @@ class TestExplicitMemoryChat(unittest.TestCase):
         self.assertFalse(turn.ingest.stored_private)
         self.assertEqual(calls, [])
 
-        rows = pipe.stores.private.query(member_id="child_9", viewer_id="child_9")
+        rows = pipe.stores.private.query(member_id="hanghang", viewer_id="hanghang")
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["type"], "preference")
         self.assertEqual(rows[0]["data"], {"tag": "likes", "value": "恐龙"})
