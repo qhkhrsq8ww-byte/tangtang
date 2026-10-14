@@ -55,7 +55,11 @@ class TestRuntimeLLMInjection(unittest.TestCase):
             return "听起来你今天有点累。要不要先歇一会儿？"
 
         rt = TangTangRuntime(members=MEMBERS, llm=llm)
-        result = rt.handle_utterance("今天好累。", {"label": "dad"})
+        from datetime import datetime, timezone
+        result = rt.handle_utterance(
+            "今天好累。",
+            {"label": "dad", "now": datetime(2026, 8, 28, 16, 0, tzinfo=timezone.utc)},
+        )
 
         self.assertEqual(result.decision, "SPEAK")
         self.assertEqual(result.action.text, "听起来你今天有点累。要不要先歇一会儿？")
