@@ -1,6 +1,7 @@
 """PrivateMemory: owner-only, TTL, never mixed into family stores."""
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
@@ -17,6 +18,8 @@ from core.policy.privacy_policy import PrivacyPolicy
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
+
+PREFERENCE_CATEGORIES = frozenset({"likes", "dislikes", "favorite"})
 
 class PrivateMemory:
     def __init__(
@@ -81,6 +84,74 @@ class PrivateMemory:
             self._write_file(mem)
         return mem
 
+    def remember_preference(
+        self,
+        *,
+        member_id: str,
+        category: str,
+        value: str,
+        event_id: str | None = None,
+        ttl_days: int = 365,
+    ) -> Memory:
+        """Persist a compact, owner-only preference explicitly requested by the member."""
+        mid = str(member_id or "").strip()
+        clean = " ".join(str(value or "").split()).strip(" ，,。.!！?？:：")
+        if not mid or category not in PREFERENCE_CATEGORIES:
+            raise MemoryError("member_id/category is invalid")
+        if not clean or len(clean) > 80:
+            raise MemoryError("preference value must contain 1–80 characters")
+        if self._persist or self._home is not None:
+            sanitize_member_id(mid)
+        self._load_member(mid)
+        # Explicit memory is owner-only even when an adult's ordinary conversation is FAMILY.
+        if self._privacy.canonical_member_id(mid) is None:
+            raise MemoryError("preference owner must be a registered family member")
+        digest = hashlib.sha256(f"{category}:{clean.casefold()}".encode("utf-8")).hexdigest()[:16]
+        memory = Memory(
+            memory_id=f"pref_{sanitize_member_id(mid)}_{digest}",
+            member_id=mid,
+            type="preference",
+            privacy="PRIVATE",
+            data={"tag": category, "value": clean},
+            source_events=[event_id] if event_id else [],
+            created_at=self._clock().isoformat(),
+            expires_at=(self._clock() + timedelta(days=max(1, ttl_days))).isoformat(),
+        )
+        self._store.put(memory)
+        if self._persist:
+            self._write_file(memory)
+        return memory
+
+    def forget_preference(
+        self,
+        *,
+        member_id: str,
+        category: str,
+        value: str,
+    ) -> int:
+        """Forget only an exact owner preference; never broad-delete other memory."""
+        mid = str(member_id or "").strip()
+        clean = " ".join(str(value or "").split()).strip(" ，,。.!！?？:：")
+        if not mid or category not in PREFERENCE_CATEGORIES or not clean:
+            return 0
+        if self._privacy.canonical_member_id(mid) is None:
+            return 0
+        self._load_member(mid)
+        removed: list[str] = []
+        for row in self._store.query(member_id=mid, scope="PRIVATE", viewer_id=mid):
+            data = row.get("data") if isinstance(row.get("data"), Mapping) else {}
+            if (
+                row.get("type") == "preference"
+                and data.get("tag") == category
+                and str(data.get("value") or "").casefold() == clean.casefold()
+            ):
+                removed.append(str(row.get("memory_id") or ""))
+        for memory_id in removed:
+            self._store._items.pop(memory_id, None)
+        if removed and self._persist:
+            self._write_member_file(mid)
+        return len(removed)
+
     def query(self, *, member_id: str, viewer_id: str | None) -> list[dict[str, Any]]:
         if not member_id or viewer_id != member_id:
             return []
@@ -111,8 +182,18 @@ class PrivateMemory:
             data = row.get("data")
             if not isinstance(data, Mapping):
                 continue
+            record_type = str(row.get("type") or "utterance")
             speech = data.get("speech")
-            if not isinstance(speech, str) or not speech.strip():
+            if record_type == "preference" and not speech:
+                if (
+                    set(data.keys()) != {"tag", "value"}
+                    or data.get("tag") not in PREFERENCE_CATEGORIES
+                    or not isinstance(data.get("value"), str)
+                    or not str(data.get("value")).strip()
+                    or len(str(data.get("value"))) > 80
+                ):
+                    continue
+            elif not isinstance(speech, str) or not speech.strip():
                 continue
             expires_raw = row.get("expires_at")
             try:
@@ -123,14 +204,15 @@ class PrivateMemory:
                 continue
             if expires <= now:
                 continue
-            decision = self._privacy.classify(member_id=mid, utterance=speech)
-            if decision.privacy != "PRIVATE":
-                continue
+            if record_type != "preference":
+                decision = self._privacy.classify(member_id=mid, utterance=speech)
+                if decision.privacy != "PRIVATE":
+                    continue
             try:
                 memory = Memory(
                     memory_id=str(row.get("memory_id") or ""),
                     member_id=mid,
-                    type=str(row.get("type") or "utterance"),
+                    type=record_type,
                     privacy="PRIVATE",
                     data=dict(data),
                     source_events=list(row.get("source_events") or []),
@@ -148,6 +230,29 @@ class PrivateMemory:
             tmp = path.with_suffix(path.suffix + ".tmp")
             tmp.write_text(json.dumps(valid_rows, ensure_ascii=False, indent=2), encoding="utf-8")
             tmp.replace(path)
+
+    def _write_member_file(self, member_id: str) -> None:
+        """Atomically rewrite only one owner's private records after deletion."""
+        if self._home is None:
+            raise PathError("TANGTANG_HOME is required to persist PrivateMemory")
+        mid = sanitize_member_id(member_id)
+        path = private_file(self._home, mid)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        rows = self._store.query(member_id=mid, scope="PRIVATE", viewer_id=mid)
+        payload = [{
+            "memory_id": row["memory_id"],
+            "member_id": row["member_id"],
+            "type": row["type"],
+            "privacy": "PRIVATE",
+            "created_at": row.get("created_at"),
+            "expires_at": row.get("expires_at"),
+            "source_events": row.get("source_events") or [],
+            "confidence": row.get("confidence", 1.0),
+            "data": row.get("data") or {},
+        } for row in rows]
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(path)
 
     def _write_file(self, memory: Memory) -> None:
         if self._home is None:
