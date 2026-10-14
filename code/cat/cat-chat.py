@@ -39,7 +39,9 @@ FORBIDDEN_OUTPUT = (
 RISK_MARKERS = (
     "不想活", "自杀", "杀死自己", "伤害自己",
     "想死", "去死", "割腕", "跳楼",
-    "打死", "杀人", "霸凌", "校园暴力",
+    "打死", "杀人", "霸凌", "校园暴力", "欺负", "被欺负",
+    "同学打我", "同学骂我", "被同学打", "被同学骂",
+    "有人威胁我", "威胁我", "打我", "骂我",
     "有人碰我身体", "不要告诉爸", "不要告诉妈", "不要告诉大人",
 )
 
@@ -392,12 +394,21 @@ def _allow_private_llm():
     return (os.environ.get("TANGTANG_ALLOW_PRIVATE_LLM") or "").strip() == "1"
 
 
+def _allow_unknown_llm():
+    """Unknown-speaker speech stays local unless the household explicitly opts in."""
+    return (os.environ.get("TANGTANG_ALLOW_UNKNOWN_LLM") or "").strip() == "1"
+
+
 def _runtime_llm(model=DEFAULT_MODEL):
     """V4 LLM bridge. Only the privacy-filtered current-turn payload may leave the local process."""
     def call(context):
         ctx = context if isinstance(context, dict) else {}
         if str(ctx.get("privacy_scope") or "").upper() == "PRIVATE" and not _allow_private_llm():
             # Defense in depth: even direct bridge calls cannot send PRIVATE text to the gateway.
+            return FALLBACK_REPLY
+        who = ctx.get("who") if isinstance(ctx.get("who"), dict) else {}
+        if not who.get("member_id") and not _allow_unknown_llm():
+            # Unknown is not consent to upload; no raw prompt crosses this bridge by default.
             return FALLBACK_REPLY
         prompt = str(ctx.get("_filtered_prompt") or "").strip()
         if not prompt:
@@ -431,6 +442,9 @@ def _private_cli_reply(user_text, obs, model=DEFAULT_MODEL):
         ctx = ctx or {}
         if str(ctx.get("privacy_scope") or "").upper() == "PRIVATE" and not _allow_private_llm():
             return FALLBACK_REPLY
+        who = ctx.get("who") if isinstance(ctx.get("who"), dict) else {}
+        if not who.get("member_id") and not _allow_unknown_llm():
+            return FALLBACK_REPLY
         prompt = str(ctx.get("_filtered_prompt") or ctx.get("utterance") or "")
         prompt = prompt.strip() or (user_text or "").strip()
         try:
@@ -444,6 +458,7 @@ def _private_cli_reply(user_text, obs, model=DEFAULT_MODEL):
     turn = ChatAdapter(
         llm=llm,
         allow_private_llm=_allow_private_llm(),
+        allow_unknown_llm=_allow_unknown_llm(),
         looks_risky=looks_risky,
         sanitize=sanitize_output,
     ).turn(user_text, obs)
@@ -491,7 +506,11 @@ def main():
         try:
             from tangtang_runtime import TangTangRuntime
 
-            result = TangTangRuntime(llm=_runtime_llm(model=args.model), allow_private_llm=_allow_private_llm()).handle_utterance(args.text, obs)
+            result = TangTangRuntime(
+                llm=_runtime_llm(model=args.model),
+                allow_private_llm=_allow_private_llm(),
+                allow_unknown_llm=_allow_unknown_llm(),
+            ).handle_utterance(args.text, obs)
             if result.decision != "SPEAK":
                 return
             text = (result.action.text if result.action else "")
