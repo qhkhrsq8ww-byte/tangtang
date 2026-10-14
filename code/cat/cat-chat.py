@@ -387,6 +387,11 @@ def _local_safety_reply(user_text):
     return SAFE_REPLY
 
 
+def _allow_private_llm():
+    """Private speech stays on-device unless the household explicitly opts in."""
+    return (os.environ.get("TANGTANG_ALLOW_PRIVATE_LLM") or "").strip() == "1"
+
+
 def _runtime_llm(model=DEFAULT_MODEL):
     """V4 LLM bridge. Only the privacy-filtered current-turn payload may leave the local process."""
     def call(context):
@@ -432,6 +437,7 @@ def _private_cli_reply(user_text, obs, model=DEFAULT_MODEL):
 
     turn = ChatAdapter(
         llm=llm,
+        allow_private_llm=_allow_private_llm(),
         looks_risky=looks_risky,
         sanitize=sanitize_output,
     ).turn(user_text, obs)
@@ -479,7 +485,7 @@ def main():
         try:
             from tangtang_runtime import TangTangRuntime
 
-            result = TangTangRuntime(llm=_runtime_llm(model=args.model)).handle_utterance(args.text, obs)
+            result = TangTangRuntime(llm=_runtime_llm(model=args.model), allow_private_llm=_allow_private_llm()).handle_utterance(args.text, obs)
             if result.decision != "SPEAK":
                 return
             text = (result.action.text if result.action else "")
