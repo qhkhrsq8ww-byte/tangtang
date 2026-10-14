@@ -29,6 +29,7 @@ from core.runtime.isolate import isolate
 _CAT_CHAT = Path(__file__).resolve().parents[2] / "code" / "cat" / "cat-chat.py"
 
 LLMFn = Callable[[Mapping[str, Any]], str]
+LLM_FALLBACK = "糖糖在呢，刚刚没接上。"
 
 
 def _load_cat_chat_helpers() -> tuple[Callable[[str], bool] | None, Callable[[str], str] | None]:
@@ -188,10 +189,10 @@ class ChatAdapter:
             def _call_llm() -> str:
                 return str(self._llm(prompt_ctx))
 
-            llm_res = isolate(_call_llm, fallback="汪汪～")
-            text_out = llm_res.value if llm_res.ok and isinstance(llm_res.value, str) else "汪汪～"
+            llm_res = isolate(_call_llm, fallback=LLM_FALLBACK)
+            text_out = llm_res.value if llm_res.ok and isinstance(llm_res.value, str) else LLM_FALLBACK
             if not text_out.strip():
-                text_out = "汪汪～"
+                text_out = LLM_FALLBACK
             if self._sanitize is not None:
                 cleaned = isolate(lambda: self._sanitize(text_out), fallback=text_out)
                 if cleaned.ok and isinstance(cleaned.value, str) and cleaned.value.strip():

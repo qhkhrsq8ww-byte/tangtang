@@ -48,7 +48,7 @@ class TestPersonaSixUtterances(unittest.TestCase):
         for member_id, utterance, _expected in SIX_UTTERANCES:
             reply = self.r.reply(member_id=member_id, utterance=utterance)
             self.assertEqual(reply.role, expected_role[member_id], member_id)
-            self.assertTrue(reply.text.startswith("汪汪～"), reply.text)
+            self.assertFalse(reply.text.startswith("汪汪～"), reply.text)
             if expected_role[member_id] in {"elder", "adult"}:
                 for tok in TODDLER_TOKENS:
                     self.assertNotIn(tok, reply.text, f"{member_id} childish {tok}")
@@ -69,14 +69,14 @@ class TestPersonaSixUtterances(unittest.TestCase):
 
     def test_sister_alias_qiaqia_not_toddler(self):
         text = self.r.reply_text(member_id="qiaqia", utterance="好无聊，不想写作业。")
-        self.assertTrue(text.startswith("汪汪～"))
+        self.assertFalse(text.startswith("汪汪～"), text)
         self.assertNotIn("宝宝", text)
         self.assertNotIn("吃饭饭", text)
         self.assertEqual(profile_for("姐姐", V4_MEMBERS), "friend")
 
     def test_brother_alias_hanghang_not_lecture(self):
         text = self.r.reply_text(member_id="hanghang", utterance="我想打游戏！")
-        self.assertTrue(text.startswith("汪汪～"))
+        self.assertFalse(text.startswith("汪汪～"), text)
         self.assertNotIn("作为家长", text)
         self.assertNotIn("立刻停止", text)
         self.assertEqual(profile_for("弟弟", V4_MEMBERS), "play")
@@ -87,12 +87,12 @@ class TestPersonaEmptyUnknown(unittest.TestCase):
         r = PersonaRenderer()
         reply = r.reply(member_id=None, utterance="")
         self.assertEqual(reply.member_id, "unknown")
-        self.assertTrue(reply.text.startswith("汪汪～"))
+        self.assertFalse(reply.text.startswith("汪汪～"), reply.text)
 
     def test_unknown_visitor(self):
         r = PersonaRenderer(V4_MEMBERS)
         reply = r.reply(member_id="邻居", utterance="你好")
-        self.assertIn("汪汪～", reply.text)
+        self.assertFalse(reply.text.startswith("汪汪～"), reply.text)
         self.assertNotIn("宝宝", reply.text)
 
     def test_personas_cover_six(self):

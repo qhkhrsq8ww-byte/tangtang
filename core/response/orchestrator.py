@@ -119,14 +119,14 @@ class ResponseOrchestrator:
                     context=ctx,
                 )
             except Exception:
-                text = "汪汪～"
+                text = "糖糖在呢，刚刚没接上。"
         else:
             try:
                 text = self.responder(ctx)
             except ActionError:
                 raise
             except Exception:
-                text = "汪汪～"
+                text = "糖糖在呢，刚刚没接上。"
         if not isinstance(text, str):
             raise ActionError("responder must return text, not a sink callable")
         needles = self.injection.other_private_needles(ctx, member_id)

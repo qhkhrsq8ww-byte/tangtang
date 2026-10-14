@@ -38,13 +38,36 @@ class TestRuntimeOffline(unittest.TestCase):
             result = rt.handle_utterance("糖糖，我加班回来了。", {"label": "dad"})
             self.assertTrue(result.event_kept)
             self.assertEqual(result.decision, "SPEAK")
-            self.assertTrue(result.action.text.startswith("汪汪～"))
+            self.assertIn("爸爸回来啦", result.action.text)
             self.assertTrue(result.animation)
             self.assertTrue(store.contains(result.event_id))
             path = Path(tmp) / "events" / "events.jsonl"
             self.assertTrue(path.is_file())
             self.assertNotIn("/Users/lv/.qclaw/workspace/cat/", path.read_text(encoding="utf-8"))
 
+
+class TestRuntimeLLMInjection(unittest.TestCase):
+    def test_injected_llm_receives_filtered_current_turn(self):
+        received = []
+
+        def llm(payload):
+            received.append(dict(payload))
+            return "听起来你今天有点累。要不要先歇一会儿？"
+
+        rt = TangTangRuntime(members=MEMBERS, llm=llm)
+        from datetime import datetime, timezone
+        result = rt.handle_utterance(
+            "今天好累。",
+            {"label": "dad", "now": datetime(2026, 8, 28, 16, 0, tzinfo=timezone.utc)},
+        )
+
+        self.assertEqual(result.decision, "SPEAK")
+        self.assertEqual(result.action.text, "听起来你今天有点累。要不要先歇一会儿？")
+        self.assertEqual(len(received), 1)
+        self.assertIn("_filtered_prompt", received[0])
+        self.assertIn("utterance=今天好累。", received[0]["_filtered_prompt"])
+        self.assertNotIn("history", received[0])
+        self.assertNotIn("memory", received[0])
 
 class TestDuplicateEventNoDuplicateBehavior(unittest.TestCase):
     def test_same_event_id_does_not_speak_twice(self):
@@ -99,7 +122,7 @@ class TestRuntimeFailuresLocal(unittest.TestCase):
         )
         self.assertTrue(result.event_kept)
         self.assertEqual(result.member_id, "dad")
-        self.assertEqual(result.action.text, "汪汪～")
+        self.assertEqual(result.action.text, "糖糖在呢，刚刚没接上。")
 
     def test_unknown_stays_unknown(self):
         rt = TangTangRuntime(members=MEMBERS)

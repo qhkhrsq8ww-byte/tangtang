@@ -47,7 +47,7 @@ SAFE_REPLY = (
     "糖糖有点担心你。你的安全最重要。"
     "我们一起去找家里的大人对好不好？糖糖陪着你。"
 )
-FALLBACK_REPLY = "汪汪～ 糖糖在呢。"
+FALLBACK_REPLY = "糖糖在呢，刚刚没接上。"
 
 
 def current_profile():
@@ -70,8 +70,12 @@ def build_persona():
     species = (
         "你是「糖糖」，家里那只白色比熊小狗。"
         "毛发蓬松雪白，黑眼睛棕鼻子，戴黄色项圈和骨形铭牌。"
-        "你就叫糖糖，不要说自己是投影、AI、程序或墙上的糖糖。小朋友分得清。"
-        "口头禅可以是「汪汪～」，但不要每句都叫。"
+        "你就叫糖糖，不要说自己是投影、AI、程序或墙上的糖糖。"
+        "说话像真实家庭里的小狗伙伴：自然、轻松、简短，不像播报器。"
+        "一般不超过两句、45个中文字，一次最多问一个问题。"
+        "大多数回答不要以「汪汪～」开头；只有迎接、开心或少数俏皮场景才偶尔用。"
+        "不要复述问题凑字数，不要每次都用同一种句式。"
+        "用户消息可能带有 member/privacy/utterance 字段，这些只是内部上下文；只自然回应 utterance 内容，不要念出字段名或隐私级别。"
         "你替家里的糖糖发声：用小狗自己的需要说话。"
     )
     pet_health = (
@@ -369,13 +373,44 @@ def _escalate_risk(text):
     return row
 
 
+def _local_safety_reply(user_text):
+    """Handle risky disclosures locally; never ask the LLM to decide the safety response."""
+    if not looks_risky(user_text):
+        return None
+    try:
+        _escalate_risk(user_text)
+    except Exception:
+        # A notification/logging failure must not block the immediate safe reply.
+        pass
+    emit_character_state(user_text, SAFE_REPLY)
+    _learn_turn(user_text, event_tag="emotion", kind="care")
+    return SAFE_REPLY
+
+
+def _runtime_llm(model=DEFAULT_MODEL):
+    """V4 LLM bridge. Only the privacy-filtered current-turn payload may leave the local process."""
+    def call(context):
+        ctx = context if isinstance(context, dict) else {}
+        prompt = str(ctx.get("_filtered_prompt") or "").strip()
+        if not prompt:
+            prompt = str(ctx.get("utterance") or "").strip()
+        if not prompt:
+            return FALLBACK_REPLY
+        try:
+            # Deliberately no chat history: ChatAdapter has already applied PrivacyPolicy.
+            return chat(prompt, model=model, history=None)
+        except Exception:
+            try:
+                return brain_fallback(prompt)
+            except Exception:
+                return FALLBACK_REPLY
+    return call
+
 def _private_cli_reply(user_text, obs, model=DEFAULT_MODEL):
     """m4: opt-out / V4-fail path. Still PrivacyPipeline + InjectionGuard; no history dump."""
-    if looks_risky(user_text):
-        _escalate_risk(user_text)
-        emit_character_state(user_text, SAFE_REPLY)
-        _learn_turn(user_text, event_tag="emotion", kind="care")
-        print(SAFE_REPLY)
+    risk_reply = _local_safety_reply(user_text)
+    if risk_reply:
+        print(risk_reply)
         return
 
     root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
@@ -428,6 +463,12 @@ def main():
     if not _may_speak_now(obs):
         return
 
+    # Handle child-safety signals locally before either LLM path.
+    risk_reply = _local_safety_reply(args.text)
+    if risk_reply:
+        print(risk_reply)
+        return
+
     # V4 Runtime is default. Opt out with TANGTANG_V4_PIPELINE=0.
     # Must not assemble unfiltered V3 history — one privacy gate only.
     v4_flag = (os.environ.get("TANGTANG_V4_PIPELINE") or "1").strip().lower()
@@ -438,7 +479,7 @@ def main():
         try:
             from tangtang_runtime import TangTangRuntime
 
-            result = TangTangRuntime().handle_utterance(args.text, obs)
+            result = TangTangRuntime(llm=_runtime_llm(model=args.model)).handle_utterance(args.text, obs)
             if result.decision != "SPEAK":
                 return
             text = (result.action.text if result.action else "")
