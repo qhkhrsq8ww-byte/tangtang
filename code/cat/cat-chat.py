@@ -453,6 +453,12 @@ def main():
     if not args.text.strip():
         args.text = "糖糖，我来啦"
 
+    # Child-safety disclosures outrank alarms, presence, and ordinary quiet gates.
+    risk_reply = _local_safety_reply(args.text)
+    if risk_reply:
+        print(risk_reply)
+        return
+
     # 闹铃设/取消：本地解析 + JSON，LLM 不决定 crontab / TTS / 隐私。
     alarm_line = _alarm_reply(args.text)
     if alarm_line:
@@ -460,13 +466,6 @@ def main():
         return
 
     obs = _live_obs()
-    # Safety disclosures take priority over the ordinary speak/quiet gate.
-    # Do not suppress a child's request for help because the home is quiet.
-    risk_reply = _local_safety_reply(args.text)
-    if risk_reply:
-        print(risk_reply)
-        return
-
     if not _may_speak_now(obs):
         return
 
