@@ -233,6 +233,21 @@ def _may_speak_now(obs):
     return may_call_llm(decide(obs, now=now, channel="chat", live=True))
 
 
+def _is_explicit_local_intent(text):
+    """User-requested local memory/todo operations may answer during quiet hours, unless risky."""
+    if looks_risky(text):
+        return False
+    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    try:
+        from core.memory.explicit_intents import parse_memory_intent
+        from core.tasks.intents import parse_task_intent
+        return parse_memory_intent(text) is not None or parse_task_intent(text) is not None
+    except Exception:
+        return False
+
+
 def emit_character_state(user_text, reply_text):
     """Chat reply → CharacterStateEngine (single truth) → presentation files.
 
@@ -493,7 +508,7 @@ def main():
         return
 
     obs = _live_obs()
-    if not _may_speak_now(obs):
+    if not _may_speak_now(obs) and not _is_explicit_local_intent(args.text):
         return
 
     # V4 Runtime is default. Opt out with TANGTANG_V4_PIPELINE=0.
