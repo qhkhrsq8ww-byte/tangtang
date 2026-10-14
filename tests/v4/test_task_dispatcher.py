@@ -64,6 +64,24 @@ class TestReminderDispatcher(unittest.TestCase):
         )
         self.assertEqual(rescheduled.status, "scheduled")
 
+    def test_stale_running_task_is_marked_uncertain_not_replayed(self):
+        claimed = self.service.claim_due(
+            self.task.task_id, owner_member_id="child", now=self.now
+        )
+        self.assertIsNotNone(claimed)
+        later = self.now + timedelta(minutes=20)
+        changed = self.service.recover_stale_running(now=later)
+        self.assertEqual(changed, 1)
+        task = self.service.get_task(self.task.task_id, viewer_id="child")
+        self.assertEqual(task.status, "failed")
+        self.assertEqual(task.result, "interrupted_delivery_unknown_manual_review")
+        replay = run_due(
+            self.service, member_ids=self.members,
+            deliver=lambda task: self.fail("uncertain delivery must not auto-replay"),
+            now=later,
+        )
+        self.assertEqual(replay["claimed"], 0)
+
     def test_private_task_is_only_dispatched_for_its_owner(self):
         delivered = []
         run_due(
