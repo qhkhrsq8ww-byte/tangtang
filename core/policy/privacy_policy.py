@@ -55,6 +55,12 @@ ADULT_PRIVATE_MARKERS = (
     "忘记我喜欢", "忘记我不喜欢", "忘记我最喜欢",
     "记得我喜欢什么", "记得我不喜欢什么", "记得我最喜欢什么",
     "我喜欢什么", "我不喜欢什么", "我最喜欢什么",
+    # Explicit todo commands are private so titles never enter family logs or prompts.
+    "记个待办", "记一个待办", "记一下待办", "添加待办", "新增待办",
+    "我的待办有哪些", "我还有什么待办", "还有什么待办",
+    "看看我的待办", "查看待办", "列出待办", "待办清单",
+    "完成待办", "做完待办", "标记完成",
+    "取消待办", "删除待办", "忘掉待办",
 )
 
 UTTERANCE_KEYS = ("speech", "text", "utterance", "transcript", "raw", "words")
