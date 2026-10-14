@@ -309,6 +309,55 @@ class ChatAdapter:
         if viewer_id != member_id:
             text = "我还不能确认这是你的提醒，先不创建或修改。"
             operation = "reminder_denied"
+        elif intent.action == "list":
+            rows = self.tasks.list_tasks(
+                viewer_id=member_id,
+                statuses={"needs_confirmation", "scheduled", "running", "failed"},
+                include_family=False,
+                limit=20,
+            )
+            rows = [task for task in rows if task.kind == "reminder"]
+            if not rows:
+                text = "你现在没有待处理的提醒。"
+            else:
+                text = "你的提醒有：" + "；".join(
+                    f"{task.title}（{'待补时间' if not task.due_at else task.due_at}，{task.status}）"
+                    for task in rows[:8]
+                ) + "。"
+            operation = "reminder_list"
+        elif intent.action in {"cancel", "reschedule"}:
+            candidates = self.tasks.list_tasks(
+                viewer_id=member_id,
+                statuses={"needs_confirmation", "scheduled", "failed"},
+                include_family=False,
+                limit=500,
+            )
+            candidates = [
+                task for task in candidates
+                if task.kind == "reminder"
+                and self._normalize_task_title(task.title) == self._normalize_task_title(intent.title or "")
+            ]
+            if len(candidates) != 1:
+                text = (
+                    "我没找到名称完全相同的提醒，或有多个同名提醒。你可以先说“查看提醒”，再用完整事项名称操作。"
+                )
+                operation = "reminder_not_found"
+            elif intent.action == "cancel":
+                task = self.tasks.cancel(candidates[0].task_id, owner_member_id=member_id)
+                text = f"好，已经取消提醒：{task.title}。"
+                operation = "reminder_cancel"
+            elif not intent.due_at:
+                text = "我没识别出新的提醒时间。请说清楚日期和几点，例如“把带水杯提醒改到明天晚上八点”。"
+                operation = "reminder_clarify"
+            else:
+                task = self.tasks.reschedule(
+                    candidates[0].task_id,
+                    owner_member_id=member_id,
+                    due_at=intent.due_at,
+                    timezone_name=intent.timezone_name,
+                )
+                text = f"好，已经修改提醒：{task.title}，新时间是 {task.due_at}。"
+                operation = "reminder_reschedule"
         elif intent.action == "time_reply":
             pending = self.tasks.list_tasks(
                 viewer_id=member_id,
