@@ -138,10 +138,11 @@ class ChatAdapter:
         text = str(utterance or "")
         if not text.strip():
             return False
-        if self._looks_risky is not None:
-            risky = isolate(lambda: bool(self._looks_risky(text)), fallback=True)
-            if not risky.ok or risky.value:
-                return False
+        if self._looks_risky is None:
+            return False
+        risky = isolate(lambda: bool(self._looks_risky(text)), fallback=True)
+        if not risky.ok or risky.value:
+            return False
         return parse_memory_intent(text) is not None or parse_task_intent(text) is not None
 
     def turn(
@@ -156,11 +157,15 @@ class ChatAdapter:
         obs.setdefault("interactive", True)
         text = utterance or str(obs.get("utterance") or obs.get("speech") or "")
         risk_detected = False
-        if self._looks_risky is not None:
-            risky = isolate(lambda: bool(self._looks_risky(text)), fallback=False)
-            if risky.ok and risky.value:
+        if self._looks_risky is None:
+            # If deterministic safety classification is unavailable, fail closed for intent shortcuts.
+            risk_detected = True
+        else:
+            risky = isolate(lambda: bool(self._looks_risky(text)), fallback=True)
+            if not risky.ok or risky.value:
                 risk_detected = True
-                obs = {**obs, "safety": "risk"}
+                if risky.ok and risky.value:
+                    obs = {**obs, "safety": "risk"}
         # These explicit commands retain only the structured result, not the original utterance.
         memory_intent = None if risk_detected else parse_memory_intent(text)
         task_intent = None if risk_detected else parse_task_intent(text)
