@@ -510,6 +510,8 @@ def main():
                 llm=_runtime_llm(model=args.model),
                 allow_private_llm=_allow_private_llm(),
                 allow_unknown_llm=_allow_unknown_llm(),
+                home=DATA_DIR,
+                persist=True,
             ).handle_utterance(args.text, obs)
             if result.decision != "SPEAK":
                 return
