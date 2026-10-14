@@ -396,6 +396,9 @@ def _runtime_llm(model=DEFAULT_MODEL):
     """V4 LLM bridge. Only the privacy-filtered current-turn payload may leave the local process."""
     def call(context):
         ctx = context if isinstance(context, dict) else {}
+        if str(ctx.get("privacy_scope") or "").upper() == "PRIVATE" and not _allow_private_llm():
+            # Defense in depth: even direct bridge calls cannot send PRIVATE text to the gateway.
+            return FALLBACK_REPLY
         prompt = str(ctx.get("_filtered_prompt") or "").strip()
         if not prompt:
             prompt = str(ctx.get("utterance") or "").strip()
@@ -425,7 +428,10 @@ def _private_cli_reply(user_text, obs, model=DEFAULT_MODEL):
 
     def llm(ctx):
         # Filtered prompt only — never reload local chat history into the cloud call.
-        prompt = str((ctx or {}).get("_filtered_prompt") or (ctx or {}).get("utterance") or "")
+        ctx = ctx or {}
+        if str(ctx.get("privacy_scope") or "").upper() == "PRIVATE" and not _allow_private_llm():
+            return FALLBACK_REPLY
+        prompt = str(ctx.get("_filtered_prompt") or ctx.get("utterance") or "")
         prompt = prompt.strip() or (user_text or "").strip()
         try:
             return chat(prompt, model=model, history=None)
