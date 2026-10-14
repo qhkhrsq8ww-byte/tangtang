@@ -130,6 +130,7 @@ class TangTangRuntime:
             llm=self._llm,
             allow_private_llm=allow_private_llm,
             allow_unknown_llm=allow_unknown_llm,
+            tasks=self.tasks,
         )
         # Sinks run through adapters. Do not also bind the same callables on
         # PresentationRuntime or TTS/projection would fire twice.
