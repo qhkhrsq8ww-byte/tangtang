@@ -104,6 +104,7 @@ class PrivacyPipeline:
         observation: Mapping[str, Any] | None = None,
         *,
         source: str = "mic",
+        store_private_memory: bool = True,
     ) -> IngestResult:
         obs = dict(observation or {})
         member_id = self.identity.resolve(obs) or obs.get("member_id") or obs.get("label")
@@ -132,7 +133,7 @@ class PrivacyPipeline:
             raise PrivacyError("SafeLogger leaked PRIVATE / unknown utterance")
 
         result = IngestResult(event=event, decision=decision)
-        if decision.privacy == "PRIVATE" and decision.member_id:
+        if decision.privacy == "PRIVATE" and decision.member_id and store_private_memory:
             put = isolate(lambda: self.stores.private.put(
                 member_id=decision.member_id,
                 utterance=utterance,
