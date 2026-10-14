@@ -460,13 +460,14 @@ def main():
         return
 
     obs = _live_obs()
-    if not _may_speak_now(obs):
-        return
-
-    # Handle child-safety signals locally before either LLM path.
+    # Safety disclosures take priority over the ordinary speak/quiet gate.
+    # Do not suppress a child's request for help because the home is quiet.
     risk_reply = _local_safety_reply(args.text)
     if risk_reply:
         print(risk_reply)
+        return
+
+    if not _may_speak_now(obs):
         return
 
     # V4 Runtime is default. Opt out with TANGTANG_V4_PIPELINE=0.
