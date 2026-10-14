@@ -3,7 +3,7 @@
 observe → identify → event → Family Brain → decision → response → presentation
 
 Offline (no LLM / no vendor TTS): policy, silent, basic animation, and the
-event log still work. LLM down → 汪汪～. Sink failures stay local.
+event log still work. LLM down → a short natural fallback. Sink failures stay local.
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from core.response.orchestrator import PresentationAction
 from core.runtime.isolate import isolate
 from core.runtime.presentation import DeliveryResult, PresentationRuntime
 
-FALLBACK = "汪汪～"
+FALLBACK = "糖糖在呢，刚刚没接上。"
 
 
 @dataclass
