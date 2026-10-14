@@ -61,7 +61,7 @@ class TestTtsFailKeepsEvent(unittest.TestCase):
     def test_llm_fail_falls_back_to_wangwang(self):
         orch = ResponseOrchestrator(responder=lambda ctx: (_ for _ in ()).throw(ConnectionError("llm")))
         action = orch.run(decision="SPEAK", context={"who": {"member_id": "mom"}})
-        self.assertEqual(action.text, "汪汪～")
+        self.assertEqual(action.text, "糖糖在呢，刚刚没接上。")
         self.assertEqual(action.decision, "SPEAK")
 
 
