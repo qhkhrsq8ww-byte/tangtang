@@ -78,7 +78,7 @@ class TestFamilyMemoryPersistence(unittest.TestCase):
             ))
 
             second = FamilyMemory(home=td, persist=True, privacy=privacy)
-            rows = second.query(member_id="dad", scope="FAMILY", viewer_id="dad")
+            rows = second.query(member_id="dad", viewer_id="dad")
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]["data"]["value"], "short replies")
 
