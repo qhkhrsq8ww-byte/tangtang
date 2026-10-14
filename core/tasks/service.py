@@ -302,6 +302,27 @@ class TaskService:
         self._save()
         return task
 
+    def recover_stale_running(
+        self, *, older_than: timedelta = timedelta(minutes=10), now: datetime | None = None
+    ) -> int:
+        """Mark interrupted deliveries as uncertain instead of silently replaying them."""
+        current = now or self._clock()
+        if current.tzinfo is None:
+            current = current.replace(tzinfo=timezone.utc)
+        changed = 0
+        for task in self._tasks.values():
+            if task.status != "running" or not task.last_attempt_at:
+                continue
+            attempted = _parse_aware(task.last_attempt_at)
+            if attempted is None or current - attempted < older_than:
+                continue
+            task.status = "failed"
+            task.updated_at = _iso_now(self._clock)
+            task.result = "interrupted_delivery_unknown_manual_review"
+            self._save()
+            changed += 1
+        return changed
+
     def finish_delivery(
         self,
         task_id: str,
