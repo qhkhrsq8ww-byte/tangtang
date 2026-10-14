@@ -24,6 +24,7 @@ from core.ingest import IngestResult, PrivacyPipeline
 from core.memory.explicit_intents import MemoryIntent, category_text, parse_memory_intent
 from core.memory.recall import retrieve_structured_memories
 from core.tasks.intents import TaskIntent, parse_task_intent
+from core.tasks.reminders import ReminderIntent, parse_reminder_intent
 from core.tasks.service import TaskService
 from core.policy.injection import InjectionGuard
 from core.policy.speak_gate import decide as speak_decide, may_call_llm
@@ -152,11 +153,15 @@ class ChatAdapter:
                 obs = {**obs, "safety": "risk"}
         # These explicit commands retain only the structured result, not the original utterance.
         memory_intent = None if risk_detected else parse_memory_intent(text)
+        reminder_now = obs.get("now") if isinstance(obs.get("now"), datetime) else None
+        reminder_intent = None if risk_detected else parse_reminder_intent(
+            text, now=reminder_now, timezone_name=obs.get("timezone")
+        )
         task_intent = None if risk_detected else parse_task_intent(text)
         ingested = self.pipeline.ingest(
             text,
             obs,
-            store_private_memory=memory_intent is None and task_intent is None,
+            store_private_memory=memory_intent is None and reminder_intent is None and task_intent is None,
         )
         speaker_id = ingested.decision.member_id
         effective_viewer_id = viewer_id or speaker_id
@@ -164,6 +169,15 @@ class ChatAdapter:
         if memory_intent is not None:
             local_result = self._handle_memory_intent(
                 intent=memory_intent,
+                ingested=ingested,
+                member_id=speaker_id,
+                viewer_id=effective_viewer_id,
+            )
+            if local_result is not None:
+                return local_result
+        if reminder_intent is not None:
+            local_result = self._handle_reminder_intent(
+                intent=reminder_intent,
                 ingested=ingested,
                 member_id=speaker_id,
                 viewer_id=effective_viewer_id,
@@ -280,6 +294,144 @@ class ChatAdapter:
             return ChatTurn(action=action, ingest=ingested, context=ctx)
         action = self.pipeline.orchestrator.run(decision=decision, context=ctx, action="reply")
         return ChatTurn(action=action, ingest=ingested, context=ctx)
+
+    def _handle_reminder_intent(
+        self,
+        *,
+        intent: ReminderIntent,
+        ingested: IngestResult,
+        member_id: str | None,
+        viewer_id: str | None,
+    ) -> ChatTurn | None:
+        """Create, clarify and schedule reminders locally; never claim delivery before dispatch."""
+        if not member_id:
+            return None
+        if viewer_id != member_id:
+            text = "我还不能确认这是你的提醒，先不创建或修改。"
+            operation = "reminder_denied"
+        elif intent.action == "list":
+            rows = self.tasks.list_tasks(
+                viewer_id=member_id,
+                statuses={"needs_confirmation", "scheduled", "running", "failed"},
+                include_family=False,
+                limit=20,
+            )
+            rows = [task for task in rows if task.kind == "reminder"]
+            if not rows:
+                text = "你现在没有待处理的提醒。"
+            else:
+                text = "你的提醒有：" + "；".join(
+                    f"{task.title}（{'待补时间' if not task.due_at else task.due_at}，{task.status}）"
+                    for task in rows[:8]
+                ) + "。"
+            operation = "reminder_list"
+        elif intent.action in {"cancel", "reschedule"}:
+            candidates = self.tasks.list_tasks(
+                viewer_id=member_id,
+                statuses={"needs_confirmation", "scheduled", "failed"},
+                include_family=False,
+                limit=500,
+            )
+            candidates = [
+                task for task in candidates
+                if task.kind == "reminder"
+                and self._normalize_task_title(task.title) == self._normalize_task_title(intent.title or "")
+            ]
+            if len(candidates) != 1:
+                text = (
+                    "我没找到名称完全相同的提醒，或有多个同名提醒。你可以先说“查看提醒”，再用完整事项名称操作。"
+                )
+                operation = "reminder_not_found"
+            elif intent.action == "cancel":
+                task = self.tasks.cancel(candidates[0].task_id, owner_member_id=member_id)
+                text = f"好，已经取消提醒：{task.title}。"
+                operation = "reminder_cancel"
+            elif not intent.due_at:
+                text = "我没识别出新的提醒时间。请说清楚日期和几点，例如“把带水杯提醒改到明天晚上八点”。"
+                operation = "reminder_clarify"
+            else:
+                task = self.tasks.reschedule(
+                    candidates[0].task_id,
+                    owner_member_id=member_id,
+                    due_at=intent.due_at,
+                    timezone_name=intent.timezone_name,
+                )
+                text = f"好，已经修改提醒：{task.title}，新时间是 {task.due_at}。"
+                operation = "reminder_reschedule"
+        elif intent.action == "time_reply":
+            pending = self.tasks.list_tasks(
+                viewer_id=member_id,
+                statuses={"needs_confirmation"},
+                include_family=False,
+                limit=20,
+            )
+            pending = [task for task in pending if task.kind == "reminder"]
+            if len(pending) != 1 or not intent.due_at:
+                return None
+            task = self.tasks.reschedule(
+                pending[0].task_id,
+                owner_member_id=member_id,
+                due_at=intent.due_at,
+                timezone_name=intent.timezone_name,
+            )
+            text = f"好，已经设置提醒：{task.title}，时间是 {task.due_at}。到时我会尝试播放提醒。"
+            operation = "reminder_schedule"
+        elif intent.action == "needs_details":
+            text = "我可以提醒你。先告诉我具体要提醒什么，再告诉我哪一天、几点。"
+            operation = "reminder_clarify"
+        elif intent.action == "needs_time":
+            if not intent.title:
+                text = "你想让我提醒什么事情？告诉我事项和时间就行。"
+                operation = "reminder_clarify"
+            else:
+                task = self.tasks.create_task(
+                    owner_member_id=member_id,
+                    title=intent.title,
+                    kind="reminder",
+                    visibility="PRIVATE",
+                    status="needs_confirmation",
+                    source_event_id=ingested.event.id,
+                    idempotency_key=f"reminder-draft:{ingested.event.id}",
+                    timezone_name=intent.timezone_name or "UTC",
+                )
+                text = f"我记下要提醒你：{task.title}。还没设置成功哦，你想让我哪天几点提醒？"
+                operation = "reminder_needs_time"
+        elif intent.action == "schedule" and intent.title and intent.due_at:
+            task = self.tasks.create_task(
+                owner_member_id=member_id,
+                title=intent.title,
+                due_at=intent.due_at,
+                timezone_name=intent.timezone_name or "UTC",
+                kind="reminder",
+                visibility="PRIVATE",
+                status="scheduled",
+                source_event_id=ingested.event.id,
+                idempotency_key=f"reminder-event:{ingested.event.id}",
+            )
+            text = f"好，已经设置提醒：{task.title}，时间是 {task.due_at}。到时我会尝试播放提醒。"
+            operation = "reminder_schedule"
+        else:
+            return None
+        context = {
+            "who": {"member_id": member_id},
+            "current_event": ingested.event.to_dict(),
+            "privacy_scope": "PRIVATE",
+            "task_operation": operation,
+            "private_facts": [],
+        }
+        if self._sanitize is not None:
+            cleaned = isolate(lambda: self._sanitize(text), fallback=text)
+            if cleaned.ok and isinstance(cleaned.value, str) and cleaned.value.strip():
+                text = cleaned.value
+        action = PresentationAction(
+            decision="SPEAK",
+            text=text,
+            action=operation,
+            member_id=member_id,
+            sink="voice",
+            private_facts=(),
+        )
+        return ChatTurn(action=action, ingest=ingested, context=context)
 
     def _handle_task_intent(
         self,
