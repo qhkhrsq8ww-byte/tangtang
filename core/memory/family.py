@@ -44,6 +44,44 @@ class _GatedStore:
         self._persist = persist
         self._filename = filename
         self._home: Path | None = Path(home).resolve() if home else None
+        if self._persist:
+            self._load()
+
+    def _load(self) -> None:
+        """Restore persisted rows through the same privacy gate used for new writes."""
+        home = self._home or tangtang_home()
+        path = family_file(home, self._filename)
+        if not path.is_file():
+            return
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+        if not isinstance(loaded, list):
+            return
+        for row in loaded:
+            if not isinstance(row, Mapping):
+                continue
+            data = row.get("data")
+            if not isinstance(data, Mapping):
+                continue
+            try:
+                memory = Memory(
+                    memory_id=str(row.get("memory_id") or ""),
+                    member_id=str(row.get("member_id") or ""),
+                    type=str(row.get("type") or "legacy_memory"),
+                    privacy=str(row.get("privacy") or "PUBLIC"),
+                    data=dict(data),
+                    source_events=list(row.get("source_events") or []),
+                    confidence=float(row.get("confidence", 1.0)),
+                    created_at=str(row.get("created_at") or "") or None,
+                    expires_at=str(row.get("expires_at") or "") or None,
+                )
+                self._reject(memory)
+                self._store.put(memory)
+            except Exception:
+                # Corrupt or policy-violating old rows are skipped, never exposed.
+                continue
 
     def _reject(self, memory: Memory) -> None:
         raw = raw_utterance_from(memory.data)
@@ -114,6 +152,13 @@ class _GatedStore:
                     existing = loaded
             except (OSError, json.JSONDecodeError):
                 existing = []
+        payload.update({
+            "type": memory.type,
+            "source_events": list(memory.source_events),
+            "confidence": memory.confidence,
+            "expires_at": memory.expires_at,
+        })
+        existing = [row for row in existing if not isinstance(row, Mapping) or row.get("memory_id") != memory.memory_id]
         existing.append(payload)
         tmp = path.with_suffix(path.suffix + ".tmp")
         tmp.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -223,6 +268,44 @@ class HabitStore:
         self._persist = persist
         self._home = Path(home).resolve() if home else None
         self._rows: list[dict[str, Any]] = []
+        if self._persist:
+            self._load()
+
+    def _load(self) -> None:
+        """Reload safe historical habit rows; discard child raw speech from legacy files."""
+        home = self._home or tangtang_home()
+        path = habit_file(home)
+        if not path.is_file():
+            return
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+        rows = loaded.get("logs") if isinstance(loaded, Mapping) else loaded
+        if not isinstance(rows, list):
+            return
+        safe_rows: list[dict[str, Any]] = []
+        for item in rows:
+            if not isinstance(item, Mapping):
+                continue
+            mid = str(item.get("member_id") or "").strip()
+            if not mid:
+                continue
+            text = str(item.get("text") or item.get("utterance") or "")
+            # Child raw speech is rejected even when loading old on-disk files.
+            if text and self._privacy.is_child(mid):
+                continue
+            privacy = str(item.get("privacy") or self._privacy.classify(member_id=mid, utterance=text).privacy)
+            if not self._privacy.allow_destination(
+                DEST_HABIT_STORE, member_id=mid, utterance=text, privacy=privacy
+            ):
+                continue
+            row = dict(item)
+            row.pop("utterance", None)
+            row["text"] = text
+            row["privacy"] = privacy
+            safe_rows.append(row)
+        self._rows = safe_rows
 
     def put(self, *, member_id: str, utterance: str = "", extra: Mapping[str, Any] | None = None) -> dict[str, Any]:
         if not self._privacy.allow_destination(

@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from core.adapters.animation import AnimationAction, AnimationController
@@ -24,9 +25,13 @@ from core.adapters.voice_adapter import VoiceAdapter
 from core.events.event import Event
 from core.events.event_bus import EventBus, PublishResult
 from core.identity.resolver import IdentityResolver
-from core.ingest import IngestResult, PrivacyPipeline
+from core.ingest import IngestResult, PrivacyPipeline, Stores
 from core.logging.safe import SafeLogger
+from core.memory.family import FamilyMemory, FamilySummary, HabitStore, ParentContext
+from core.memory.paths import tangtang_home
+from core.memory.private import PrivateMemory
 from core.policy.speak_gate import decide as speak_decide, may_call_llm
+from core.policy.privacy_policy import PrivacyPolicy
 from core.response.orchestrator import PresentationAction
 from core.runtime.isolate import isolate
 from core.runtime.presentation import DeliveryResult, PresentationRuntime
@@ -79,20 +84,41 @@ class TangTangRuntime:
         llm: Callable[[Mapping[str, Any]], str] | None = None,
         allow_private_llm: bool = False,
         allow_unknown_llm: bool = False,
+        home: str | Path | None = None,
+        persist: bool = False,
     ) -> None:
         roster = dict(members) if members is not None else load_members()
         self.members = roster
         self.offline = offline
         self.logger = logger or SafeLogger()
         self.identity = IdentityResolver(roster)
-        self.pipeline = pipeline or PrivacyPipeline(members=roster, logger=self.logger)
+        self.persist = bool(persist)
+        self.home = tangtang_home(home) if self.persist else (Path(home).expanduser().resolve() if home is not None else None)
+        if pipeline is not None:
+            self.pipeline = pipeline
+        else:
+            privacy = PrivacyPolicy(roster)
+            stores = None
+            if self.persist:
+                stores = Stores(
+                    private=PrivateMemory(home=self.home, privacy=privacy, persist=True),
+                    family=FamilyMemory(home=self.home, privacy=privacy, persist=True),
+                    summary=FamilySummary(home=self.home, privacy=privacy, persist=True),
+                    parent=ParentContext(home=self.home, privacy=privacy, persist=True),
+                    habits=HabitStore(home=self.home, privacy=privacy, persist=True),
+                )
+            self.pipeline = PrivacyPipeline(
+                members=roster, privacy=privacy, stores=stores, logger=self.logger
+            )
         self.voice = voice or VoiceAdapter()
         self.living_room = LivingRoomAdapter()
         self.tts = tts or TTSAdapter()
         self.projection = projection or ProjectionAdapter()
         self.animation = animation or AnimationController()
         self.bus = bus or EventBus()
-        self.events = events or JsonlEventStore()
+        self.events = events or (
+            JsonlEventStore(home=self.home, persist=True) if self.persist else JsonlEventStore()
+        )
         self.stt = stt
         self._llm = None if offline else llm
         self.chat = ChatAdapter(
