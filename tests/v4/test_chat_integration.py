@@ -104,7 +104,7 @@ class TestChatLlmFailure(unittest.TestCase):
 
         rt = TangTangRuntime(members=MEMBERS, llm=boom)
         result = rt.handle_utterance("糖糖在吗", {"label": "dad"})
-        self.assertEqual(result.action.text, "汪汪～")
+        self.assertEqual(result.action.text, "糖糖在呢，刚刚没接上。")
         self.assertTrue(result.event_kept)
         self.assertEqual(result.decision, "SPEAK")
 
