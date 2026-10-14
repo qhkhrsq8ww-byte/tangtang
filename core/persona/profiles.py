@@ -59,12 +59,12 @@ PERSONAS: dict[str, dict[str, Any]] = {
 
 # Six living-room utterances used as the Round 3 acceptance matrix.
 SIX_UTTERANCES: tuple[tuple[str, str, str], ...] = (
-    ("grandpa", "糖糖，帮我看看明天天气。", "汪汪～ 爷爷，明天可能有雨，出门记得带伞。"),
-    ("grandma", "糖糖陪奶奶说说话。", "汪汪～ 奶奶，糖糖在呢，想聊什么都行。"),
-    ("dad", "糖糖，我加班回来了。", "汪汪～ 爸爸回来啦，要不要先歇一会儿。"),
-    ("mom", "孩子们作业写完了吗？", "汪汪～ 妈妈，糖糖还没看到作业都收好，要不要轻轻提醒一下。"),
-    ("child_12", "好无聊，不想写作业。", "汪汪～ 先歇两分钟也行，等一下再挑最容易的一题？"),
-    ("child_9", "我想打游戏！", "汪汪～ 可以玩一会儿，等下糖糖喊你起来动一动哦。"),
+    ("grandpa", "糖糖，帮我看看明天天气。", "爷爷，明天可能有雨，出门记得带伞。"),
+    ("grandma", "糖糖陪奶奶说说话。", "奶奶，糖糖在呢，想聊什么都行。"),
+    ("dad", "糖糖，我加班回来了。", "爸爸回来啦，要不要先歇一会儿？"),
+    ("mom", "孩子们作业写完了吗？", "妈妈，糖糖还没看到作业都收好，要不要轻轻提醒一下？"),
+    ("child_12", "好无聊，不想写作业。", "先歇两分钟也行，等一下再挑最容易的一题？"),
+    ("child_9", "我想打游戏！", "可以玩一会儿，等下糖糖喊你起来动一动哦。"),
 )
 
 _ALIAS_TO_CANONICAL = {
@@ -147,22 +147,22 @@ class PersonaRenderer:
         elif scene in {"phone", "sitting", "exercise"}:
             out = WALK_SUGGESTION
         elif scene == "no_meal":
-            out = "汪汪～ 要不要先吃一点再忙？"
+            out = "要不要先吃一点再忙？"
         elif scene == "late_sleep":
-            out = "汪汪～ 有点晚了，要不要先去睡？"
+            out = "有点晚了，要不要先去休息？"
         elif scene == "home":
-            out = "汪汪～ 欢迎回家。"
+            out = "欢迎回家！今天过得怎么样？"
         elif role == "elder":
             name = spec.get("display") or "您"
-            out = f"汪汪～ {name}，糖糖在呢。"
+            out = f"{name}，糖糖在呢。"
         elif role == "adult":
-            out = "汪汪～ 糖糖在，需要帮忙就说一声。"
+            out = "糖糖在呢，需要帮忙就说一声。"
         elif role == "friend":
-            out = "汪汪～ 嗯，糖糖听着呢。想歇一下还是先做一件小的？"
+            out = "嗯，糖糖听着呢。想歇一下，还是先做一件小的？"
         elif role == "play":
-            out = "汪汪～ 糖糖陪你！我们一会儿再动一动好不好。"
+            out = "糖糖陪你！我们等会儿再动一动，好不好？"
         else:
-            out = "汪汪～"
+            out = "我在呢。"
 
         out = self._copy.sanitize(out, member_id=mid, role=role)
         return PersonaReply(member_id=mid, role=role, text=out)
