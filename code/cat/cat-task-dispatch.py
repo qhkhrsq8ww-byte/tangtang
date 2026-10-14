@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
+import os
 import subprocess
 import sys
 from pathlib import Path
+from contextlib import contextmanager
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -19,6 +22,22 @@ from core.tasks.service import TaskService
 SAY = ROOT / "code" / "cat" / "cat-say.sh"
 
 
+@contextmanager
+def dispatch_lock(home: Path):
+    """Prevent overlapping instances of this dispatcher on the same Mac."""
+    lock_path = home / "tasks" / "task-dispatch.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("w", encoding="utf-8") as handle:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError("糖糖提醒派发器已经在运行；本次跳过，避免重复播放")
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="糖糖本地到期提醒派发器")
     parser.add_argument("--deliver", action="store_true", help="实际调用本机语音播放；默认仅预览")
@@ -27,7 +46,8 @@ def main() -> int:
     if not members:
         print("未读取到家庭成员配置；未执行提醒。", file=sys.stderr)
         return 2
-    service = TaskService(home=tangtang_home(), persist=True, members=members)
+    home = tangtang_home()
+    service = TaskService(home=home, persist=True, members=members)
 
     if not args.deliver:
         due = []
@@ -59,7 +79,15 @@ def main() -> int:
         print(f"[播放命令成功，未验证实际听见] {task.task_id}")
         return True
 
-    stats = run_due(service, member_ids=members.keys(), deliver=deliver)
+    try:
+        with dispatch_lock(home):
+            recovered = service.recover_stale_running()
+            if recovered:
+                print(f"有 {recovered} 项中断提醒结果不确定，已标记待人工核查；不会自动重播。")
+            stats = run_due(service, member_ids=members.keys(), deliver=deliver)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 0
     print("糖糖提醒派发结果：" + ", ".join(f"{key}={value}" for key, value in stats.items()))
     return 0 if stats["failed"] == 0 else 1
 
