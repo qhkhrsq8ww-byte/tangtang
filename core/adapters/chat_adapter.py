@@ -21,6 +21,7 @@ from typing import Any
 
 from core.adapters.family_loader import load_members
 from core.ingest import IngestResult, PrivacyPipeline
+from core.memory.explicit_intents import MemoryIntent, category_text, parse_memory_intent
 from core.memory.recall import retrieve_structured_memories
 from core.policy.injection import InjectionGuard
 from core.policy.speak_gate import decide as speak_decide, may_call_llm
@@ -143,11 +144,23 @@ class ChatAdapter:
             risky = isolate(lambda: bool(self._looks_risky(text)), fallback=False)
             if risky.ok and risky.value:
                 obs = {**obs, "safety": "risk"}
-        ingested = self.pipeline.ingest(text, obs)
+        # Only narrowly recognized, explicit preference commands bypass raw-utterance retention.
+        memory_intent = parse_memory_intent(text)
+        ingested = self.pipeline.ingest(
+            text, obs, store_private_memory=memory_intent is None
+        )
         speaker_id = ingested.decision.member_id
-        who_id = speaker_id
         effective_viewer_id = viewer_id or speaker_id
         who = {"member_id": speaker_id}
+        if memory_intent is not None:
+            local_result = self._handle_memory_intent(
+                intent=memory_intent,
+                ingested=ingested,
+                member_id=speaker_id,
+                viewer_id=effective_viewer_id,
+            )
+            if local_result is not None:
+                return local_result
         now = obs.get("now")
         when = now if isinstance(now, datetime) else None
         decision = speak_decide(
@@ -249,6 +262,90 @@ class ChatAdapter:
             return ChatTurn(action=action, ingest=ingested, context=ctx)
         action = self.pipeline.orchestrator.run(decision=decision, context=ctx, action="reply")
         return ChatTurn(action=action, ingest=ingested, context=ctx)
+
+    def _handle_memory_intent(
+        self,
+        *,
+        intent: MemoryIntent,
+        ingested: IngestResult,
+        member_id: str | None,
+        viewer_id: str | None,
+    ) -> ChatTurn | None:
+        """Handle explicit remember/forget/recall commands locally, never via LLM."""
+        if not member_id:
+            return None
+        if viewer_id != member_id:
+            text = "我还不能确认这是你的个人记忆，先不读取或修改。"
+            rows: list[dict[str, Any]] = []
+        else:
+            rows = []
+            if intent.action == "remember" and intent.category and intent.value:
+                memory = self.pipeline.stores.private.remember_preference(
+                    member_id=member_id,
+                    category=intent.category,
+                    value=intent.value,
+                    event_id=ingested.event.id,
+                )
+                text = f"好，我记住了：你{category_text(intent.category)}「{memory.data['value']}」。"
+                rows = [ {
+                    "type": "preference",
+                    "privacy": "PRIVATE",
+                    "data": dict(memory.data),
+                    "created_at": memory.created_at or "",
+                } ]
+            elif intent.action == "forget" and intent.category and intent.value:
+                removed = self.pipeline.stores.private.forget_preference(
+                    member_id=member_id,
+                    category=intent.category,
+                    value=intent.value,
+                )
+                text = "好，我把这条偏好忘掉了。" if removed else "我没找到这条偏好，可能还没记住。"
+            elif intent.action == "recall":
+                for row in self.pipeline.stores.private.query(
+                    member_id=member_id, viewer_id=viewer_id
+                ):
+                    data = row.get("data") if isinstance(row.get("data"), Mapping) else {}
+                    if row.get("type") != "preference" or not isinstance(data.get("value"), str):
+                        continue
+                    if intent.category and data.get("tag") != intent.category:
+                        continue
+                    if set(data.keys()) != {"tag", "value"}:
+                        continue
+                    rows.append({
+                        "type": "preference",
+                        "privacy": "PRIVATE",
+                        "data": {"tag": data["tag"], "value": data["value"]},
+                        "created_at": row.get("created_at") or "",
+                    })
+                rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+                rows = rows[:3]
+                if not rows:
+                    text = "我还没记住这类偏好。你可以说“记住我喜欢恐龙”。"
+                else:
+                    snippets = [
+                        f"你{category_text(str(row['data']['tag']))}「{row['data']['value']}」"
+                        for row in rows
+                    ]
+                    text = "我记得，" + "，还有".join(snippets) + "。"
+            else:
+                return None
+        context = {
+            "who": {"member_id": member_id},
+            "current_event": ingested.event.to_dict(),
+            "privacy_scope": "PRIVATE",
+            "memory_operation": intent.action,
+            "recall": rows,
+            "private_facts": [],
+        }
+        action = PresentationAction(
+            decision="SPEAK",
+            text=text,
+            action=f"memory_{intent.action}",
+            member_id=member_id,
+            sink="voice",
+            private_facts=(),
+        )
+        return ChatTurn(action=action, ingest=ingested, context=context)
 
     def reply(
         self,
