@@ -95,7 +95,10 @@ def parse_reminder_intent(
     cancel = re.match(r"^(?:糖糖[，, ]*)?(?:取消|删除)(?:提醒|闹钟)[：:,， ]*(.{1,120})$", raw)
     if cancel:
         return ReminderIntent("cancel", cancel.group(1).strip(" ，,。.!！?？:："))
-    has_reminder_cue = bool(re.search(r"(提醒我|提醒一下我|提醒我一下|到时提醒我)", raw))
+    has_reminder_cue = bool(
+        re.search(r"(提醒我|提醒一下我|提醒我一下|到时提醒我)", raw)
+        or (re.search(r"(修改|调整|改到|改为|改成)", raw) and re.search(r"提醒", raw))
+    )
     has_time_cue = bool(re.search(r"(今天|明天|后天|上午|早上|中午|下午|傍晚|晚上|\d{1,2}:\d{2}|点|时)", raw))
     if not has_reminder_cue:
         if has_time_cue:
