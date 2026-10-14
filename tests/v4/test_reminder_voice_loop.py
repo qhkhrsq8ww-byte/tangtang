@@ -43,6 +43,17 @@ class TestReminderIntent(unittest.TestCase):
         self.assertEqual(intent.action, "time_reply")
         self.assertEqual(intent.due_at, "2026-10-16T20:00:00+00:00")
 
+    def test_list_cancel_and_reschedule_commands_parse(self):
+        self.assertEqual(parse_reminder_intent("查看提醒").action, "list")
+        cancelled = parse_reminder_intent("取消提醒：带水杯")
+        self.assertEqual((cancelled.action, cancelled.title), ("cancel", "带水杯"))
+        changed = parse_reminder_intent(
+            "把带水杯提醒改到明天晚上八点", now=self.now, timezone_name="UTC"
+        )
+        self.assertEqual(changed.action, "reschedule")
+        self.assertEqual(changed.title, "带水杯")
+        self.assertEqual(changed.due_at, "2026-10-16T20:00:00+00:00")
+
 
 class TestReminderChatLoop(unittest.TestCase):
     def make_chat(self):
@@ -89,6 +100,19 @@ class TestReminderChatLoop(unittest.TestCase):
         rows = tasks.list_tasks(viewer_id="hanghang", statuses={"scheduled"}, include_family=False)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].title, "带水杯")
+
+    def test_reminder_can_be_queried_rescheduled_and_cancelled(self):
+        tasks, chat = self.make_chat()
+        obs = {"label": "hanghang", "interactive": True, "now": datetime(2026, 10, 15, 7, 0, tzinfo=timezone.utc), "timezone": "UTC"}
+        chat.turn("明天晚上八点提醒我带水杯", obs)
+        self.assertEqual(chat.turn("查看提醒", obs).action.action, "reminder_list")
+        changed = chat.turn("把带水杯提醒改到后天晚上九点", obs)
+        self.assertEqual(changed.action.action, "reminder_reschedule")
+        row = tasks.list_tasks(viewer_id="hanghang", statuses={"scheduled"}, include_family=False)[0]
+        self.assertEqual(row.due_at, "2026-10-17T21:00:00+00:00")
+        cancelled = chat.turn("取消提醒：带水杯", obs)
+        self.assertEqual(cancelled.action.action, "reminder_cancel")
+        self.assertEqual(tasks.list_tasks(viewer_id="hanghang", statuses={"cancelled"}, include_family=False)[0].title, "带水杯")
 
 
 if __name__ == "__main__":
