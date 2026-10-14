@@ -35,6 +35,7 @@ from core.policy.privacy_policy import PrivacyPolicy
 from core.response.orchestrator import PresentationAction
 from core.runtime.isolate import isolate
 from core.runtime.presentation import DeliveryResult, PresentationRuntime
+from core.tasks.service import TaskService
 
 FALLBACK = "糖糖在呢，刚刚没接上。"
 
@@ -119,6 +120,8 @@ class TangTangRuntime:
         self.events = events or (
             JsonlEventStore(home=self.home, persist=True) if self.persist else JsonlEventStore()
         )
+        # Single task/commitment repository shared by voice, timer and future web adapters.
+        self.tasks = TaskService(home=self.home, persist=self.persist, members=roster)
         self.stt = stt
         self._llm = None if offline else llm
         self.chat = ChatAdapter(
