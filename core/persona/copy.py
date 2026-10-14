@@ -9,7 +9,7 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-WALK_SUGGESTION = "汪汪～ 要不要起来走一走？"
+WALK_SUGGESTION = "要不要起来走一走？"
 
 # Minutes-on-phone / sitting surveillance. Deterministic; LLM cannot override.
 FORBIDDEN_SURVEILLANCE = (
@@ -79,9 +79,9 @@ class CopyGuard:
         role = role or str(ctx.get("role") or "")
         member_id = member_id or str((ctx.get("who") or {}).get("member_id") or "")
         if role in {"elder", "adult", "friend"} and has_any(raw, TODDLER_TOKENS):
-            return "汪汪～ 糖糖在呢。"
+            return "糖糖在呢。"
         if role == "play" and has_any(raw, LECTURE_TOKENS):
-            return "汪汪～ 可以玩一会儿，等下糖糖喊你起来动一动哦。"
+            return "可以玩一会儿，等下糖糖喊你起来动一动哦。"
         if member_id in {"grandpa", "grandma", "dad", "mom"} and has_any(raw, TODDLER_TOKENS):
             return "汪汪～ 糖糖在呢。"
         return raw
