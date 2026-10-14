@@ -90,11 +90,28 @@ class TestChatMembers(unittest.TestCase):
         self.assertEqual(turn.ingest.decision.privacy, "FAMILY")
         self.assertEqual(turn.action.decision, "SPEAK")
 
-    def test_unknown_public(self):
-        chat = ChatAdapter(members=MEMBERS)
+    def test_unknown_public_stays_local_and_redacts_event_payload(self):
+        calls = []
+        chat = ChatAdapter(members=MEMBERS, llm=lambda ctx: calls.append(dict(ctx)) or "云端回复")
         turn = chat.turn("你好糖糖", {"label": "unknown"})
         self.assertEqual(turn.ingest.decision.privacy, "PUBLIC")
         self.assertIsNone(turn.ingest.decision.member_id)
+        self.assertEqual(turn.ingest.event.payload, {"redacted": True})
+        self.assertFalse(chat.pipeline.logger.contains_raw("你好糖糖"))
+        self.assertEqual(calls, [])
+        self.assertEqual(turn.action.decision, "SPEAK")
+
+    def test_unknown_llm_requires_explicit_opt_in(self):
+        calls = []
+        chat = ChatAdapter(
+            members=MEMBERS,
+            llm=lambda ctx: calls.append(dict(ctx)) or "访客你好。",
+            allow_unknown_llm=True,
+        )
+        turn = chat.turn("你好糖糖", {"label": "unknown"})
+        self.assertIsNone(turn.ingest.decision.member_id)
+        self.assertEqual(len(calls), 1)
+        self.assertIn("member=unknown", calls[0]["_filtered_prompt"])
 
 
 class TestChatLlmFailure(unittest.TestCase):

@@ -100,6 +100,7 @@ class ChatAdapter:
         members: Mapping[str, object] | None = None,
         llm: LLMFn | None = None,
         allow_private_llm: bool = False,
+        allow_unknown_llm: bool = False,
         sanitize: Callable[[str], str] | None = None,
         looks_risky: Callable[[str], bool] | None = None,
     ) -> None:
@@ -107,6 +108,7 @@ class ChatAdapter:
         self.pipeline = pipeline or PrivacyPipeline(members=roster)
         self._llm = llm
         self._allow_private_llm = bool(allow_private_llm)
+        self._allow_unknown_llm = bool(allow_unknown_llm)
         risky, sanit = _load_cat_chat_helpers()
         self._sanitize = sanitize or sanit
         self._looks_risky = looks_risky or risky
@@ -187,7 +189,14 @@ class ChatAdapter:
         # PRIVATE is local-first: never send it to a model gateway without an explicit opt-in.
         # When blocked, fall through to PersonaRenderer instead of returning a generic error.
         private_cloud_blocked = scope == "PRIVATE" and not self._allow_private_llm
-        if self._llm is not None and may_call_llm(decision) and not private_cloud_blocked:
+        # Unknown identity is not consent to upload speech. Stay local unless the household explicitly opts in.
+        unknown_cloud_blocked = ingested.decision.member_id is None and not self._allow_unknown_llm
+        if (
+            self._llm is not None
+            and may_call_llm(decision)
+            and not private_cloud_blocked
+            and not unknown_cloud_blocked
+        ):
             ctx["skip_persona"] = True
             prompt_ctx = _llm_payload(ctx, text, who, scope)
 

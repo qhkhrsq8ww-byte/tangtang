@@ -20,7 +20,11 @@ from core.memory.paths import resolve_under
 
 RISK_CATEGORY_MARKERS: dict[str, tuple[str, ...]] = {
     "self_harm": ("不想活", "自杀", "杀死自己", "伤害自己", "想死", "去死", "割腕", "跳楼"),
-    "violence": ("打死", "杀人", "霸凌", "校园暴力"),
+    "violence": (
+        "打死", "杀人", "霸凌", "校园暴力", "欺负", "被欺负",
+        "同学打我", "同学骂我", "被同学打", "被同学骂",
+        "有人威胁我", "威胁我", "打我", "骂我",
+    ),
     "unsafe_contact": ("有人碰我身体",),
     "secret_keep": ("不要告诉爸", "不要告诉妈", "不要告诉大人"),
 }

@@ -116,17 +116,20 @@ class PrivacyPipeline:
         )
         if not decision.member_id and decision.privacy == "PRIVATE":
             raise PrivacyError("PRIVATE ingest requires member_id")
+        # An unknown speaker is not permission to persist their raw speech.
+        # Keep the PUBLIC classification for compatibility, but redact the event payload.
+        redact_utterance = decision.privacy == "PRIVATE" or decision.member_id is None
         event = Event.create(
             type="utterance",
             source=source,
             privacy=decision.privacy,
             member_id=decision.member_id,
-            payload={"redacted": True} if decision.privacy == "PRIVATE" else {"speech": utterance},
+            payload={"redacted": True} if redact_utterance else {"speech": utterance},
             clock=self.clock,
         )
         self.logger.event(event)
-        if self.logger.contains_raw(utterance) and decision.privacy == "PRIVATE":
-            raise PrivacyError("SafeLogger leaked PRIVATE utterance")
+        if self.logger.contains_raw(utterance) and redact_utterance:
+            raise PrivacyError("SafeLogger leaked PRIVATE / unknown utterance")
 
         result = IngestResult(event=event, decision=decision)
         if decision.privacy == "PRIVATE" and decision.member_id:
