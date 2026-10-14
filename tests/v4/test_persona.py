@@ -76,7 +76,7 @@ class TestPersonaSixUtterances(unittest.TestCase):
 
     def test_brother_alias_hanghang_not_lecture(self):
         text = self.r.reply_text(member_id="hanghang", utterance="我想打游戏！")
-        self.assertTrue(text.startswith("汪汪～"))
+        self.assertFalse(text.startswith("汪汪～"), text)
         self.assertNotIn("作为家长", text)
         self.assertNotIn("立刻停止", text)
         self.assertEqual(profile_for("弟弟", V4_MEMBERS), "play")
