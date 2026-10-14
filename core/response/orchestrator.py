@@ -119,7 +119,7 @@ class ResponseOrchestrator:
                     context=ctx,
                 )
             except Exception:
-                text = "汪汪～"
+                text = "糖糖在呢，刚刚没接上。"
         else:
             try:
                 text = self.responder(ctx)
