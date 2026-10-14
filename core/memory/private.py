@@ -98,7 +98,7 @@ class PrivateMemory:
         clean = " ".join(str(value or "").split()).strip(" ，,。.!！?？:：")
         if not mid or category not in PREFERENCE_CATEGORIES:
             raise MemoryError("member_id/category is invalid")
-        if not clean or len(clean) > 80 or any(ch in clean for ch in "\\r\\n"):
+        if not clean or len(clean) > 80:
             raise MemoryError("preference value must contain 1–80 characters")
         if self._persist or self._home is not None:
             sanitize_member_id(mid)
