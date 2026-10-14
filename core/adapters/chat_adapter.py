@@ -133,6 +133,17 @@ class ChatAdapter:
         self._looks_risky = looks_risky or risky
         self._injection = InjectionGuard()
 
+    def is_explicit_local_intent(self, utterance: str | None) -> bool:
+        """Allow user-initiated local memory/todo commands during quiet mode, never risk bypasses."""
+        text = str(utterance or "")
+        if not text.strip():
+            return False
+        if self._looks_risky is not None:
+            risky = isolate(lambda: bool(self._looks_risky(text)), fallback=True)
+            if not risky.ok or risky.value:
+                return False
+        return parse_memory_intent(text) is not None or parse_task_intent(text) is not None
+
     def turn(
         self,
         utterance: str,
