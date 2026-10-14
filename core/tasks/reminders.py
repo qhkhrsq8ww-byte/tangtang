@@ -130,7 +130,8 @@ def parse_reminder_intent(
         title = " ".join(title.split()).strip(" ，,。.!！?？:：")
         return ReminderIntent("needs_time", title[:120] or None, timezone_name=tz_label)
     title = raw
-    title = re.sub(r"^(?:糖糖[，, ]*)?(?:请)?(?:到时)?提醒(?:一下)?我(?:一下)?", "", title)
+    title = re.sub(r"^糖糖[，, ]*", "", title)
+    title = re.sub(r"^(?:请)?(?:到时)?提醒(?:一下)?我(?:一下)?", "", title)
     title = re.sub(_DATE, " ", title)
     title = re.sub(_CLOCK, " ", title)
     title = re.sub(_CLOCK24, " ", title)
