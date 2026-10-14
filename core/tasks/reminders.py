@@ -90,9 +90,14 @@ def parse_reminder_intent(
     raw = " ".join(str(text or "").strip().split()).strip(" ，,。.!！?？:：")
     if not raw or len(raw) > 180:
         return None
-    if not re.search(r"(提醒我|提醒一下我|提醒我一下|到时提醒我)", raw):
+    has_reminder_cue = bool(re.search(r"(提醒我|提醒一下我|提醒我一下|到时提醒我)", raw))
+    has_time_cue = bool(re.search(r"(今天|明天|后天|上午|早上|中午|下午|傍晚|晚上|\d{1,2}:\d{2}|点|时)", raw))
+    if not has_reminder_cue:
+        if has_time_cue:
+            due_at, tz_label = _parse_due(raw, now or datetime.now().astimezone(), timezone_name)
+            return ReminderIntent("time_reply", due_at=due_at, timezone_name=tz_label) if due_at else None
         return None
-    if not re.search(r"(今天|明天|后天|上午|早上|中午|下午|傍晚|晚上|\d{1,2}:\d{2}|点|时)", raw):
+    if not has_time_cue:
         title = re.sub(r"^(?:糖糖[，, ]*)?(?:请)?(?:到时候)?提醒(?:一下)?我(?:一下)?", "", raw).strip(" ，,。.!！?？:：")
         title = re.sub(r"^(?:记得|别忘了|要)?", "", title).strip()
         if title:
