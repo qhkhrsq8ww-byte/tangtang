@@ -21,6 +21,7 @@ from typing import Any
 
 from core.adapters.family_loader import load_members
 from core.ingest import IngestResult, PrivacyPipeline
+from core.memory.recall import retrieve_structured_memories
 from core.policy.injection import InjectionGuard
 from core.policy.speak_gate import decide as speak_decide, may_call_llm
 from core.response.orchestrator import PresentationAction
@@ -66,12 +67,25 @@ def _filtered_prompt(context: Mapping[str, Any]) -> str:
     ]
     if family_bits:
         parts.append("family[" + ",".join(str(b) for b in family_bits) + "]")
+    # Only explicitly allowlisted structured facts may enter the prompt; never raw turn history.
+    recall = context.get("recall")
+    if isinstance(recall, list):
+        rendered = []
+        for row in recall[:5]:
+            if not isinstance(row, Mapping):
+                continue
+            data = row.get("data") if isinstance(row.get("data"), Mapping) else {}
+            facts = [f"{key}={str(value)[:180]}" for key, value in data.items() if value not in (None, "")]
+            if facts:
+                rendered.append(f"{row.get('type', 'memory')}:" + ",".join(facts))
+        if rendered:
+            parts.append("authorized_memory[" + ";".join(rendered)[:700] + "]")
     parts.append("utterance=" + utterance)
     return "\n".join(parts)
 
 
 def _llm_payload(context: Mapping[str, Any], utterance: str, who: Mapping[str, Any], scope: str) -> dict[str, Any]:
-    """Slim dict only. No memory / recent / child raw history."""
+    """Slim dict; includes only the allowlisted structured-memory projection, never raw history."""
     return {
         "_filtered_prompt": _filtered_prompt(context),
         "utterance": utterance,
@@ -130,8 +144,10 @@ class ChatAdapter:
             if risky.ok and risky.value:
                 obs = {**obs, "safety": "risk"}
         ingested = self.pipeline.ingest(text, obs)
-        who_id = viewer_id or ingested.decision.member_id
-        who = {"member_id": who_id}
+        speaker_id = ingested.decision.member_id
+        who_id = speaker_id
+        effective_viewer_id = viewer_id or speaker_id
+        who = {"member_id": speaker_id}
         now = obs.get("now")
         when = now if isinstance(now, datetime) else None
         decision = speak_decide(
@@ -182,10 +198,22 @@ class ChatAdapter:
             observation={**obs, "utterance": text},
             family=family_snapshot,
             privacy_scope=scope,
+            viewer_id=effective_viewer_id,
         )
         ctx["utterance"] = text
         ctx["scene"] = obs.get("scene")
         ctx["event_id"] = ingested.event.id
+        recall = isolate(
+            lambda: retrieve_structured_memories(
+                member_id=speaker_id,
+                viewer_id=effective_viewer_id,
+                privacy_scope=scope,
+                private_store=self.pipeline.stores.private,
+                family_store=self.pipeline.stores.family,
+            ),
+            fallback=[],
+        )
+        ctx["recall"] = recall.value if recall.ok and isinstance(recall.value, list) else []
         # PRIVATE is local-first: never send it to a model gateway without an explicit opt-in.
         # When blocked, fall through to PersonaRenderer instead of returning a generic error.
         private_cloud_blocked = scope == "PRIVATE" and not self._allow_private_llm
