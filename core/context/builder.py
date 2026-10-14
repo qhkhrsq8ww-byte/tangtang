@@ -40,6 +40,7 @@ class ContextBuilder:
         recent: list[Any] | None = None,
         family: Mapping[str, Any] | None = None,
         privacy_scope: str | None = None,
+        viewer_id: str | None = None,
     ) -> dict[str, Any]:
         who_map = dict(who or {})
         obs = dict(observation or {})
@@ -51,7 +52,7 @@ class ContextBuilder:
             lambda: self._memory.query(
                 member_id=str(member_id or ""),
                 scope=str(scope),
-                viewer_id=str(member_id) if member_id else None,
+                viewer_id=str(viewer_id or member_id) if (viewer_id or member_id) else None,
             ),
             fallback=[],
         )
