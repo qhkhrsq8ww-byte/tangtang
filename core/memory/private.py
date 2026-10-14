@@ -134,11 +134,8 @@ class PrivateMemory:
         clean = " ".join(str(value or "").split()).strip(" ，,。.!！?？:：")
         if not mid or category not in PREFERENCE_CATEGORIES or not clean:
             return 0
-        if mid != self._privacy.canonical_member_id(mid):
-            canonical = self._privacy.canonical_member_id(mid)
-            if canonical is None:
-                return 0
-            mid = canonical
+        if self._privacy.canonical_member_id(mid) is None:
+            return 0
         self._load_member(mid)
         removed: list[str] = []
         for row in self._store.query(member_id=mid, scope="PRIVATE", viewer_id=mid):
