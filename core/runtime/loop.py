@@ -378,7 +378,8 @@ class TangTangRuntime:
             policy=self.pipeline.interrupt,
             live=bool(obs.get("live")),
         )
-        if not may_call_llm(gate):
+        local_intent = self.chat.is_explicit_local_intent(utterance)
+        if not may_call_llm(gate) and not local_intent:
             return RuntimeResult(
                 event=None,
                 member_id=str(member_id) if member_id else None,
