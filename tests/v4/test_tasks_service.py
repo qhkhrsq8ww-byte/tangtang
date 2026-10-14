@@ -73,10 +73,10 @@ class TestTaskPersistence(unittest.TestCase):
         service = TaskService(members=MEMBERS)
         private = service.create_task(owner_member_id="dad", title="私人事项")
         family = service.create_task(owner_member_id="dad", title="家庭采购", visibility="FAMILY")
-        self.assertIsNone(service.get_task(private.task_id, viewer_id="mom"))
-        self.assertIsNotNone(service.get_task(family.task_id, viewer_id="mom"))
+        self.assertIsNone(service.get_task(private.task_id, viewer_id="qiaqia"))
+        self.assertIsNotNone(service.get_task(family.task_id, viewer_id="qiaqia"))
         self.assertIsNone(service.get_task(family.task_id, viewer_id="stranger"))
-        self.assertEqual([t.task_id for t in service.list_tasks(viewer_id="mom")], [family.task_id])
+        self.assertEqual([t.task_id for t in service.list_tasks(viewer_id="qiaqia")], [family.task_id])
 
     def test_lifecycle_complete_cancel_reschedule(self):
         service = TaskService(members=MEMBERS, clock=FrozenClock())
