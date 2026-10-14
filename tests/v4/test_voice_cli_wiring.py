@@ -28,6 +28,7 @@ class TestVoiceCliLlmBridge(unittest.TestCase):
             bridge = CAT._runtime_llm(model="test-model")
             result = bridge({
                 "_filtered_prompt": "member=dad\nprivacy=PRIVATE\nutterance=今天好累。",
+                "privacy_scope": "FAMILY",
                 "utterance": "今天好累。",
                 "history": [{"role": "user", "content": "不应发送的旧对话"}],
             })
@@ -40,6 +41,30 @@ class TestVoiceCliLlmBridge(unittest.TestCase):
         self.assertEqual(calls[0][1], "test-model")
         self.assertIsNone(calls[0][2])
         self.assertNotIn("不应发送的旧对话", calls[0][0])
+
+    def test_private_bridge_does_not_call_gateway_without_opt_in(self):
+        calls = []
+        original_chat = CAT.chat
+        original_flag = CAT.os.environ.get("TANGTANG_ALLOW_PRIVATE_LLM")
+        def fake_chat(*args, **kwargs):
+            calls.append(args)
+            return "这句话不该被调用"
+        CAT.chat = fake_chat
+        CAT.os.environ.pop("TANGTANG_ALLOW_PRIVATE_LLM", None)
+        try:
+            response = CAT._runtime_llm(model="test-model")({
+                "_filtered_prompt": "member=hanghang\\nprivacy=PRIVATE\\nutterance=我的私事",
+                "utterance": "我的私事",
+                "privacy_scope": "PRIVATE",
+            })
+        finally:
+            CAT.chat = original_chat
+            if original_flag is not None:
+                CAT.os.environ["TANGTANG_ALLOW_PRIVATE_LLM"] = original_flag
+            else:
+                CAT.os.environ.pop("TANGTANG_ALLOW_PRIVATE_LLM", None)
+        self.assertEqual(response, CAT.FALLBACK_REPLY)
+        self.assertEqual(calls, [])
 
     def test_risky_turn_uses_local_safe_reply_without_model_call(self):
         names = ("looks_risky", "_escalate_risk", "emit_character_state", "_learn_turn")
@@ -65,7 +90,7 @@ class TestVoiceCliLlmBridge(unittest.TestCase):
         alarm_gate = main.index("alarm_line = _alarm_reply(args.text)")
         observation_gate = main.index("obs = _live_obs()")
         speak_gate = main.index("if not _may_speak_now(obs):")
-        llm_call = main.index("TangTangRuntime(llm=_runtime_llm(model=args.model))")
+        llm_call = main.index("TangTangRuntime(llm=_runtime_llm(model=args.model), allow_private_llm=_allow_private_llm())")
         self.assertLess(risk_gate, alarm_gate)
         self.assertLess(risk_gate, observation_gate)
         self.assertLess(risk_gate, speak_gate)
