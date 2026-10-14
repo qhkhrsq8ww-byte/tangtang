@@ -320,7 +320,7 @@ class ChatAdapter:
                 rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
                 rows = rows[:3]
                 if not rows:
-                    text = "我还没记住这类偏好。你可以说“记住我喜欢恐龙”。"
+                    text = "我还没记住这类偏好。你可以明确告诉我想让我记住什么。"
                 else:
                     snippets = [
                         f"你{category_text(str(row['data']['tag']))}「{row['data']['value']}」"
