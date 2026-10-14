@@ -50,6 +50,11 @@ ADULT_PRIVATE_MARKERS = (
     "私人信息", "私人的", "我的私事", "别告诉孩子", "不要告诉孩子",
     "别告诉任何人", "不要告诉任何人", "这是秘密", "保密",
     "密码", "银行卡", "私事",
+    # Explicit personal-memory commands must not be copied to family-visible stores/logs.
+    "记住我喜欢", "记住我不喜欢", "记住我最喜欢",
+    "忘记我喜欢", "忘记我不喜欢", "忘记我最喜欢",
+    "记得我喜欢什么", "记得我不喜欢什么", "记得我最喜欢什么",
+    "我喜欢什么", "我不喜欢什么", "我最喜欢什么",
 )
 
 UTTERANCE_KEYS = ("speech", "text", "utterance", "transcript", "raw", "words")
