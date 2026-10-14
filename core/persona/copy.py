@@ -83,5 +83,5 @@ class CopyGuard:
         if role == "play" and has_any(raw, LECTURE_TOKENS):
             return "可以玩一会儿，等下糖糖喊你起来动一动哦。"
         if member_id in {"grandpa", "grandma", "dad", "mom"} and has_any(raw, TODDLER_TOKENS):
-            return "汪汪～ 糖糖在呢。"
+            return "糖糖在呢。"
         return raw
