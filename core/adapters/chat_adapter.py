@@ -23,6 +23,8 @@ from core.adapters.family_loader import load_members
 from core.ingest import IngestResult, PrivacyPipeline
 from core.memory.explicit_intents import MemoryIntent, category_text, parse_memory_intent
 from core.memory.recall import retrieve_structured_memories
+from core.tasks.intents import TaskIntent, parse_task_intent
+from core.tasks.service import TaskService
 from core.policy.injection import InjectionGuard
 from core.policy.speak_gate import decide as speak_decide, may_call_llm
 from core.response.orchestrator import PresentationAction
@@ -116,6 +118,7 @@ class ChatAdapter:
         llm: LLMFn | None = None,
         allow_private_llm: bool = False,
         allow_unknown_llm: bool = False,
+        tasks: TaskService | None = None,
         sanitize: Callable[[str], str] | None = None,
         looks_risky: Callable[[str], bool] | None = None,
     ) -> None:
@@ -124,6 +127,7 @@ class ChatAdapter:
         self._llm = llm
         self._allow_private_llm = bool(allow_private_llm)
         self._allow_unknown_llm = bool(allow_unknown_llm)
+        self.tasks = tasks or TaskService(members=roster)
         risky, sanit = _load_cat_chat_helpers()
         self._sanitize = sanitize or sanit
         self._looks_risky = looks_risky or risky
@@ -140,14 +144,19 @@ class ChatAdapter:
         obs = dict(observation or {})
         obs.setdefault("interactive", True)
         text = utterance or str(obs.get("utterance") or obs.get("speech") or "")
+        risk_detected = False
         if self._looks_risky is not None:
             risky = isolate(lambda: bool(self._looks_risky(text)), fallback=False)
             if risky.ok and risky.value:
+                risk_detected = True
                 obs = {**obs, "safety": "risk"}
-        # Only narrowly recognized, explicit preference commands bypass raw-utterance retention.
-        memory_intent = parse_memory_intent(text)
+        # These explicit commands retain only the structured result, not the original utterance.
+        memory_intent = None if risk_detected else parse_memory_intent(text)
+        task_intent = None if risk_detected else parse_task_intent(text)
         ingested = self.pipeline.ingest(
-            text, obs, store_private_memory=memory_intent is None
+            text,
+            obs,
+            store_private_memory=memory_intent is None and task_intent is None,
         )
         speaker_id = ingested.decision.member_id
         effective_viewer_id = viewer_id or speaker_id
@@ -155,6 +164,15 @@ class ChatAdapter:
         if memory_intent is not None:
             local_result = self._handle_memory_intent(
                 intent=memory_intent,
+                ingested=ingested,
+                member_id=speaker_id,
+                viewer_id=effective_viewer_id,
+            )
+            if local_result is not None:
+                return local_result
+        if task_intent is not None:
+            local_result = self._handle_task_intent(
+                intent=task_intent,
                 ingested=ingested,
                 member_id=speaker_id,
                 viewer_id=effective_viewer_id,
@@ -262,6 +280,117 @@ class ChatAdapter:
             return ChatTurn(action=action, ingest=ingested, context=ctx)
         action = self.pipeline.orchestrator.run(decision=decision, context=ctx, action="reply")
         return ChatTurn(action=action, ingest=ingested, context=ctx)
+
+    def _handle_task_intent(
+        self,
+        *,
+        intent: TaskIntent,
+        ingested: IngestResult,
+        member_id: str | None,
+        viewer_id: str | None,
+    ) -> ChatTurn | None:
+        """Handle explicit todos locally. Existing alarm scheduling stays in cat-alarm.py."""
+        if not member_id:
+            return None
+        if viewer_id != member_id:
+            text = "我还不能确认这是你的待办清单，先不读取或修改。"
+            visible_tasks = []
+        else:
+            visible_tasks = []
+            active = {"proposed", "needs_confirmation", "scheduled", "running", "failed"}
+            if intent.action == "create" and intent.title:
+                try:
+                    task = self.tasks.create_task(
+                        owner_member_id=member_id,
+                        title=intent.title,
+                        kind="task",
+                        visibility="PRIVATE",
+                        status="proposed",
+                        source_event_id=ingested.event.id,
+                        idempotency_key=f"todo-event:{ingested.event.id}",
+                    )
+                    visible_tasks = [{
+                        "title": task.title,
+                        "status": task.status,
+                        "due_at": task.due_at,
+                    }]
+                    text = f"好，记下来了：{task.title}。目前还没有设置提醒时间。"
+                except (ValueError, PermissionError):
+                    text = "这件待办我没能保存下来，咱们换个简短一点的说法再试试。"
+            elif intent.action == "list":
+                visible_tasks = [
+                    {
+                        "title": task.title,
+                        "status": task.status,
+                        "due_at": task.due_at,
+                    }
+                    for task in self.tasks.list_tasks(
+                        viewer_id=member_id,
+                        statuses=active,
+                        include_family=False,
+                        limit=10,
+                    )
+                ]
+                if not visible_tasks:
+                    text = "你现在没有待办事项。"
+                else:
+                    titles = [str(row["title"])[:60] for row in visible_tasks[:5]]
+                    text = f"你现在有 {len(visible_tasks)} 件待办：" + "；".join(titles) + "。"
+                    if len(visible_tasks) > 5:
+                        text += "还有几件，咱们可以接着看。"
+            elif intent.action in {"complete", "cancel"} and intent.title:
+                wanted = self._normalize_task_title(intent.title)
+                candidates = self.tasks.list_tasks(
+                    viewer_id=member_id,
+                    statuses=active,
+                    include_family=False,
+                    limit=500,
+                )
+                matches = [
+                    task for task in candidates
+                    if self._normalize_task_title(task.title) == wanted
+                ]
+                if len(matches) > 1:
+                    text = "有几件待办名称相同，先告诉我更完整的事项名称，我再处理。"
+                elif not matches:
+                    text = "我没找到名称完全相同的待办，你可以说“完成待办：事项名称”。"
+                elif intent.action == "complete":
+                    task = self.tasks.complete(
+                        matches[0].task_id,
+                        owner_member_id=member_id,
+                        result="completed_by_user",
+                    )
+                    text = f"好，这件待办已经标记完成：{task.title}。"
+                else:
+                    task = self.tasks.cancel(matches[0].task_id, owner_member_id=member_id)
+                    text = f"好，这件待办已经取消：{task.title}。"
+            else:
+                return None
+        context = {
+            "who": {"member_id": member_id},
+            "current_event": ingested.event.to_dict(),
+            "privacy_scope": "PRIVATE",
+            "task_operation": intent.action,
+            "tasks": visible_tasks,
+            "private_facts": [],
+        }
+        if self._sanitize is not None:
+            cleaned = isolate(lambda: self._sanitize(text), fallback=text)
+            if cleaned.ok and isinstance(cleaned.value, str) and cleaned.value.strip():
+                text = cleaned.value
+        action = PresentationAction(
+            decision="SPEAK",
+            text=text,
+            action=f"task_{intent.action}",
+            member_id=member_id,
+            sink="voice",
+            private_facts=(),
+        )
+        return ChatTurn(action=action, ingest=ingested, context=context)
+
+    @staticmethod
+    def _normalize_task_title(title: str) -> str:
+        return " ".join(str(title or "").strip().strip(" ，,。.!！?？:：").split()).casefold()
 
     def _handle_memory_intent(
         self,
