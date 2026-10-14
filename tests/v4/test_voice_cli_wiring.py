@@ -62,8 +62,12 @@ class TestVoiceCliLlmBridge(unittest.TestCase):
         source = CAT_CHAT.read_text(encoding="utf-8")
         main = source[source.index("def main():"):]
         risk_gate = main.index("risk_reply = _local_safety_reply(args.text)")
+        alarm_gate = main.index("alarm_line = _alarm_reply(args.text)")
+        observation_gate = main.index("obs = _live_obs()")
         speak_gate = main.index("if not _may_speak_now(obs):")
         llm_call = main.index("TangTangRuntime(llm=_runtime_llm(model=args.model))")
+        self.assertLess(risk_gate, alarm_gate)
+        self.assertLess(risk_gate, observation_gate)
         self.assertLess(risk_gate, speak_gate)
         self.assertLess(risk_gate, llm_call)
 
