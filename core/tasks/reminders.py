@@ -15,10 +15,10 @@ class ReminderIntent:
     timezone_name: str | None = None
 
 
-_NUM = r"(?:\\d{1,2}|[零〇一二两三四五六七八九十]{1,3})"
+_NUM = r"(?:\d{1,2}|[零〇一二两三四五六七八九十]{1,3})"
 _DATE = r"(今天|明天|后天)"
-_CLOCK = rf"(?:(上午|早上|中午|下午|傍晚|晚上)\\s*)?({_NUM})(?:点|时)(半|\\d{{1,2}}分?)?"
-_CLOCK24 = r"(\\d{1,2}):(\\d{2})"
+_CLOCK = rf"(?:(上午|早上|中午|下午|傍晚|晚上)\s*)?({_NUM})(?:点|时)(半|\d{{1,2}}分?)?"
+_CLOCK24 = r"(\d{1,2}):(\d{2})"
 
 
 def _number(value: str) -> int:
@@ -92,7 +92,7 @@ def parse_reminder_intent(
         return None
     if not re.search(r"(提醒我|提醒一下我|提醒我一下|到时提醒我)", raw):
         return None
-    if not re.search(r"(今天|明天|后天|上午|早上|中午|下午|傍晚|晚上|\\d{1,2}:\\d{2}|点|时)", raw):
+    if not re.search(r"(今天|明天|后天|上午|早上|中午|下午|傍晚|晚上|\d{1,2}:\d{2}|点|时)", raw):
         title = re.sub(r"^(?:糖糖[，, ]*)?(?:请)?(?:到时候)?提醒(?:一下)?我(?:一下)?", "", raw).strip(" ，,。.!！?？:：")
         title = re.sub(r"^(?:记得|别忘了|要)?", "", title).strip()
         if title:
@@ -102,7 +102,7 @@ def parse_reminder_intent(
     due_at, tz_label = _parse_due(clock_text, now or datetime.now().astimezone(), timezone_name)
     if not due_at:
         title = re.sub(r"^(?:糖糖[，, ]*)?(?:请)?(?:到时候)?提醒(?:一下)?我(?:一下)?", "", raw).strip(" ，,。.!！?？:：")
-        title = re.sub(r"(今天|明天|后天|上午|早上|中午|下午|傍晚|晚上|\\d{1,2}:\\d{2}|点半?|时|\\d+分?)", " ", title)
+        title = re.sub(r"(今天|明天|后天|上午|早上|中午|下午|傍晚|晚上|\d{1,2}:\d{2}|点半?|时|\d+分?)", " ", title)
         title = " ".join(title.split()).strip(" ，,。.!！?？:：")
         return ReminderIntent("needs_time", title[:120] or None, timezone_name=tz_label)
     title = raw
@@ -111,7 +111,7 @@ def parse_reminder_intent(
     title = re.sub(_CLOCK, " ", title)
     title = re.sub(_CLOCK24, " ", title)
     title = re.sub(r"(上午|早上|中午|下午|傍晚|晚上|提醒我|提醒一下我|到时提醒我)", " ", title)
-    title = re.sub(r"^(?:在|记得|别忘了|要)\\s*", "", title)
+    title = re.sub(r"^(?:在|记得|别忘了|要)\s*", "", title)
     title = " ".join(title.split()).strip(" ，,。.!！?？:：")
     if not title:
         return ReminderIntent("needs_details", due_at=due_at, timezone_name=tz_label)
