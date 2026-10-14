@@ -50,6 +50,7 @@ class TestM4PrivateCliReply(unittest.TestCase):
                         pipeline=pipe,
                         members=MEMBERS,
                         llm=llm,
+                        allow_private_llm=True,
                         looks_risky=chat.looks_risky,
                         sanitize=chat.sanitize_output,
                     ).turn(BULLY, {"label": "hanghang", "live": True, "interactive": True})
