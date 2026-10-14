@@ -16,11 +16,11 @@ _CATEGORY_TEXT = {
     "dislikes": "不喜欢",
 }
 _REMEMBER = re.compile(
-    r"^(?:糖糖[，, ]*)?(?:请)?(?:帮我)?记住(?:一下)?[，,：:\\s]*"
+    r"^(?:糖糖[，, ]*)?(?:请)?(?:帮我)?记住(?:一下)?[，,：:\s]*"
     r"(?:我)?(最喜欢|喜欢|不喜欢|讨厌)(.{1,80})$"
 )
 _FORGET = re.compile(
-    r"^(?:糖糖[，, ]*)?(?:请)?忘记[，,：:\\s]*"
+    r"^(?:糖糖[，, ]*)?(?:请)?忘记[，,：:\s]*"
     r"(?:我)?(最喜欢|喜欢|不喜欢|讨厌)(.{1,80})$"
 )
 _RECALL = re.compile(
@@ -63,8 +63,8 @@ def parse_memory_intent(text: str | None) -> MemoryIntent | None:
 
     match = _RECALL.fullmatch(raw)
     if match:
-        category_text = match.group(1) or match.group(2)
-        return MemoryIntent("recall", _CATEGORY[category_text] if category_text else None)
+        category = match.group(1) or match.group(2)
+        return MemoryIntent("recall", _CATEGORY[category] if category else None)
 
     return None
 
