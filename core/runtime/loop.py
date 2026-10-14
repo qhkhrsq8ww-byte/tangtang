@@ -77,6 +77,7 @@ class TangTangRuntime:
         logger: SafeLogger | None = None,
         offline: bool = False,
         llm: Callable[[Mapping[str, Any]], str] | None = None,
+        allow_private_llm: bool = False,
     ) -> None:
         roster = dict(members) if members is not None else load_members()
         self.members = roster
@@ -97,6 +98,7 @@ class TangTangRuntime:
             pipeline=self.pipeline,
             members=roster,
             llm=self._llm,
+            allow_private_llm=allow_private_llm,
         )
         # Sinks run through adapters. Do not also bind the same callables on
         # PresentationRuntime or TTS/projection would fire twice.
