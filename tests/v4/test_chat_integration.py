@@ -123,6 +123,37 @@ class TestChatLlmFailure(unittest.TestCase):
         self.assertNotIn(BULLY, seen[-1] if seen else "")
 
 
+class TestPrivateLlmOptIn(unittest.TestCase):
+    def test_child_private_turn_does_not_call_model_by_default(self):
+        called = []
+
+        def llm(ctx):
+            called.append(dict(ctx))
+            return "听起来你有点无聊。要不要一起玩个小游戏？"
+
+        chat = ChatAdapter(members=MEMBERS, llm=llm)
+        turn = chat.turn("我有点无聊。", {"label": "hanghang", "interactive": True})
+
+        self.assertEqual(turn.ingest.decision.privacy, "PRIVATE")
+        self.assertEqual(turn.action.decision, "SPEAK")
+        self.assertTrue(turn.action.text)
+        self.assertEqual(called, [])
+
+    def test_private_llm_requires_explicit_opt_in(self):
+        called = []
+
+        def llm(ctx):
+            called.append(dict(ctx))
+            return "听起来你有点无聊。要不要一起玩个小游戏？"
+
+        chat = ChatAdapter(members=MEMBERS, llm=llm, allow_private_llm=True)
+        turn = chat.turn("我有点无聊。", {"label": "hanghang", "interactive": True})
+
+        self.assertEqual(turn.ingest.decision.privacy, "PRIVATE")
+        self.assertEqual(len(called), 1)
+        self.assertIn("utterance=我有点无聊。", called[0]["_filtered_prompt"])
+
+
 class TestChatV3NotDeleted(unittest.TestCase):
     def test_cat_chat_file_still_exists(self):
         path = ROOT / "code" / "cat" / "cat-chat.py"
