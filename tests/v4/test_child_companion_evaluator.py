@@ -62,7 +62,7 @@ class OfflineCorpusEvaluatorTests(unittest.TestCase):
         self.assertEqual(result["invalid_scores"], [])
 
     def test_report_states_automation_limitations(self):
-        report = build_report(self.stats, label="test-run")
+        report = build_report(self.stats, label="test-run", score_summary=summarize_scores([]))
         self.assertIn("test-run", report)
         self.assertIn("不自动调用模型", report)
         self.assertIn("人工评分", report)
