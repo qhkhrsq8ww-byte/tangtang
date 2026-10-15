@@ -18,6 +18,7 @@ def test_corpus_has_unique_ids_and_expected_schema():
     assert corpus["provenance"]["real_child_data"] is False
     examples = corpus["examples"]
     assert len(examples) >= 50
+    assert sum(bool(item["context"]) for item in examples) >= 20
     ids = [item["id"] for item in examples]
     assert len(ids) == len(set(ids))
     required = {
