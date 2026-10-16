@@ -69,6 +69,13 @@ def _filtered_prompt(context: Mapping[str, Any]) -> str:
         f"member={member_id or 'unknown'}",
         f"privacy={scope}",
     ]
+    plan = context.get("companion_plan")
+    if isinstance(plan, Mapping):
+        behavior = str(plan.get("behavior") or "")
+        decision = str(plan.get("decision") or "")
+        role = str(plan.get("role") or "")
+        if behavior or decision:
+            parts.append(f"companion_plan=decision:{decision},behavior:{behavior},role:{role}")
     if family_bits:
         parts.append("family[" + ",".join(str(b) for b in family_bits) + "]")
     # Only explicitly allowlisted structured facts may enter the prompt; never raw turn history.
@@ -247,6 +254,10 @@ class ChatAdapter:
         )
         ctx["utterance"] = text
         ctx["scene"] = obs.get("scene")
+        # Brain is deterministic and local; expose only its structured decision,
+        # never internal planner state, to the response layer.
+        if isinstance(obs.get("companion_plan"), Mapping):
+            ctx["companion_plan"] = dict(obs["companion_plan"])
         ctx["event_id"] = ingested.event.id
         recall = isolate(
             lambda: retrieve_structured_memories(
