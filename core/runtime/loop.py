@@ -420,7 +420,7 @@ class TangTangRuntime:
             delivery, frames = self._deliver(event, action, audio=audio, observation=obs)
             return RuntimeResult(
                 event=event,
-                member_id=None,
+                member_id=str(member_id) if member_id else None,
                 privacy="PUBLIC",
                 decision=action.decision,
                 action=action,
