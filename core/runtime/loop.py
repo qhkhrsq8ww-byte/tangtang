@@ -67,7 +67,7 @@ class RuntimeResult:
 class TangTangRuntime:
     """Composition root for the wired V4 path. Device sinks are injected."""
 
-    core_api_version = "5.0.0"
+    core_api_version = "5.1.0"
 
     def __init__(
         self,
@@ -182,7 +182,7 @@ class TangTangRuntime:
     ) -> tuple[DeliveryResult, list[str]]:
         tts_res = isolate(lambda: self.tts.deliver(event, action))
         proj_res = isolate(lambda: self.projection.deliver(event, action))
-        pres = isolate(lambda: self.presentation.deliver(event, action, audio=audio))
+        pres = isolate(lambda: self.presentation.deliver(event, action, audio=None))
         delivery = DeliveryResult(event_id=event.id, event_kept=True)
         errors: list[str] = []
         for part in (tts_res, proj_res, pres):
