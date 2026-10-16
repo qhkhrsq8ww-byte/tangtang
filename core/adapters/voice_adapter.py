@@ -59,11 +59,13 @@ def _normalize_identify_result(raw: Any) -> tuple[str | None, float]:
 class VoiceAdapter:
     """Voiceprint → Observation. Identity is a later stage, not this module."""
 
-    core_api_version = "4.0.0"
+    core_api_version = "5.1.0"
 
     def __init__(self, identify_fn: IdentifyFn | None = None) -> None:
         self._identify = identify_fn
         self._loaded: IdentifyFn | None | bool = False
+        self._last_candidate: str | None = None
+        self._stable_hits = 0
 
     def _fn(self) -> IdentifyFn | None:
         if self._identify is not None:
@@ -97,6 +99,19 @@ class VoiceAdapter:
                 candidate, conf = _normalize_identify_result(raw)
         if is_unknown_candidate(candidate):
             candidate, conf = None, 0.0
+        # One noisy voiceprint frame must not flip identity. This state is
+        # runtime-local; no audio or biometric data is persisted.
+        if candidate is not None:
+            if candidate == self._last_candidate:
+                self._stable_hits += 1
+            else:
+                self._last_candidate = candidate
+                self._stable_hits = 1
+            if conf < 0.70 and self._stable_hits < 2:
+                candidate, conf = None, 0.0
+        else:
+            self._last_candidate = None
+            self._stable_hits = 0
         # Hard rule: never invent hanghang / child_9 for unknown.
         payload = dict(extra or {})
         if pcm_path:
