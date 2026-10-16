@@ -10,6 +10,7 @@ from typing import Any
 
 from core.memory.family import FamilyMemory
 from core.memory.private import PrivateMemory
+from core.memory.relevance import relevance_score
 
 RECALLABLE_TYPES = frozenset({
     "preference", "long_term_fact", "commitment", "goal", "task", "important_fact",
@@ -74,5 +75,6 @@ def retrieve_structured_memories(
         item = _safe_projection(row)
         if item:
             projected.append(item)
-    projected.sort(key=lambda item: item.get("created_at") or "", reverse=True)
+    # Rank by usefulness to the current companion turn, not just recency.
+    projected.sort(key=lambda item: relevance_score(item), reverse=True)
     return projected[: min(limit, 8)]
