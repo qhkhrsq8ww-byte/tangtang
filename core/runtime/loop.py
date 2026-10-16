@@ -22,6 +22,7 @@ from core.adapters.observation import Observation
 from core.adapters.projection_adapter import ProjectionAdapter
 from core.adapters.tts_adapter import TTSAdapter
 from core.adapters.voice_adapter import VoiceAdapter
+from core.brain.planner import CompanionPlanner
 from core.events.event import Event
 from core.events.event_bus import EventBus, PublishResult
 from core.identity.resolver import IdentityResolver
@@ -66,7 +67,7 @@ class RuntimeResult:
 class TangTangRuntime:
     """Composition root for the wired V4 path. Device sinks are injected."""
 
-    core_api_version = "4.0.0"
+    core_api_version = "5.0.0"
 
     def __init__(
         self,
@@ -93,6 +94,8 @@ class TangTangRuntime:
         self.offline = offline
         self.logger = logger or SafeLogger()
         self.identity = IdentityResolver(roster)
+        # V5 companion brain: plans behavior without generating speech or touching devices.
+        self.brain = CompanionPlanner()
         self.persist = bool(persist)
         self.home = tangtang_home(home) if self.persist else (Path(home).expanduser().resolve() if home is not None else None)
         if pipeline is not None:
@@ -370,6 +373,19 @@ class TangTangRuntime:
         else:
             obs.pop("member_id", None)
         obs.setdefault("interactive", True)
+        # Enrich the response context with a deterministic companion plan.
+        # User-initiated turns are never suppressed by the planner.
+        plan = isolate(
+            lambda: self.brain.plan(
+                member_id=str(member_id) if member_id else None,
+                observation=obs,
+                utterance=utterance,
+                proactive=False,
+            ),
+            fallback=None,
+        )
+        if plan.ok and plan.value is not None:
+            obs["companion_plan"] = plan.value.to_dict()
         when = obs.get("now")
         gate = speak_decide(
             obs,
@@ -545,8 +561,22 @@ class TangTangRuntime:
                 event_kept=True,
                 publish=pub,
             )
+        plan = isolate(
+            lambda: self.brain.plan(
+                member_id=str(mid) if mid else None,
+                observation=obs,
+                proactive=True,
+            ),
+            fallback=None,
+        )
+        companion_plan = plan.value if plan.ok else None
+        if companion_plan is not None:
+            obs["companion_plan"] = companion_plan.to_dict()
         gate = isolate(lambda: self.pipeline.interrupt.decide(obs), fallback="SILENT")
         decision = gate.value if gate.ok and isinstance(gate.value, str) else "SILENT"
+        # V5 adds a companion-specific veto for proactive behavior only.
+        if companion_plan is not None and companion_plan.decision in {"SILENT", "WAIT"}:
+            decision = "SILENT"
         ctx = isolate(
             lambda: self.pipeline.builder.build(
                 who={"member_id": mid},
