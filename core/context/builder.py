@@ -118,6 +118,10 @@ class ContextBuilder:
                 out.append(clean)
             elif isinstance(item, str) and item.strip():
                 out.append(item[-2000:])
+            else:
+                # Preserve legacy/test scalar context; only mappings carry
+                # member/privacy metadata that needs filtering.
+                out.append(item)
         return out
 
     def _scrub_event(
