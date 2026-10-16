@@ -240,39 +240,8 @@ class TangTangRuntime:
         errors: list[str] = []
         extra = dict(observation or {})
         when = extra.get("now")
-        has_signal = (
-            isinstance(when, datetime)
-            or extra.get("school_hours")
-            or extra.get("at_school")
-            or extra.get("sleeping")
-            or extra.get("asleep")
-            or extra.get("live")
-        )
-        if has_signal:
-            gate = speak_decide(
-                extra,
-                now=when if isinstance(when, datetime) else None,
-                channel="voice",
-                policy=self.pipeline.interrupt,
-                live=bool(extra.get("live")),
-            )
-            if not may_call_llm(gate):
-                return RuntimeResult(
-                    event=None,
-                    member_id=extra.get("member_id") or extra.get("label"),
-                    privacy=None,
-                    decision=gate,
-                    action=PresentationAction(
-                        decision=gate,
-                        text="",
-                        action="idle",
-                        member_id=extra.get("member_id"),
-                        sink="none",
-                    ),
-                    delivery=DeliveryResult(event_id="", event_kept=True),
-                    observation=extra,
-                    errors=errors,
-                )
+        # Voice input is user-initiated; do not suppress it before STT/identity.
+        # Quiet-hours policy applies to proactive actions, not to a child asking for help.
         transcript = utterance
         if transcript is None and self.stt is not None and audio is not None:
             heard = isolate(lambda: self.stt(audio), fallback="")
@@ -427,7 +396,7 @@ class TangTangRuntime:
                 decision="SPEAK",
                 text=FALLBACK,
                 action="reply",
-                member_id=None,
+                member_id=str(member_id) if member_id else None,
                 sink="voice",
             )
             delivery, frames = self._deliver(event, action, audio=audio, observation=obs)
