@@ -13,7 +13,7 @@ _PRIVACY = frozenset({"PRIVATE", "FAMILY", "PUBLIC"})
 
 
 class ContextBuilder:
-    core_api_version = "5.1.0"
+    core_api_version = "4.0.0"
     def __init__(
         self,
         memory: MemoryPort,
