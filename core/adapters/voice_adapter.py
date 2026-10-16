@@ -88,7 +88,9 @@ class VoiceAdapter:
         and reuse V3 identify(). Failures become unknown — never a child default.
         """
         candidate = candidate_member
-        conf = 0.0 if confidence is None else float(confidence)
+        # Injected candidates are already an explicit identity signal (used by
+        # local adapters/tests); absence of a score must not turn them unknown.
+        conf = 1.0 if candidate_member is not None and confidence is None else (0.0 if confidence is None else float(confidence))
         if candidate is None and pcm_path:
             fn = self._fn()
             if fn is None:
