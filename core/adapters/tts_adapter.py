@@ -18,7 +18,7 @@ Speaker = Callable[[str], Any]
 class TTSAdapter:
     """Execute PresentationAction.sink == voice via an injected speaker."""
 
-    core_api_version = "4.0.0"
+    core_api_version = "5.1.0"
 
     def __init__(self, speaker: Speaker | None = None) -> None:
         self.speaker = speaker

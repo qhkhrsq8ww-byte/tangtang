@@ -22,6 +22,7 @@ from core.adapters.observation import Observation
 from core.adapters.projection_adapter import ProjectionAdapter
 from core.adapters.tts_adapter import TTSAdapter
 from core.adapters.voice_adapter import VoiceAdapter
+from core.brain.planner import CompanionPlanner
 from core.events.event import Event
 from core.events.event_bus import EventBus, PublishResult
 from core.identity.resolver import IdentityResolver
@@ -66,7 +67,7 @@ class RuntimeResult:
 class TangTangRuntime:
     """Composition root for the wired V4 path. Device sinks are injected."""
 
-    core_api_version = "4.0.0"
+    core_api_version = "5.1.0"
 
     def __init__(
         self,
@@ -93,6 +94,8 @@ class TangTangRuntime:
         self.offline = offline
         self.logger = logger or SafeLogger()
         self.identity = IdentityResolver(roster)
+        # V5 companion brain: plans behavior without generating speech or touching devices.
+        self.brain = CompanionPlanner()
         self.persist = bool(persist)
         self.home = tangtang_home(home) if self.persist else (Path(home).expanduser().resolve() if home is not None else None)
         if pipeline is not None:
@@ -179,7 +182,7 @@ class TangTangRuntime:
     ) -> tuple[DeliveryResult, list[str]]:
         tts_res = isolate(lambda: self.tts.deliver(event, action))
         proj_res = isolate(lambda: self.projection.deliver(event, action))
-        pres = isolate(lambda: self.presentation.deliver(event, action, audio=audio))
+        pres = isolate(lambda: self.presentation.deliver(event, action, audio=None))
         delivery = DeliveryResult(event_id=event.id, event_kept=True)
         errors: list[str] = []
         for part in (tts_res, proj_res, pres):
@@ -237,39 +240,26 @@ class TangTangRuntime:
         errors: list[str] = []
         extra = dict(observation or {})
         when = extra.get("now")
-        has_signal = (
-            isinstance(when, datetime)
-            or extra.get("school_hours")
-            or extra.get("at_school")
-            or extra.get("sleeping")
-            or extra.get("asleep")
-            or extra.get("live")
-        )
-        if has_signal:
-            gate = speak_decide(
-                extra,
-                now=when if isinstance(when, datetime) else None,
-                channel="voice",
-                policy=self.pipeline.interrupt,
-                live=bool(extra.get("live")),
+        # Preserve V4 pre-listen protection for passive school-hours events.
+        # An explicitly interactive turn is allowed through to STT.
+        if (extra.get("school_hours") or extra.get("at_school")) and not extra.get("interactive"):
+            return RuntimeResult(
+                event=None,
+                member_id=extra.get("member_id"),
+                privacy=None,
+                decision="SILENT",
+                action=PresentationAction(
+                    decision="SILENT",
+                    text="",
+                    action="school_quiet",
+                    member_id=str(extra.get("member_id")) if extra.get("member_id") else None,
+                    sink="none",
+                ),
+                delivery=DeliveryResult(event_id="", event_kept=True),
+                observation=extra,
+                errors=errors,
             )
-            if not may_call_llm(gate):
-                return RuntimeResult(
-                    event=None,
-                    member_id=extra.get("member_id") or extra.get("label"),
-                    privacy=None,
-                    decision=gate,
-                    action=PresentationAction(
-                        decision=gate,
-                        text="",
-                        action="idle",
-                        member_id=extra.get("member_id"),
-                        sink="none",
-                    ),
-                    delivery=DeliveryResult(event_id="", event_kept=True),
-                    observation=extra,
-                    errors=errors,
-                )
+        # User-initiated voice turns remain interactive even during quiet hours.
         transcript = utterance
         if transcript is None and self.stt is not None and audio is not None:
             heard = isolate(lambda: self.stt(audio), fallback="")
@@ -370,6 +360,19 @@ class TangTangRuntime:
         else:
             obs.pop("member_id", None)
         obs.setdefault("interactive", True)
+        # Enrich the response context with a deterministic companion plan.
+        # User-initiated turns are never suppressed by the planner.
+        plan = isolate(
+            lambda: self.brain.plan(
+                member_id=str(member_id) if member_id else None,
+                observation=obs,
+                utterance=utterance,
+                proactive=False,
+            ),
+            fallback=None,
+        )
+        if plan.ok and plan.value is not None:
+            obs["companion_plan"] = plan.value.to_dict()
         when = obs.get("now")
         gate = speak_decide(
             obs,
@@ -411,13 +414,13 @@ class TangTangRuntime:
                 decision="SPEAK",
                 text=FALLBACK,
                 action="reply",
-                member_id=None,
+                member_id=str(member_id) if member_id else None,
                 sink="voice",
             )
             delivery, frames = self._deliver(event, action, audio=audio, observation=obs)
             return RuntimeResult(
                 event=event,
-                member_id=None,
+                member_id=str(member_id) if member_id else None,
                 privacy="PUBLIC",
                 decision=action.decision,
                 action=action,
@@ -545,8 +548,22 @@ class TangTangRuntime:
                 event_kept=True,
                 publish=pub,
             )
+        plan = isolate(
+            lambda: self.brain.plan(
+                member_id=str(mid) if mid else None,
+                observation=obs,
+                proactive=True,
+            ),
+            fallback=None,
+        )
+        companion_plan = plan.value if plan.ok else None
+        if companion_plan is not None:
+            obs["companion_plan"] = companion_plan.to_dict()
         gate = isolate(lambda: self.pipeline.interrupt.decide(obs), fallback="SILENT")
         decision = gate.value if gate.ok and isinstance(gate.value, str) else "SILENT"
+        # V5 adds a companion-specific veto for proactive behavior only.
+        if companion_plan is not None and companion_plan.decision in {"SILENT", "WAIT"}:
+            decision = "SILENT"
         ctx = isolate(
             lambda: self.pipeline.builder.build(
                 who={"member_id": mid},

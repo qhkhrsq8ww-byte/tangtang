@@ -68,7 +68,10 @@ class ContextBuilder:
         else:
             event_out = {}
         event_out = self._scrub_event(event_out, scope=str(scope), viewer_id=member_id)
-        recent_out = list(recent or [])[-self.max_recent :]
+        # Short-term context is bounded and member-scoped.
+        recent_out = self._bounded_recent(
+            recent or [], member_id=str(member_id or ""), scope=str(scope), viewer_id=viewer_id
+        )
         utterance = str(obs.get("utterance") or obs.get("speech") or "")
         payload = event_out.get("payload") if isinstance(event_out.get("payload"), Mapping) else {}
         if isinstance(payload, Mapping) and not utterance:
@@ -89,7 +92,37 @@ class ContextBuilder:
             "injection": injected,
             "utterance": utterance,
             "private_facts": [],
+            "conversation_context": recent_out,
         }
+
+    def _bounded_recent(
+        self,
+        recent: list[Any],
+        *,
+        member_id: str,
+        scope: str,
+        viewer_id: str | None,
+    ) -> list[Any]:
+        out: list[Any] = []
+        for item in recent[-self.max_recent :]:
+            if isinstance(item, Mapping):
+                owner = item.get("member_id")
+                item_scope = str(item.get("privacy_scope") or item.get("privacy") or scope)
+                if owner and member_id and str(owner) != member_id:
+                    continue
+                if item_scope == "PRIVATE" and owner and owner != viewer_id and scope != "FAMILY":
+                    continue
+                clean = dict(item)
+                clean.pop("secrets", None)
+                clean.pop("private_facts", None)
+                out.append(clean)
+            elif isinstance(item, str) and item.strip():
+                out.append(item[-2000:])
+            else:
+                # Preserve legacy/test scalar context; only mappings carry
+                # member/privacy metadata that needs filtering.
+                out.append(item)
+        return out
 
     def _scrub_event(
         self,

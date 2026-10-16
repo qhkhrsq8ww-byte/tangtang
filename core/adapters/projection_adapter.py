@@ -16,7 +16,7 @@ Projector = Callable[[PresentationAction], Any]
 
 
 class ProjectionAdapter:
-    core_api_version = "4.0.0"
+    core_api_version = "5.1.0"
 
     def __init__(self, projector: Projector | None = None) -> None:
         self.projector = projector
