@@ -12,6 +12,7 @@ class TestV51ApiContract(unittest.TestCase):
         self.assertEqual(ResponseOrchestrator.core_api_version, "5.1.0")
         self.assertEqual(TTSAdapter.core_api_version, "5.1.0")
         self.assertEqual(ProjectionAdapter.core_api_version, "5.1.0")
+        # ContextBuilder remains a V4-compatible port while accepting V5 context fields.
 
 if __name__ == "__main__":
     unittest.main()
