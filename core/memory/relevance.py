@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Mapping
+from core.memory.lifecycle import lifecycle_state
 
 _TYPE_WEIGHT = {
     "commitment": 1.00,
@@ -29,6 +30,9 @@ def _parse(value: Any) -> datetime | None:
 def relevance_score(row: Mapping[str, Any], *, now: datetime | None = None) -> float:
     now = now or datetime.now(timezone.utc)
     typ = str(row.get("type") or "")
+    state = lifecycle_state(row, now=now)
+    if state in {"expired", "completed"}:
+        return 0.0
     score = _TYPE_WEIGHT.get(typ, 0.30)
     try:
         score *= 0.65 + 0.35 * max(0.0, min(1.0, float(row.get("confidence", 1.0))))
