@@ -56,6 +56,9 @@ class CompanionPlanner:
 
     def __init__(self, *, min_proactive_gap_minutes: int = 20) -> None:
         self.min_proactive_gap_minutes = max(1, int(min_proactive_gap_minutes))
+        # Runtime-local anti-chatter state. No speech/content is persisted here.
+        self._last_proactive: dict[str, datetime] = {}
+        self._last_behavior: dict[str, str] = {}
 
     @staticmethod
     def _hour(observation: Mapping[str, Any]) -> int | None:
@@ -130,6 +133,23 @@ class CompanionPlanner:
 
         behavior = _BEHAVIOR_BY_SCENE.get(scene)
         if behavior:
+            key = str(member_id or "unknown")
+            now = obs.get("now")
+            last = self._last_proactive.get(key)
+            if isinstance(now, datetime) and isinstance(last, datetime):
+                elapsed = (now - last).total_seconds() / 60.0
+                if elapsed < self.min_proactive_gap_minutes and self._last_behavior.get(key) == behavior:
+                    return CompanionPlan(
+                        decision="WAIT",
+                        behavior="quiet",
+                        reason="proactive_cooldown",
+                        role=role,
+                        proactive=True,
+                        metadata={"scene": scene, "cooldown_minutes": self.min_proactive_gap_minutes},
+                    )
+            if isinstance(now, datetime):
+                self._last_proactive[key] = now
+                self._last_behavior[key] = behavior
             return CompanionPlan(
                 decision="CONSIDER",
                 behavior=behavior,
