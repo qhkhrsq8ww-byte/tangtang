@@ -240,8 +240,26 @@ class TangTangRuntime:
         errors: list[str] = []
         extra = dict(observation or {})
         when = extra.get("now")
-        # Voice input is user-initiated; do not suppress it before STT/identity.
-        # Quiet-hours policy applies to proactive actions, not to a child asking for help.
+        # Preserve V4 pre-listen protection for passive school-hours events.
+        # An explicitly interactive turn is allowed through to STT.
+        if (extra.get("school_hours") or extra.get("at_school")) and not extra.get("interactive"):
+            return RuntimeResult(
+                event=None,
+                member_id=extra.get("member_id"),
+                privacy=None,
+                decision="SILENT",
+                action=PresentationAction(
+                    decision="SILENT",
+                    text="",
+                    action="school_quiet",
+                    member_id=str(extra.get("member_id")) if extra.get("member_id") else None,
+                    sink="none",
+                ),
+                delivery=DeliveryResult(event_id="", event_kept=True),
+                observation=extra,
+                errors=errors,
+            )
+        # User-initiated voice turns remain interactive even during quiet hours.
         transcript = utterance
         if transcript is None and self.stt is not None and audio is not None:
             heard = isolate(lambda: self.stt(audio), fallback="")
