@@ -453,6 +453,7 @@ tangtang_play_audio() {
 }
 
 tangtang_ensure_server() {
+  # 必须走 http://127.0.0.1:8080（本目录 python -m http.server），不要 file://。
   # 必须确认目标页面真实返回成功，避免把端口上其它服务的 404 当作舞台已启动。
   local url="http://127.0.0.1:8080/cat-stage.html"
   local attempt
