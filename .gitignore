@@ -37,3 +37,7 @@ __pycache__/
 # 2026-10-19 追加：LLM key（糖糖直连智谱，绝不入库）
 code/cat/.llm_key
 **/.llm_key
+
+# 媒体备份不入库（体积大且非代码）
+code/cat/assets/video.backup-*/
+code/cat/assets/video.original-*/

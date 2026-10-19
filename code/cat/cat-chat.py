@@ -87,7 +87,25 @@ def build_persona():
         who = "还不能确定说话的人是谁。用通用亲切称呼，不要假装认识，不要提起其他家庭成员的私事。"
     else:
         who = "只陪伴当前说话的人，不要提起其他孩子的私事或拿他们比较。"
-    return f"{species}\n{style}\n{safety}\n{who}\n默认称呼：{name}。"
+    mem = []
+    try:
+        with open(os.path.join(DATA_DIR, "cat-memory.json"), encoding="utf-8") as f:
+            m = json.load(f)
+        for k, label in (("nickname", "昵称"), ("age", "年龄"), ("grade", "年级"), ("birthday", "生日")):
+            if m.get(k):
+                mem.append(f"{label}:{m[k]}")
+        if m.get("first_met"):
+            mem.append(f"初见:{m['first_met']}")
+    except Exception:
+        pass
+    try:
+        with open(os.path.join(DATA_DIR, "cat-state.json"), encoding="utf-8") as f:
+            st = json.load(f)
+        mem.append(f"糖糖当前心情:开心{st.get('happiness','?')}/精力{st.get('energy','?')}/想念{st.get('loneliness','?')}(满分100,数值低时语气更温柔体贴)")
+    except Exception:
+        pass
+    mem_txt = ("\n【你认识的家人与糖糖状态(内部参考,自然融入,不要罗列数值)】\n" + "；".join(mem)) if mem else ""
+    return f"{species}\n{style}\n{safety}\n{who}\n默认称呼：{name}。{mem_txt}"
 
 
 def looks_risky(text):

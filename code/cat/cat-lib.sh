@@ -63,3 +63,11 @@ tangtang_ensure_stage() {
 tangtang_projector_on() {
   nc -z -w 3 "$TANGTANG_PROJECTOR_IP" "$TANGTANG_AIRPLAY_PORT" 2>/dev/null
 }
+
+# 2026-10-19 补：TTS 输出锁（与 repo cat-talk.sh 依赖对齐）
+tangtang_tts_lock() {
+  local lock=/tmp/cat_tts.lock
+  exec 9>"$lock" 2>/dev/null || return 0
+  if flock -w 5 9 2>/dev/null; then return 0; fi
+  return 0
+}
