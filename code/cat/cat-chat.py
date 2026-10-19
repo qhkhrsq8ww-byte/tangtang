@@ -52,6 +52,24 @@ SAFE_REPLY = (
 FALLBACK_REPLY = "糖糖在呢，刚刚没接上。"
 
 
+def _llm_timeout_seconds():
+    """Bound each gateway request so a slow cloud model cannot stall voice chat indefinitely."""
+    try:
+        value = float(os.environ.get("TANGTANG_LLM_TIMEOUT_SECONDS", "10"))
+    except (TypeError, ValueError):
+        value = 10.0
+    return max(3.0, min(value, 20.0))
+
+
+def _brain_fallback_timeout_seconds():
+    """Keep the local fallback bounded too; this is a voice response path."""
+    try:
+        value = float(os.environ.get("TANGTANG_BRAIN_FALLBACK_TIMEOUT_SECONDS", "8"))
+    except (TypeError, ValueError):
+        value = 8.0
+    return max(3.0, min(value, 12.0))
+
+
 def current_profile():
     p = (os.environ.get("TANGTANG_PROFILE") or "play").strip().lower()
     return p if p in ("play", "friend", "adult", "elder") else "play"
@@ -173,30 +191,19 @@ def chat(user_text, model=DEFAULT_MODEL, history=None):
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=40) as r:
+    with urllib.request.urlopen(req, timeout=_llm_timeout_seconds()) as r:
         data = json.loads(r.read().decode("utf-8"))
     content = data["choices"][0]["message"]["content"].strip()
+    # Empty replies and prompt echoes are failures, not reasons to make a second
+    # long cloud request. The caller can use the bounded local fallback instead.
     if not content or content == user_text.strip():
-        payload2 = json.dumps({
-            "model": model, "messages": messages,
-            "max_tokens": 1000, "temperature": 0.9,
-        }).encode("utf-8")
-        req2 = urllib.request.Request(
-            BASE.rstrip("/") + "/chat/completions", data=payload2,
-            headers={"Authorization": "Bearer " + KEY, "Content-Type": "application/json",
-                     "User-Agent": "tangtang-cat/1.0"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req2, timeout=40) as r2:
-            data2 = json.loads(r2.read().decode("utf-8"))
-        content = data2["choices"][0]["message"]["content"].strip()
+        return FALLBACK_REPLY
     return sanitize_output(content)
-
 
 def brain_fallback(user_text):
     r = subprocess.run(
         ["/usr/bin/python3", os.path.join(CAT_DIR, "cat-brain.py"), "say", user_text],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True, text=True, timeout=_brain_fallback_timeout_seconds(),
     )
     return sanitize_output((r.stdout or FALLBACK_REPLY).strip().split("\t")[0])
 
