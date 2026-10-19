@@ -160,9 +160,11 @@ class PrivateMemory:
 
     def _load_member(self, member_id: str) -> None:
         """Load the owner-only file once per process and discard expired/invalid rows."""
-        if not self._persist or self._home is None or member_id in self._loaded_members:
+        if not self._persist or self._home is None:
             return
         mid = sanitize_member_id(member_id)
+        if mid in self._loaded_members:
+            return
         self._loaded_members.add(mid)
         path = private_file(self._home, mid)
         if not path.is_file():
