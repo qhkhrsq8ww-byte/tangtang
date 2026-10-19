@@ -75,6 +75,17 @@ class TestShellTtsStatus(unittest.TestCase):
         self.assertTrue(config["RunAtLoad"])
         self.assertFalse(config["KeepAlive"])
 
+    def test_short_turn_stt_pipeline_failure_is_not_reported_as_success(self):
+        source = (CAT / "cat-turn.sh").read_text(encoding="utf-8")
+        self.assertIn('set -o pipefail; "$CAT_DIR/cat-stt-baidu.sh"', source)
+        self.assertIn('stt_status=$?', source)
+        self.assertIn('STT_STATUS="fail"', source)
+        self.assertIn('STT_STATUS="ok"', source)
+        self.assertLess(
+            source.index('stt_status=$?'),
+            source.index('if [ "$stt_status" -ne 0 ]'),
+        )
+
     def test_audio_player_nonzero_exit_is_propagated(self):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
