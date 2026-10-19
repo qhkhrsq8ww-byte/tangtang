@@ -199,10 +199,16 @@ run_turn() {
       DID_STT=1
       STT_STATUS="ok"
     elif [ "${TANGTANG_TURN_STT:-1}" = "1" ]; then
-      TEXT="$("$CAT_DIR/cat-stt-baidu.sh" "$PCM" 2>/dev/null | tr -d '\n')"
+      TEXT="$(set -o pipefail; "$CAT_DIR/cat-stt-baidu.sh" "$PCM" 2>/dev/null | tr -d '\n')"
+      stt_status=$?
       DID_STT=1
       PCM=""
-      STT_STATUS="ok"
+      if [ "$stt_status" -ne 0 ]; then
+        TEXT=""
+        STT_STATUS="fail"
+      else
+        STT_STATUS="ok"
+      fi
     else
       STT_STATUS="off"
     fi
