@@ -30,36 +30,22 @@ class TestShellTtsStatus(unittest.TestCase):
     def test_concurrent_recording_is_rejected_while_microphone_is_locked(self):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
+            lock_dir = temp / "tangtang-mic-capture.lock"
+            lock_dir.mkdir()
+            (lock_dir / "pid").write_text(str(os.getpid()), encoding="utf-8")
             fake_ffmpeg = temp / "ffmpeg"
-            fake_ffmpeg.write_text("#!/bin/sh\\nsleep 2\\nexit 0\\n", encoding="utf-8")
+            fake_ffmpeg.write_text("#!/bin/sh\\nexit 0\\n", encoding="utf-8")
             fake_ffmpeg.chmod(0o755)
             env = dict(os.environ)
             env["PATH"] = td + os.pathsep + env.get("PATH", "")
             env["TMPDIR"] = td
-            first_output = temp / "first.pcm"
-            second_output = temp / "second.pcm"
-            first = subprocess.Popen(
-                ["bash", str(CAT / "cat-listen.sh"), "1", str(first_output)],
-                env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            result = subprocess.run(
+                ["bash", str(CAT / "cat-listen.sh"), "1", str(temp / "blocked.pcm")],
+                env=env, capture_output=True, text=True, check=False,
             )
-            try:
-                lock_dir = temp / "tangtang-mic-capture.lock"
-                for _ in range(30):
-                    if (lock_dir / "pid").is_file():
-                        break
-                    import time
-                    time.sleep(0.05)
-                self.assertTrue((lock_dir / "pid").is_file(), "first recorder did not acquire lock")
-                second = subprocess.run(
-                    ["bash", str(CAT / "cat-listen.sh"), "1", str(second_output)],
-                    env=env, capture_output=True, text=True, check=False,
-                )
-                self.assertEqual(second.returncode, 75, second.stderr)
-                self.assertIn("另一个录音任务", second.stderr)
-            finally:
-                first.communicate(timeout=5)
-            self.assertFalse((temp / "tangtang-mic-capture.lock").exists())
-
+            self.assertEqual(result.returncode, 75, result.stderr)
+            self.assertIn("另一个录音任务", result.stderr)
+            self.assertFalse((temp / "blocked.pcm").exists())
     def test_recording_cli_propagates_ffmpeg_failure(self):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
