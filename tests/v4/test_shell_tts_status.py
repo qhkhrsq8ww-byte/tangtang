@@ -26,6 +26,55 @@ class TestShellTtsStatus(unittest.TestCase):
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
 
+
+    def test_recording_cli_propagates_ffmpeg_failure(self):
+        with tempfile.TemporaryDirectory() as td:
+            temp = Path(td)
+            fake_ffmpeg = temp / "ffmpeg"
+            fake_ffmpeg.write_text("#!/bin/sh\\nexit 7\\n", encoding="utf-8")
+            fake_ffmpeg.chmod(0o755)
+            output = temp / "capture.pcm"
+            env = dict(os.environ)
+            env["PATH"] = td + os.pathsep + env.get("PATH", "")
+            result = subprocess.run(
+                ["bash", str(CAT / "cat-listen.sh"), "1", str(output)],
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 7, result.stderr)
+            self.assertIn("录音程序失败", result.stderr)
+            self.assertFalse(output.exists())
+
+    def test_recording_cli_rejects_success_without_audio_file(self):
+        with tempfile.TemporaryDirectory() as td:
+            temp = Path(td)
+            fake_ffmpeg = temp / "ffmpeg"
+            fake_ffmpeg.write_text("#!/bin/sh\\nexit 0\\n", encoding="utf-8")
+            fake_ffmpeg.chmod(0o755)
+            output = temp / "capture.pcm"
+            env = dict(os.environ)
+            env["PATH"] = td + os.pathsep + env.get("PATH", "")
+            result = subprocess.run(
+                ["bash", str(CAT / "cat-listen.sh"), "1", str(output)],
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertIn("没有生成有效录音文件", result.stderr)
+
+    def test_launch_agent_one_shot_launcher_does_not_keep_restarting(self):
+        import plistlib
+
+        plist_path = ROOT / "config" / "com.tangtang.daemon.plist.example"
+        with plist_path.open("rb") as handle:
+            config = plistlib.load(handle)
+        self.assertTrue(config["RunAtLoad"])
+        self.assertFalse(config["KeepAlive"])
+
     def test_audio_player_nonzero_exit_is_propagated(self):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
