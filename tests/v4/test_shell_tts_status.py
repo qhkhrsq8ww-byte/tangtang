@@ -52,6 +52,15 @@ class TestShellTtsStatus(unittest.TestCase):
             self.assertEqual(result.returncode, 75, result.stderr)
             self.assertIn("另一个录音任务", result.stderr)
             self.assertFalse((temp / "blocked.pcm").exists())
+    def test_startup_script_stops_when_stage_or_pet_startup_fails(self):
+        source = (CAT / "start-cat.sh").read_text(encoding="utf-8")
+        self.assertIn('if ! tangtang_ensure_stage; then', source)
+        self.assertIn('if ! tangtang_ensure_pet; then', source)
+        self.assertIn('糖糖舞台启动失败', source)
+        self.assertIn('糖糖宠物页面启动失败', source)
+        self.assertLess(source.index('if ! tangtang_ensure_stage'), source.index('if ! tangtang_ensure_pet'))
+        self.assertLess(source.index('if ! tangtang_ensure_pet'), source.index('echo "🐾 糖糖全屏舞台已启动。'))
+
     def test_stage_server_checks_http_success_and_waits_for_readiness(self):
         source = (CAT / "cat-lib.sh").read_text(encoding="utf-8")
         self.assertIn('curl -fsS -o /dev/null --max-time 3 "$url"', source)
