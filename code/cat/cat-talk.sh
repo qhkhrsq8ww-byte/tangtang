@@ -59,6 +59,9 @@ if [ "${TANGTANG_TTS:-1}" = "0" ]; then
   exit 0
 fi
 
+# 与 cat-say 共用输出锁，避免共享音频文件被并发覆盖。
+tangtang_tts_lock || exit $?
+
 # 英语小伴读与闹铃同一条出声路径（cat-say → 默认蓝牙音箱）。不另开音箱。
 if [ "${1:-}" = "english" ]; then
   "$CAT_DIR/cat-say.sh" "$text" cute
@@ -71,13 +74,17 @@ speak_with_fallback() {
   local baidu_spd="$3"
   local say_rate="$4"
   local say_pitch="$5"
-  if /usr/bin/python3 "$CAT_DIR/cat-tts-edge.py" "$text" "$rate" "$pitch" >/dev/null 2>&1; then
+  rm -f /tmp/cat_tts.mp3
+  if /usr/bin/python3 "$CAT_DIR/cat-tts-edge.py" "$text" "$rate" "$pitch" >/dev/null 2>&1 \\
+      && [ -s /tmp/cat_tts.mp3 ]; then
     tangtang_play_audio /tmp/cat_tts.mp3
-    return 0
+    return $?
   fi
-  if node "$CAT_DIR/cat-tts-baidu.mjs" "$text" "$baidu_spd" >/dev/null 2>&1; then
+  rm -f /tmp/cat_tts.mp3
+  if node "$CAT_DIR/cat-tts-baidu.mjs" "$text" "$baidu_spd" >/dev/null 2>&1 \\
+      && [ -s /tmp/cat_tts.mp3 ]; then
     tangtang_play_audio /tmp/cat_tts.mp3
-    return 0
+    return $?
   fi
   say -v Ting-Ting "[[rate ${say_rate}]][[pitch ${say_pitch}]]$text"
 }
@@ -96,4 +103,4 @@ case "$label" in
     speak_with_fallback -10 5 4 150 118
     ;;
 esac
-exit 0
+exit $?
