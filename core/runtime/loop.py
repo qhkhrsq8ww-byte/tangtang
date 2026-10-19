@@ -373,6 +373,19 @@ class TangTangRuntime:
         else:
             obs.pop("member_id", None)
         obs.setdefault("interactive", True)
+        # Record explicit opt-out language locally so proactive scenes can respect it.
+        # This plan never suppresses a user-initiated turn.
+        companion_plan = isolate(
+            lambda: self.brain.plan(
+                member_id=str(member_id) if member_id else None,
+                observation=obs,
+                utterance=utterance,
+                proactive=False,
+            ),
+            fallback=None,
+        )
+        if companion_plan.ok and companion_plan.value is not None:
+            obs["companion_plan"] = companion_plan.value.to_dict()
         when = obs.get("now")
         gate = speak_decide(
             obs,
