@@ -56,6 +56,10 @@ def _parse_due(text: str, now: datetime, timezone_name: str | None) -> tuple[str
     clock24 = re.search(_CLOCK24, text)
     if not clock_match and not clock24:
         return None, tz_label
+    # An hour without a period (e.g. "明天八点") is ambiguous.
+    # Do not silently turn it into morning; caller must clarify.
+    if clock_match and not clock_match.group(1):
+        return None, tz_label
     if date_match:
         day_delta = {"今天": 0, "明天": 1, "后天": 2}[date_match.group(1)]
         day = (local_now + timedelta(days=day_delta)).date()
@@ -125,6 +129,15 @@ def parse_reminder_intent(
         if title:
             return ReminderIntent("reschedule", title[:120], due_at, tz_label)
     if not due_at:
+        # Preserve the reminder subject and ask for an explicit morning/afternoon/evening.
+        if re.search(r"(?:今天|明天|后天)\s*\S{0,8}(?:\d{1,2}|[零〇一二两三四五六七八九十]{1,3})(?:点|时)", raw):
+            title = re.sub(r"^(?:糖糖[，, ]*)?(?:请)?(?:到时候)?提醒(?:一下)?我(?:一下)?", "", raw).strip(" ，,。.!！?？:：")
+            title = re.sub(_DATE, " ", title)
+            title = re.sub(_CLOCK, " ", title)
+            title = re.sub(_CLOCK24, " ", title)
+            title = re.sub(r"(上午|早上|中午|下午|傍晚|晚上|提醒我|提醒一下我|到时提醒我)", " ", title)
+            title = " ".join(title.split()).strip(" ，,。.!！?？:：")
+            return ReminderIntent("needs_period", title[:120] or None, timezone_name=tz_label)
         title = re.sub(r"^(?:糖糖[，, ]*)?(?:请)?(?:到时候)?提醒(?:一下)?我(?:一下)?", "", raw).strip(" ，,。.!！?？:：")
         title = re.sub(r"(今天|明天|后天|上午|早上|中午|下午|傍晚|晚上|\d{1,2}:\d{2}|点半?|时|\d+分?)", " ", title)
         title = " ".join(title.split()).strip(" ，,。.!！?？:：")
