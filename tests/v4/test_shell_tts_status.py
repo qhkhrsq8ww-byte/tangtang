@@ -13,7 +13,7 @@ CAT = ROOT / "code" / "cat"
 
 class TestShellTtsStatus(unittest.TestCase):
     def test_speech_scripts_have_valid_bash_syntax(self):
-        for path in (CAT / "cat-lib.sh", CAT / "cat-say.sh", CAT / "cat-task-dispatch.py"):
+        for path in (CAT / "cat-lib.sh", CAT / "cat-listen.sh", CAT / "cat-say.sh", CAT / "cat-task-dispatch.py"):
             # cat-task-dispatch.py is Python, validated by Python/CI instead.
             if path.suffix == ".py":
                 continue
@@ -31,7 +31,7 @@ class TestShellTtsStatus(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
             fake_ffmpeg = temp / "ffmpeg"
-            fake_ffmpeg.write_text("#!/bin/sh\\nexit 7\\n", encoding="utf-8")
+            fake_ffmpeg.write_text("#!/bin/sh\nexit 7\n", encoding="utf-8")
             fake_ffmpeg.chmod(0o755)
             output = temp / "capture.pcm"
             env = dict(os.environ)
@@ -51,7 +51,7 @@ class TestShellTtsStatus(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
             fake_ffmpeg = temp / "ffmpeg"
-            fake_ffmpeg.write_text("#!/bin/sh\\nexit 0\\n", encoding="utf-8")
+            fake_ffmpeg.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
             fake_ffmpeg.chmod(0o755)
             output = temp / "capture.pcm"
             env = dict(os.environ)
@@ -88,7 +88,7 @@ class TestShellTtsStatus(unittest.TestCase):
             script = (
                 'source "$1"; '
                 'tangtang_play_audio "$2" 3; '
-                'rc=$?; printf "status:%s\\n" "$rc"; exit 0'
+                'rc=$?; printf "status:%s\n" "$rc"; exit 0'
             )
             result = subprocess.run(
                 ["bash", "-c", script, "test", str(CAT / "cat-lib.sh"), str(audio)],
