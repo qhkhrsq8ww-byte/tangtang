@@ -7,6 +7,7 @@ never default child_9 / hanghang.
 from __future__ import annotations
 
 import importlib.util
+import math
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -46,8 +47,11 @@ def _normalize_identify_result(raw: Any) -> tuple[str | None, float]:
         name, score = raw[0], raw[1] if len(raw) > 1 else 1.0
         try:
             conf = float(score)
-        except (TypeError, ValueError):
-            conf = 1.0
+        except (TypeError, ValueError, OverflowError):
+            return None, 0.0
+        # Invalid matcher scores must never become trusted identity evidence.
+        if not math.isfinite(conf) or conf < 0.0 or conf > 1.0:
+            return None, 0.0
         candidate = None if is_unknown_candidate(name) else str(name).strip()
         return candidate, conf if candidate else 0.0
     text = str(raw).strip()
