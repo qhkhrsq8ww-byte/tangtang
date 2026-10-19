@@ -30,6 +30,10 @@ if ! "$CAT_DIR/cat-listen.sh" "$DUR" "$PCM" >/dev/null 2>&1; then
   echo "❌ 麦克风录音失败"
   exit 1
 fi
+# 录音成功后才由父进程接管临时音频清理；信号/提前退出也会删除。
+trap 'rm -f "$PCM"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 MEMBER_ID="unknown"
 DISPLAY=""
