@@ -34,7 +34,7 @@ speak_with_fallback() {
   rm -f "$TTS_MP3"
   if /usr/bin/python3 "$CAT_DIR/cat-tts-edge.py" "$TEXT" "$rate" "$pitch" 2>/dev/null \
       && [ -s "$TTS_MP3" ]; then
-    tangtang_play_audio "$TTS_MP3"
+    tangtang_play_audio "$TTS_MP3" || return 1
     return 0
   fi
 
@@ -55,7 +55,7 @@ speak_with_fallback() {
 
 case "$MODE" in
   sys)
-    say -v Ting-Ting "[[rate 150]][[pitch 118]]$TEXT"
+    say -v Ting-Ting "[[rate 150]][[pitch 118]]$TEXT" || exit 1
     ;;
   fast)
     speak_with_fallback 3 0 5 165 118
@@ -67,4 +67,4 @@ case "$MODE" in
     speak_with_fallback -5 0 4 150 118
     ;;
 esac
-exit 0
+exit $?
