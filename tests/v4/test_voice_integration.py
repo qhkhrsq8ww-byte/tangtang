@@ -69,6 +69,13 @@ class TestVoiceObservation(unittest.TestCase):
         self.assertEqual(obs.candidate_member, "hanghang")
         self.assertEqual(obs.confidence, 0.82)
 
+    def test_injected_candidate_with_invalid_confidence_is_unknown(self):
+        for score in (float("nan"), float("inf"), -0.1, 1.1):
+            with self.subTest(score=score):
+                obs = VoiceAdapter().observe(candidate_member="hanghang", confidence=score)
+                self.assertIsNone(obs.candidate_member)
+                self.assertEqual(obs.confidence, 0.0)
+
 
 class TestVoiceFullChainChild9(unittest.TestCase):
     def test_child9_voice_to_private_memory_context_response_tts(self):
