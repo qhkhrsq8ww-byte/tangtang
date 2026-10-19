@@ -50,6 +50,43 @@ class TestCompanionPlanner(unittest.TestCase):
         self.assertEqual(plan.behavior, "welcome")
         self.assertEqual(plan.role, "play")
 
+    def test_explicit_request_for_quiet_suppresses_only_proactive_scenes(self):
+        brain = CompanionPlanner()
+        now = datetime(2026, 10, 19, 12, 0, tzinfo=timezone.utc)
+        response = brain.plan(
+            member_id="child_9",
+            utterance="糖糖，今天别叫我。",
+            observation={"now": now},
+            proactive=False,
+        )
+        self.assertEqual(response.decision, "RESPOND")
+        self.assertEqual(response.reason, "user_requested_quiet")
+
+        proactive = brain.plan(
+            member_id="child_9",
+            observation={"now": now.replace(hour=13), "scene": "home"},
+            proactive=True,
+        )
+        self.assertEqual(proactive.decision, "WAIT")
+        self.assertEqual(proactive.reason, "user_requested_quiet")
+
+    def test_user_quiet_request_expires_after_four_hours(self):
+        brain = CompanionPlanner()
+        now = datetime(2026, 10, 19, 12, 0, tzinfo=timezone.utc)
+        brain.plan(
+            member_id="child_12",
+            utterance="我想安静一下",
+            observation={"now": now},
+            proactive=False,
+        )
+        after = brain.plan(
+            member_id="child_12",
+            observation={"now": now.replace(hour=17), "scene": "home"},
+            proactive=True,
+        )
+        self.assertEqual(after.decision, "CONSIDER")
+        self.assertEqual(after.behavior, "welcome")
+
     def test_same_scene_uses_cooldown(self):
         brain = CompanionPlanner(min_proactive_gap_minutes=20)
         now = datetime(2026, 10, 16, 17, 0, tzinfo=timezone.utc)
