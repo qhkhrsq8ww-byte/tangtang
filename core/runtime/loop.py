@@ -581,7 +581,9 @@ class TangTangRuntime:
         if companion_plan is not None:
             obs["companion_plan"] = companion_plan.to_dict()
             # Planner is a veto for proactive output only; it never forces speech.
-            if companion_plan.decision in {"SILENT", "WAIT"}:
+            if companion_plan.decision in {"SILENT", "WAIT"} and decision == "SPEAK":
+                # Planner may veto speech, but must not overwrite a stronger
+                # policy result such as LOG_ONLY or DELAY.
                 decision = "SILENT"
         ctx = isolate(
             lambda: self.pipeline.builder.build(
