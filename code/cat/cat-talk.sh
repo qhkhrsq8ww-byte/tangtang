@@ -75,13 +75,13 @@ speak_with_fallback() {
   local say_rate="$4"
   local say_pitch="$5"
   rm -f /tmp/cat_tts.mp3
-  if /usr/bin/python3 "$CAT_DIR/cat-tts-edge.py" "$text" "$rate" "$pitch" >/dev/null 2>&1 \\
+  if /usr/bin/python3 "$CAT_DIR/cat-tts-edge.py" "$text" "$rate" "$pitch" >/dev/null 2>&1 \
       && [ -s /tmp/cat_tts.mp3 ]; then
     tangtang_play_audio /tmp/cat_tts.mp3
     return $?
   fi
   rm -f /tmp/cat_tts.mp3
-  if node "$CAT_DIR/cat-tts-baidu.mjs" "$text" "$baidu_spd" >/dev/null 2>&1 \\
+  if node "$CAT_DIR/cat-tts-baidu.mjs" "$text" "$baidu_spd" >/dev/null 2>&1 \
       && [ -s /tmp/cat_tts.mp3 ]; then
     tangtang_play_audio /tmp/cat_tts.mp3
     return $?
