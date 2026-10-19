@@ -435,18 +435,21 @@ tangtang_play_audio() {
   [ -f "$f" ] || return 1
   afplay "$f" >/dev/null 2>&1 &
   local ap=$!
-  local start now
+  local start now timed_out=0 rc=0
   start=$(date +%s)
   while kill -0 "$ap" 2>/dev/null; do
     sleep 0.3
     now=$(date +%s)
     if [ $((now - start)) -ge "$limit" ]; then
+      timed_out=1
       kill -9 "$ap" 2>/dev/null
       break
     fi
   done
-  wait "$ap" 2>/dev/null
-  return 0
+  wait "$ap" 2>/dev/null || rc=$?
+  # A timeout or a failed player is a delivery failure, not successful playback.
+  [ "$timed_out" = "0" ] || return 1
+  return "$rc"
 }
 
 tangtang_ensure_server() {
