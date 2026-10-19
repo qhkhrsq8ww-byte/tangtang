@@ -27,6 +27,25 @@ class TestShellTtsStatus(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
 
 
+    def test_concurrent_recording_is_rejected_while_microphone_is_locked(self):
+        with tempfile.TemporaryDirectory() as td:
+            temp = Path(td)
+            lock_dir = temp / "tangtang-mic-capture.lock"
+            lock_dir.mkdir()
+            (lock_dir / "pid").write_text(str(os.getpid()), encoding="utf-8")
+            fake_ffmpeg = temp / "ffmpeg"
+            fake_ffmpeg.write_text("#!/bin/sh\\nexit 0\\n", encoding="utf-8")
+            fake_ffmpeg.chmod(0o755)
+            env = dict(os.environ)
+            env["PATH"] = td + os.pathsep + env.get("PATH", "")
+            env["TMPDIR"] = td
+            result = subprocess.run(
+                ["bash", str(CAT / "cat-listen.sh"), "1", str(temp / "blocked.pcm")],
+                env=env, capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 75, result.stderr)
+            self.assertIn("另一个录音任务", result.stderr)
+            self.assertFalse((temp / "blocked.pcm").exists())
     def test_recording_cli_propagates_ffmpeg_failure(self):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
