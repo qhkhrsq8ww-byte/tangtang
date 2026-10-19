@@ -432,6 +432,9 @@ class ChatAdapter:
         elif intent.action == "needs_details":
             text = "我可以提醒你。先告诉我具体要提醒什么，再告诉我哪一天、几点。"
             operation = "reminder_clarify"
+        elif intent.action == "needs_period":
+            text = "几点还不够明确哦。请再说一遍完整时间，并说明早上、下午或晚上，例如“明天晚上八点提醒我带水杯”。"
+            operation = "reminder_clarify_period"
         elif intent.action == "needs_time":
             if not intent.title:
                 text = "你想让我提醒什么事情？告诉我事项和时间就行。"
