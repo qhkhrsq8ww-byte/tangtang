@@ -52,6 +52,13 @@ class TestShellTtsStatus(unittest.TestCase):
             self.assertEqual(result.returncode, 75, result.stderr)
             self.assertIn("另一个录音任务", result.stderr)
             self.assertFalse((temp / "blocked.pcm").exists())
+    def test_reminder_does_not_continue_after_speech_output_is_skipped(self):
+        source = (CAT / "cat-remind.sh").read_text(encoding="utf-8")
+        self.assertIn('talk_status=$?', source)
+        self.assertIn('糖糖语音输出失败或正在播放其它语音，本次提醒跳过', source)
+        self.assertIn('exit "$talk_status"', source)
+        status = source.index('if [ "$talk_status" -ne 0 ]; then')
+        self.assertLess(status, source.index('# 上学闹铃：Glass 短铃', status))
     def test_tts_output_lock_rejects_overlapping_speech(self):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
