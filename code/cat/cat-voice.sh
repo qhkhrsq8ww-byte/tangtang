@@ -107,7 +107,12 @@ if [ -n "$ALARM_LINE" ]; then
   echo "   糖糖: $ALARM_LINE"
   printf '%s\n' "[idle] $ALARM_LINE" > "$CAT_DIR/cat-mood.txt"
   "$CAT_DIR/cat-say.sh" "$ALARM_LINE" cute
+  say_status=$?
   rm -f "$PCM"
+  if [ "$say_status" -ne 0 ]; then
+    echo "❌ 闹铃回复语音播放失败（状态码: $say_status）" >&2
+    exit "$say_status"
+  fi
   exit 0
 fi
 
@@ -131,4 +136,9 @@ fi
 echo "   糖糖: $REPLY"
 # 情绪状态已由 cat-chat.py 经 CharacterStateEngine 写入 cat-presentation-action.json / cat-mood.txt
 "$CAT_DIR/cat-say.sh" "$REPLY" cute
+say_status=$?
 rm -f "$PCM"
+if [ "$say_status" -ne 0 ]; then
+  echo "❌ 糖糖回复语音播放失败（状态码: $say_status）" >&2
+  exit "$say_status"
+fi
