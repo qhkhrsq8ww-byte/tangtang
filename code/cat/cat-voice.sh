@@ -4,7 +4,7 @@
 # 时刻表不要接本脚本（先录满再 LLM）。客厅短回合请用 cat-turn.sh：
 # 先看作息再开麦；声纹不当主路径；只在客厅；沉默不追问。
 # 声纹/习惯数据仅写入本地，不提交 Git。不给小朋友建声纹。
-set -u
+set -u -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
 . "$SCRIPT_DIR/cat-lib.sh"
@@ -94,8 +94,14 @@ fi
 
 echo "🧠 识别中..."
 TEXT=$("$CAT_DIR/cat-stt-baidu.sh" "$PCM" 2>/dev/null | tr -d '\n')
+stt_status=$?
+if [ "$stt_status" -ne 0 ]; then
+  rm -f "$PCM"
+  echo "❌ 语音识别进程失败（状态码: $stt_status）" >&2
+  exit "$stt_status"
+fi
 if [ -z "$TEXT" ]; then
-  # 没听清：不追问、不开第二轮
+  # 识别成功但没有可用文本：不追问、不开第二轮
   rm -f "$PCM"
   exit 0
 fi
@@ -128,7 +134,14 @@ REPLY=$(TANGTANG_PROFILE="$TANGTANG_PROFILE" \
   TANGTANG_MEMBER_ID="$TANGTANG_MEMBER_ID" \
   TANGTANG_CHILD_NAME="$TANGTANG_CHILD_NAME" \
   /usr/bin/python3 "$CAT_DIR/cat-chat.py" "$TEXT" 2>/dev/null | tr -d '\n')
+chat_status=$?
+if [ "$chat_status" -ne 0 ]; then
+  rm -f "$PCM"
+  echo "❌ 糖糖对话进程失败（状态码: $chat_status）" >&2
+  exit "$chat_status"
+fi
 if [ -z "$REPLY" ]; then
+  # 对话进程正常退出但没有可用回复，不播放旧音频
   rm -f "$PCM"
   exit 0
 fi
