@@ -35,6 +35,7 @@ _CAT_CHAT = Path(__file__).resolve().parents[2] / "code" / "cat" / "cat-chat.py"
 
 LLMFn = Callable[[Mapping[str, Any]], str]
 LLM_FALLBACK = "糖糖在呢，刚刚没接上。"
+SAFETY_SUPPORT_REPLY = "听到你这么说，糖糖有点担心你。你现在安全吗？如果有人正在伤害你，马上去找身边可信任的大人，糖糖会陪着你。"
 
 
 def _load_cat_chat_helpers() -> tuple[Callable[[str], bool] | None, Callable[[str], str] | None]:
@@ -177,13 +178,32 @@ class ChatAdapter:
         ingested = self.pipeline.ingest(
             text,
             obs,
-            store_private_memory=memory_intent is None and reminder_intent is None and task_intent is None,
+            store_private_memory=not risk_detected and memory_intent is None and reminder_intent is None and task_intent is None,
         )
         speaker_id = ingested.decision.member_id
         effective_viewer_id = viewer_id or speaker_id
         who = {"member_id": speaker_id}
         if risk_detected and speaker_id:
             self._recent_turns.pop(speaker_id, None)
+        # Safety disclosures are handled locally and deterministically. Never send
+        # them to the cloud model, even when ordinary PRIVATE turns are opted in.
+        if risk_detected:
+            return ChatTurn(
+                action=PresentationAction(
+                    decision="SPEAK",
+                    text=SAFETY_SUPPORT_REPLY,
+                    action="safety_support",
+                    member_id=speaker_id,
+                    sink="voice",
+                ),
+                ingest=ingested,
+                context={
+                    "who": who,
+                    "privacy_scope": ingested.decision.privacy,
+                    "safety": "risk",
+                    "event_id": ingested.event.id,
+                },
+            )
         if memory_intent is not None:
             local_result = self._handle_memory_intent(
                 intent=memory_intent,
