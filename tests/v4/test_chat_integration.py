@@ -276,5 +276,35 @@ class TestMemberScopedShortContext(unittest.TestCase):
         self.assertNotIn("CHILD_PRIVATE_938", received[0]["_filtered_prompt"])
 
 
+
+    def test_risk_turn_clears_that_members_previous_short_context(self):
+        received = []
+
+        def llm(ctx):
+            received.append(dict(ctx))
+            return "我听到了。"
+
+        chat = ChatAdapter(
+            members=MEMBERS,
+            llm=llm,
+            allow_private_llm=True,
+            looks_risky=lambda text: "RISK_DISCLOSURE_MARKER" in text,
+        )
+        chat.turn("之前的普通对话 DAD_BEFORE_RISK_517", {"label": "dad"})
+        risk = chat.turn(
+            "RISK_DISCLOSURE_MARKER 我遇到了很难受的事",
+            {"label": "dad"},
+        )
+        self.assertEqual(risk.action.action, "safety_support")
+        self.assertEqual(len(received), 1, "risk disclosure must not call the cloud model")
+
+        chat.turn("我们接着聊", {"label": "dad"})
+        self.assertEqual(len(received), 2)
+        next_prompt = received[1]["_filtered_prompt"]
+        self.assertNotIn("DAD_BEFORE_RISK_517", next_prompt)
+        self.assertNotIn("RISK_DISCLOSURE_MARKER", next_prompt)
+        self.assertNotIn("recent_dialogue_context", next_prompt)
+
+
 if __name__ == "__main__":
     unittest.main()
