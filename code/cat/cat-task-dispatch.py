@@ -63,6 +63,12 @@ def main() -> int:
         return 0
 
     def deliver(task):
+        if sys.platform != "darwin":
+            print("当前不是 macOS；未执行真实语音播放，提醒保留失败状态。", file=sys.stderr)
+            return False
+        if os.environ.get("TANGTANG_TTS", "1").strip().lower() in {"0", "dry"}:
+            print("当前 TANGTANG_TTS 为静音/干运行模式；不将提醒记为已投递。", file=sys.stderr)
+            return False
         if not SAY.is_file():
             print("未找到 cat-say.sh；提醒未播放。", file=sys.stderr)
             return False
