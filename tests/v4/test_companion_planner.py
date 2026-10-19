@@ -98,6 +98,16 @@ class TestCompanionPlanner(unittest.TestCase):
 
 
 class TestCompanionPlannerRuntime(unittest.TestCase):
+    def test_runtime_records_quiet_request_without_blocking_current_turn(self):
+        runtime = TangTangRuntime(offline=True)
+        now = datetime(2026, 10, 19, 12, 0, tzinfo=timezone.utc)
+        result = runtime.handle_utterance(
+            "糖糖，今天别叫我。",
+            {"label": "child_9", "now": now},
+        )
+        self.assertEqual(result.observation["companion_plan"]["reason"], "user_requested_quiet")
+        self.assertNotEqual(result.decision, "SILENT")
+
     def test_runtime_records_quiet_hour_plan_and_suppresses_proactive_speech(self):
         runtime = TangTangRuntime(offline=True)
         result = runtime.handle_living_room(
