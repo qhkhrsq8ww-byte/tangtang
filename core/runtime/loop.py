@@ -366,6 +366,8 @@ class TangTangRuntime:
         """STT/text → Identity → Event → PrivacyPolicy → Memory → Context → LLM → TTS."""
         errors = list(extra_errors or [])
         obs = dict(observation or {})
+        if not isinstance(obs.get("now"), datetime):
+            obs["now"] = datetime.now().astimezone()
         member_id = self._identify(obs) or obs.get("member_id")
         if member_id:
             obs["member_id"] = member_id
@@ -513,6 +515,8 @@ class TangTangRuntime:
     ) -> RuntimeResult:
         """Proactive scene → Event → InterruptPolicy → Response. Never speaks to a child by skipping policy."""
         extra = dict(observation or {})
+        if not isinstance(extra.get("now"), datetime):
+            extra["now"] = datetime.now().astimezone()
         obs = self.living_room.observation_for(kind, extra)
         mid = member_id or extra.get("member_id") or extra.get("label")
         if mid:
