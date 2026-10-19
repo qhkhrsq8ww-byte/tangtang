@@ -46,6 +46,13 @@ class TestShellTtsStatus(unittest.TestCase):
             self.assertEqual(result.returncode, 75, result.stderr)
             self.assertIn("另一个录音任务", result.stderr)
             self.assertFalse((temp / "blocked.pcm").exists())
+    def test_stage_server_checks_http_success_and_waits_for_readiness(self):
+        source = (CAT / "cat-lib.sh").read_text(encoding="utf-8")
+        self.assertIn('curl -fsS -o /dev/null --max-time 3 "$url"', source)
+        self.assertIn('for attempt in 1 2 3 4 5 6 7 8 9 10; do', source)
+        self.assertIn('tangtang_ensure_server || return $?', source)
+        self.assertIn('糖糖本地页面服务启动失败', source)
+        self.assertIn('tangtang_ensure_pet() {\n  tangtang_ensure_server || return $?', source)
     def test_recording_cli_propagates_ffmpeg_failure(self):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)

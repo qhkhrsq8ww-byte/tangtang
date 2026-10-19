@@ -454,15 +454,26 @@ tangtang_play_audio() {
 
 tangtang_ensure_server() {
   # 必须走 http://127.0.0.1:8080（本目录 python -m http.server），不要 file://。
-  # 桌面宠物相对路径要读 assets/video/*.mp4 与 cat-presentation-action.json。
-  if ! curl -s -o /dev/null --max-time 3 "http://127.0.0.1:8080/cat-stage.html"; then
-    nohup /usr/bin/python3 -m http.server 8080 --bind 127.0.0.1 --directory "$CAT_DIR" >/tmp/cathttp.log 2>&1 &
-    sleep 2
+  # 必须确认目标页面真实返回成功，避免把端口上其它服务的 404 当作舞台已启动。
+  local url="http://127.0.0.1:8080/cat-stage.html"
+  local attempt
+  if curl -fsS -o /dev/null --max-time 3 "$url"; then
+    return 0
   fi
+  nohup /usr/bin/python3 -m http.server 8080 --bind 127.0.0.1 --directory "$CAT_DIR" >/tmp/cathttp.log 2>&1 &
+  # 不以固定 sleep 推断服务已就绪；最多等待 5 秒并验证实际 HTTP 响应。
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    if curl -fsS -o /dev/null --max-time 1 "$url"; then
+      return 0
+    fi
+    sleep 0.5
+  done
+  echo "糖糖本地页面服务启动失败：请检查端口 8080 是否被占用及 /tmp/cathttp.log。" >&2
+  return 1
 }
 
 tangtang_ensure_stage() {
-  tangtang_ensure_server
+  tangtang_ensure_server || return $?
   if ! pgrep -f "Safari.*cat-stage" >/dev/null 2>&1; then
     open "http://127.0.0.1:8080/cat-stage.html"
     ( osascript -e "tell application \"Safari\" to if (count of windows) > 0 then set URL of front document to \"http://127.0.0.1:8080/cat-stage.html\"" 2>/dev/null & )
@@ -471,7 +482,7 @@ tangtang_ensure_stage() {
 
 # 默认宠物：17 状态 MP4（cat-desktop-pet.html）。cat-pet.html 是旧 PNG，保留文件但不作入口。
 tangtang_ensure_pet() {
-  tangtang_ensure_server
+  tangtang_ensure_server || return $?
   if ! pgrep -f "Safari.*cat-desktop-pet" >/dev/null 2>&1; then
     open "http://127.0.0.1:8080/cat-desktop-pet.html"
     # 舞台已开时只加页，不改前台 URL，避免把投影舞台顶掉。
