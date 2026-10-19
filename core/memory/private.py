@@ -226,10 +226,17 @@ class PrivateMemory:
                 continue
         # Persist cleanup so expired rows are not retained indefinitely on disk.
         if len(valid_rows) != len(rows):
-            path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = path.with_suffix(path.suffix + ".tmp")
-            tmp.write_text(json.dumps(valid_rows, ensure_ascii=False, indent=2), encoding="utf-8")
-            tmp.replace(path)
+            # Expired/corrupt rows should be removed when possible, but a read-only
+            # data home must not turn a safe memory read into a runtime failure.
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                tmp = path.with_suffix(path.suffix + ".tmp")
+                tmp.write_text(json.dumps(valid_rows, ensure_ascii=False, indent=2), encoding="utf-8")
+                tmp.replace(path)
+            except OSError:
+                # Invalid/expired rows are still filtered from this in-memory load.
+                # Cleanup can be retried on a later run with writable storage.
+                pass
 
     def _write_member_file(self, member_id: str) -> None:
         """Atomically rewrite only one owner's private records after deletion."""
