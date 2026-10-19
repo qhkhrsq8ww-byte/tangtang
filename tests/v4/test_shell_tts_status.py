@@ -65,5 +65,25 @@ class TestShellTtsStatus(unittest.TestCase):
         )
 
 
+
+    def test_voice_cli_does_not_mask_stt_or_chat_pipeline_failures(self):
+        source = (CAT / "cat-voice.sh").read_text(encoding="utf-8")
+        self.assertIn("set -u -o pipefail", source)
+        self.assertIn('stt_status=$?', source)
+        self.assertIn('chat_status=$?', source)
+        self.assertIn('语音识别进程失败', source)
+        self.assertIn('糖糖对话进程失败', source)
+        self.assertIn('exit "$stt_status"', source)
+        self.assertIn('exit "$chat_status"', source)
+        self.assertLess(
+            source.index('stt_status=$?'),
+            source.index('if [ -z "$TEXT" ]'),
+        )
+        self.assertLess(
+            source.index('chat_status=$?'),
+            source.index('if [ -z "$REPLY" ]'),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
