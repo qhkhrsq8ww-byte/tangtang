@@ -366,8 +366,6 @@ class TangTangRuntime:
         """STT/text → Identity → Event → PrivacyPolicy → Memory → Context → LLM → TTS."""
         errors = list(extra_errors or [])
         obs = dict(observation or {})
-        if not isinstance(obs.get("now"), datetime):
-            obs["now"] = datetime.now().astimezone()
         member_id = self._identify(obs) or obs.get("member_id")
         if member_id:
             obs["member_id"] = member_id
@@ -377,10 +375,13 @@ class TangTangRuntime:
         obs.setdefault("interactive", True)
         # Record explicit opt-out language locally so proactive scenes can respect it.
         # This plan never suppresses a user-initiated turn.
+        planner_obs = dict(obs)
+        if not isinstance(planner_obs.get("now"), datetime):
+            planner_obs["now"] = datetime.now().astimezone()
         companion_plan = isolate(
             lambda: self.brain.plan(
                 member_id=str(member_id) if member_id else None,
-                observation=obs,
+                observation=planner_obs,
                 utterance=utterance,
                 proactive=False,
             ),
@@ -515,8 +516,6 @@ class TangTangRuntime:
     ) -> RuntimeResult:
         """Proactive scene → Event → InterruptPolicy → Response. Never speaks to a child by skipping policy."""
         extra = dict(observation or {})
-        if not isinstance(extra.get("now"), datetime):
-            extra["now"] = datetime.now().astimezone()
         obs = self.living_room.observation_for(kind, extra)
         mid = member_id or extra.get("member_id") or extra.get("label")
         if mid:
@@ -567,10 +566,13 @@ class TangTangRuntime:
             )
         gate = isolate(lambda: self.pipeline.interrupt.decide(obs), fallback="SILENT")
         decision = gate.value if gate.ok and isinstance(gate.value, str) else "SILENT"
+        planner_obs = dict(obs)
+        if not isinstance(planner_obs.get("now"), datetime):
+            planner_obs["now"] = datetime.now().astimezone()
         plan = isolate(
             lambda: self.brain.plan(
                 member_id=str(mid) if mid else None,
-                observation=obs,
+                observation=planner_obs,
                 proactive=True,
             ),
             fallback=None,
