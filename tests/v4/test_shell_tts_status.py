@@ -88,6 +88,10 @@ class TestShellTtsStatus(unittest.TestCase):
         self.assertIn('&& [ -s /tmp/cat_tts.mp3 ]', source)
         self.assertIn('tangtang_play_audio /tmp/cat_tts.mp3\n    return $?', source)
         self.assertIn('esac\nexit $?\n', source)
+        english = source.index('if [ "${1:-}" = "english" ]')
+        english_exit = source.index('exit $?', english)
+        lock = source.index('tangtang_tts_lock || exit $?')
+        self.assertGreater(lock, english_exit)
 
     def test_startup_script_stops_when_stage_or_pet_startup_fails(self):
         source = (CAT / "start-cat.sh").read_text(encoding="utf-8")
