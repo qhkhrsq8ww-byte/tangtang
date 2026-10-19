@@ -55,11 +55,11 @@ class TestM4PrivateCliReply(unittest.TestCase):
                         sanitize=chat.sanitize_output,
                     ).turn(BULLY, {"label": "hanghang", "live": True, "interactive": True})
             self.assertEqual(turn.ingest.decision.privacy, "PRIVATE")
-            self.assertTrue(turn.ingest.stored_private)
+            self.assertFalse(turn.ingest.stored_private)  # risk disclosures are not persisted
             self.assertFalse(turn.ingest.stored_family)
             self.assertFalse(pipe.stores.family.contains_text(BULLY))
             self.assertFalse(pipe.logger.contains_raw(BULLY))
-            self.assertEqual(seen["n"], 1)
+            self.assertEqual(seen["n"], 0)
 
     def test_private_cli_risk_no_llm(self):
         chat = _load_cat_chat()

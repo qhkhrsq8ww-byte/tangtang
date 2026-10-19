@@ -46,7 +46,7 @@ class TestChatPrivacyGate(unittest.TestCase):
         self.assertGreaterEqual(calls["n"], 1)
         self.assertEqual(turn.ingest.decision.privacy, "PRIVATE")
         self.assertEqual(turn.ingest.decision.member_id, "hanghang")
-        self.assertTrue(turn.ingest.stored_private)
+        self.assertFalse(turn.ingest.stored_private)  # risk disclosures are not persisted
         self.assertFalse(turn.ingest.stored_family)
         self.assertFalse(turn.ingest.stored_summary)
         self.assertFalse(pipe.stores.family.contains_text(BULLY))
@@ -112,6 +112,42 @@ class TestChatMembers(unittest.TestCase):
         self.assertIsNone(turn.ingest.decision.member_id)
         self.assertEqual(len(calls), 1)
         self.assertIn("member=unknown", calls[0]["_filtered_prompt"])
+
+
+class TestChildSafetyLocalRoute(unittest.TestCase):
+    def test_risk_disclosure_never_calls_cloud_even_with_private_opt_in(self):
+        calls = []
+        chat = ChatAdapter(
+            members=MEMBERS,
+            llm=lambda ctx: calls.append(dict(ctx)) or "云端生成的回复",
+            allow_private_llm=True,
+        )
+
+        turn = chat.turn(BULLY, {"label": "hanghang", "interactive": True})
+
+        self.assertEqual(calls, [])
+        self.assertEqual(turn.action.decision, "SPEAK")
+        self.assertEqual(turn.action.action, "safety_support")
+        self.assertIn("可信任的大人", turn.action.text)
+        self.assertEqual(turn.context.get("safety"), "risk")
+        self.assertFalse(turn.ingest.stored_private)
+        self.assertFalse(turn.ingest.stored_family)
+        self.assertFalse(chat.pipeline.logger.contains_raw(BULLY))
+
+    def test_self_harm_disclosure_uses_same_local_route(self):
+        calls = []
+        chat = ChatAdapter(
+            members=MEMBERS,
+            llm=lambda ctx: calls.append(dict(ctx)) or "云端回复",
+            allow_private_llm=True,
+        )
+
+        turn = chat.turn("我不想活了", {"label": "qiaqia", "interactive": True})
+
+        self.assertEqual(calls, [])
+        self.assertEqual(turn.action.action, "safety_support")
+        self.assertIn("你现在安全吗", turn.action.text)
+        self.assertFalse(turn.ingest.stored_private)
 
 
 class TestChatLlmFailure(unittest.TestCase):

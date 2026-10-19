@@ -77,10 +77,11 @@ class TestVoiceFullChainChild9(unittest.TestCase):
         self.assertTrue(result.event_id)
         self.assertTrue(str(result.event_id).startswith("evt_"))
         self.assertTrue(result.event_kept)
-        self.assertTrue(result.ingest and result.ingest.stored_private)
+        self.assertTrue(result.ingest)
+        self.assertFalse(result.ingest.stored_private)  # safety disclosures stay out of persistent memory
         self.assertFalse(result.ingest.stored_family)
         self.assertFalse(result.ingest.stored_summary)
-        self.assertIsNotNone(result.private_memory_id)
+        self.assertIsNone(result.private_memory_id)
         blob = str(result.context)
         # Owner context may hold the utterance; family snapshot must not.
         family = result.context.get("family") or {}

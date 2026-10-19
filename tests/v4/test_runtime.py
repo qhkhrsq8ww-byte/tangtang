@@ -151,7 +151,7 @@ class TestRuntimeEvidenceChains(unittest.TestCase):
         self.assertEqual(voice.member_id, "hanghang")
         self.assertEqual(voice.privacy, "PRIVATE")
         self.assertTrue(voice.event_id.startswith("evt_"))
-        self.assertTrue(voice.ingest.stored_private)
+        self.assertFalse(voice.ingest.stored_private)  # safety disclosures stay out of persistent memory
         self.assertFalse(rt.pipeline.stores.summary.contains_text(BULLY))
         dad_view = rt.pipeline.builder.build(
             who={"member_id": "dad"},
