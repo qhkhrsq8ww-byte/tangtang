@@ -59,14 +59,14 @@ if [ "${TANGTANG_TTS:-1}" = "0" ]; then
   exit 0
 fi
 
-# 与 cat-say 共用输出锁，避免共享音频文件被并发覆盖。
-tangtang_tts_lock || exit $?
-
 # 英语小伴读与闹铃同一条出声路径（cat-say → 默认蓝牙音箱）。不另开音箱。
 if [ "${1:-}" = "english" ]; then
   "$CAT_DIR/cat-say.sh" "$text" cute
-  exit 0
+  exit $?
 fi
+
+# 非英语情绪语音直接使用本脚本生成器；与 cat-say 共用输出锁。
+tangtang_tts_lock || exit $?
 
 speak_with_fallback() {
   local rate="$1"
