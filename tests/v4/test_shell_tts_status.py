@@ -52,6 +52,43 @@ class TestShellTtsStatus(unittest.TestCase):
             self.assertEqual(result.returncode, 75, result.stderr)
             self.assertIn("另一个录音任务", result.stderr)
             self.assertFalse((temp / "blocked.pcm").exists())
+    def test_tts_output_lock_rejects_overlapping_speech(self):
+        with tempfile.TemporaryDirectory() as td:
+            temp = Path(td)
+            lock_dir = temp / "tangtang-tts-output.lock"
+            lock_dir.mkdir()
+            (lock_dir / "pid").write_text(str(os.getpid()), encoding="utf-8")
+            env = dict(os.environ)
+            env["TMPDIR"] = td
+            script = 'source "$1"; tangtang_tts_lock; rc=$?; printf "status:%s\\n" "$rc"; exit 0'
+            result = subprocess.run(
+                ["bash", "-c", script, "test", str(CAT / "cat-lib.sh")],
+                env=env, capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("status:75", result.stdout)
+            self.assertIn("避免重叠播放", result.stderr)
+
+    def test_tts_output_lock_releases_after_owner_exits(self):
+        with tempfile.TemporaryDirectory() as td:
+            env = dict(os.environ)
+            env["TMPDIR"] = td
+            script = 'source "$1"; tangtang_tts_lock || exit $?; echo acquired'
+            result = subprocess.run(
+                ["bash", "-c", script, "test", str(CAT / "cat-lib.sh")],
+                env=env, capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("acquired", result.stdout)
+            self.assertFalse((Path(td) / "tangtang-tts-output.lock").exists())
+
+    def test_cat_talk_clears_stale_tts_audio_and_propagates_playback_failure(self):
+        source = (CAT / "cat-talk.sh").read_text(encoding="utf-8")
+        self.assertIn('rm -f /tmp/cat_tts.mp3', source)
+        self.assertIn('&& [ -s /tmp/cat_tts.mp3 ]', source)
+        self.assertIn('tangtang_play_audio /tmp/cat_tts.mp3\\n    return $?', source)
+        self.assertIn('esac\\nexit $?\\n', source)
+
     def test_startup_script_stops_when_stage_or_pet_startup_fails(self):
         source = (CAT / "start-cat.sh").read_text(encoding="utf-8")
         self.assertIn('if ! tangtang_ensure_stage; then', source)
