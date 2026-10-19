@@ -10,13 +10,18 @@ structured plan that downstream Persona/LLM layers can use.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Mapping
 
 from core.persona.profiles import profile_for
 
 QUIET_START = 22
 QUIET_END = 7
+USER_QUIET_HOURS = 4
+_USER_QUIET_MARKERS = (
+    "今天别叫我", "别打扰我", "不想说话", "让我自己待会", "让我自己待一会",
+    "先别提醒我", "不要再提醒我", "别再提醒我", "我想安静一下",
+)
 
 _BEHAVIOR_BY_SCENE = {
     "home": "welcome",
@@ -59,6 +64,7 @@ class CompanionPlanner:
         # Runtime-local anti-chatter state. No speech/content is persisted here.
         self._last_proactive: dict[str, datetime] = {}
         self._last_behavior: dict[str, str] = {}
+        self._quiet_until: dict[str, datetime] = {}
 
     @staticmethod
     def _hour(observation: Mapping[str, Any]) -> int | None:
@@ -92,9 +98,21 @@ class CompanionPlanner:
         text = str(utterance or obs.get("utterance") or "").strip()
 
         # Explicit user speech always gets to the normal response pipeline.
-        # The planner can enrich context, but must not turn a conversation
-        # into silence merely because it is late or the user is unknown.
+        # A clear request for quiet is remembered for proactive scenes only.
         if text and not proactive:
+            quiet_request = any(marker in text.replace(" ", "") for marker in _USER_QUIET_MARKERS)
+            now = obs.get("now")
+            if quiet_request and member_id and isinstance(now, datetime):
+                key = str(member_id)
+                self._quiet_until[key] = now + timedelta(hours=USER_QUIET_HOURS)
+                return CompanionPlan(
+                    decision="RESPOND",
+                    behavior="respect_boundary",
+                    reason="user_requested_quiet",
+                    role=role,
+                    proactive=False,
+                    metadata={"quiet_hours": USER_QUIET_HOURS},
+                )
             return CompanionPlan(
                 decision="RESPOND",
                 behavior="conversation",
@@ -130,6 +148,22 @@ class CompanionPlanner:
                 role=role,
                 proactive=True,
             )
+
+        now = obs.get("now")
+        quiet_until = self._quiet_until.get(str(member_id or ""))
+        if isinstance(now, datetime) and isinstance(quiet_until, datetime):
+            comparable_now = now if now.tzinfo is not None else now.replace(tzinfo=quiet_until.tzinfo)
+            comparable_until = quiet_until if quiet_until.tzinfo is not None else quiet_until.replace(tzinfo=comparable_now.tzinfo)
+            if comparable_now < comparable_until:
+                return CompanionPlan(
+                    decision="WAIT",
+                    behavior="quiet",
+                    reason="user_requested_quiet",
+                    role=role,
+                    proactive=True,
+                    metadata={"quiet_until": comparable_until.isoformat()},
+                )
+            self._quiet_until.pop(str(member_id or ""), None)
 
         behavior = _BEHAVIOR_BY_SCENE.get(scene)
         if behavior:
