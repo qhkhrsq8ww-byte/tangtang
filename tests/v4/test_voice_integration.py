@@ -57,6 +57,18 @@ class TestVoiceObservation(unittest.TestCase):
         self.assertNotEqual(obs.candidate_member, "child_9")
         self.assertNotEqual(obs.candidate_member, "hanghang")
 
+    def test_invalid_voiceprint_confidence_is_unknown(self):
+        for score in (float("nan"), float("inf"), -0.1, 1.1, "not-a-score"):
+            with self.subTest(score=score):
+                obs = VoiceAdapter(identify_fn=lambda _p, s=score: ("hanghang", s)).observe("x.pcm")
+                self.assertIsNone(obs.candidate_member)
+                self.assertEqual(obs.confidence, 0.0)
+
+    def test_valid_voiceprint_confidence_is_preserved(self):
+        obs = VoiceAdapter(identify_fn=lambda _p: ("hanghang", 0.82)).observe("x.pcm")
+        self.assertEqual(obs.candidate_member, "hanghang")
+        self.assertEqual(obs.confidence, 0.82)
+
 
 class TestVoiceFullChainChild9(unittest.TestCase):
     def test_child9_voice_to_private_memory_context_response_tts(self):
