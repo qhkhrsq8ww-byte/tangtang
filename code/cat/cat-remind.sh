@@ -201,8 +201,14 @@ esac
 if [ "$living_ok" != "1" ]; then
   if [ -n "$ARG" ]; then
     out="$("$CAT_DIR/cat-talk.sh" "$EVENT" "$ARG")"
+    talk_status=$?
   else
     out="$("$CAT_DIR/cat-talk.sh" "$EVENT")"
+    talk_status=$?
+  fi
+  if [ "$talk_status" -ne 0 ]; then
+    log_skip "糖糖语音输出失败或正在播放其它语音，本次提醒跳过"
+    exit "$talk_status"
   fi
 fi
 
