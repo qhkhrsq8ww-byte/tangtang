@@ -180,5 +180,65 @@ class TestChatV3NotDeleted(unittest.TestCase):
         self.assertIn("def chat(", src)
 
 
+
+class TestMemberScopedShortContext(unittest.TestCase):
+    def test_same_member_gets_bounded_recent_dialogue(self):
+        received = []
+
+        def llm(ctx):
+            received.append(dict(ctx))
+            return f"回应{len(received)}"
+
+        chat = ChatAdapter(members=MEMBERS, llm=llm)
+        chat.turn("我今天踢球进了两个球", {"label": "dad"})
+        chat.turn("后来我们队输了", {"label": "dad"})
+        prompt = received[1]["_filtered_prompt"]
+        self.assertIn("recent_dialogue_context", prompt)
+        self.assertIn("我今天踢球进了两个球", prompt)
+        self.assertIn("回应1", prompt)
+        self.assertIn("utterance=后来我们队输了", prompt)
+
+    def test_context_is_isolated_between_family_members(self):
+        received = []
+
+        def llm(ctx):
+            received.append(dict(ctx))
+            return "我听到了。"
+
+        chat = ChatAdapter(members=MEMBERS, llm=llm)
+        chat.turn("爸爸的专属上下文标记 DAD_ONLY_481", {"label": "dad"})
+        chat.turn("妈妈的另一段话", {"label": "mom"})
+        mom_prompt = received[1]["_filtered_prompt"]
+        self.assertNotIn("DAD_ONLY_481", mom_prompt)
+        self.assertNotIn("爸爸的专属上下文标记", mom_prompt)
+
+    def test_unknown_speaker_does_not_accumulate_context(self):
+        received = []
+
+        def llm(ctx):
+            received.append(dict(ctx))
+            return "你好。"
+
+        chat = ChatAdapter(members=MEMBERS, llm=llm, allow_unknown_llm=True)
+        chat.turn("访客第一句", {"label": "unknown"})
+        chat.turn("访客第二句", {"label": "unknown"})
+        self.assertEqual(len(received), 2)
+        self.assertNotIn("访客第一句", received[1]["_filtered_prompt"])
+        self.assertNotIn("recent_dialogue_context", received[1]["_filtered_prompt"])
+
+    def test_private_child_is_not_added_to_cloud_context_by_default(self):
+        received = []
+
+        def llm(ctx):
+            received.append(dict(ctx))
+            return "好呀。"
+
+        chat = ChatAdapter(members=MEMBERS, llm=llm)
+        chat.turn("孩子私密内容 CHILD_PRIVATE_938", {"label": "hanghang"})
+        chat.turn("晚饭准备好了", {"label": "dad"})
+        self.assertEqual(len(received), 1)
+        self.assertNotIn("CHILD_PRIVATE_938", received[0]["_filtered_prompt"])
+
+
 if __name__ == "__main__":
     unittest.main()
