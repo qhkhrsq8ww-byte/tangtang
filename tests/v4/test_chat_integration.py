@@ -46,7 +46,7 @@ class TestChatPrivacyGate(unittest.TestCase):
         self.assertGreaterEqual(calls["n"], 1)
         self.assertEqual(turn.ingest.decision.privacy, "PRIVATE")
         self.assertEqual(turn.ingest.decision.member_id, "hanghang")
-        self.assertTrue(turn.ingest.stored_private)
+        self.assertFalse(turn.ingest.stored_private)  # risk disclosures are not persisted
         self.assertFalse(turn.ingest.stored_family)
         self.assertFalse(turn.ingest.stored_summary)
         self.assertFalse(pipe.stores.family.contains_text(BULLY))
