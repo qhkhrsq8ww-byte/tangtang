@@ -90,7 +90,12 @@ class VoiceAdapter:
         and reuse V3 identify(). Failures become unknown — never a child default.
         """
         candidate = candidate_member
-        conf = 0.0 if confidence is None else float(confidence)
+        try:
+            conf = 0.0 if confidence is None else float(confidence)
+        except (TypeError, ValueError, OverflowError):
+            candidate, conf = None, 0.0
+        if not math.isfinite(conf) or conf < 0.0 or conf > 1.0:
+            candidate, conf = None, 0.0
         if candidate is None and pcm_path:
             fn = self._fn()
             if fn is None:
