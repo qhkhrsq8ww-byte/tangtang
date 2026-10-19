@@ -33,3 +33,7 @@ code/cat/cat-alarms.json
 .env
 __pycache__/
 *.pyc
+
+# 2026-10-19 追加：LLM key（糖糖直连智谱，绝不入库）
+code/cat/.llm_key
+**/.llm_key

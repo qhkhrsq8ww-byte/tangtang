@@ -9,39 +9,30 @@
   python3 cat-chat.py "小朋友说的话"
   TANGTANG_PROFILE=play TANGTANG_SPEAKER=unknown python3 cat-chat.py "..."
 输出: 糖糖的回复（纯文本，一行）
-
-V4: 新对话路径是 core.adapters.chat_adapter.ChatAdapter（必经 PrivacyPolicy）。
-本 CLI 默认走 TangTangRuntime；设 TANGTANG_V4_PIPELINE=0（或 V4 异常）回退时仍走 ChatAdapter
-（InjectionGuard + PrivacyPipeline），不再把 cat-chat-history 原话拼进 LLM。不要删除本文件。
 """
-import os, sys, json, urllib.request, argparse, subprocess, re, importlib.util
-from datetime import datetime
+import os, sys, json, urllib.request, argparse, subprocess, re
 
-BASE = os.environ.get("QCLAW_LLM_BASE_URL", "http://127.0.0.1:19000/proxy/llm")
+BASE = os.environ.get("QCLAW_LLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
 KEY = os.environ.get("QCLAW_LLM_API_KEY", "")
-DEFAULT_MODEL = "pool-deepseek-v4-pro"
+_key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".llm_key")
+if not KEY and os.path.exists(_key_file):
+    KEY = open(_key_file).read().strip()
+DEFAULT_MODEL = "glm-4-flash"
 CAT_DIR = os.path.dirname(os.path.abspath(__file__))
-if CAT_DIR not in sys.path:
-    sys.path.insert(0, CAT_DIR)
-from tangtang_paths import data_dir  # noqa: E402
-
-DATA_DIR = data_dir()
+DATA_DIR = os.environ.get("TANGTANG_DATA_DIR", CAT_DIR)
 
 FORBIDDEN_OUTPUT = (
     "你必须", "警告你", "根据系统检测", "根据系统监测",
     "爸爸让我监督", "妈妈让我监督", "父母让我监督",
     "内部指令", "我是AI", "我是人工智能", "我是语言模型",
     "作为人工智能", "作为AI",
-    "我是投影", "墙上的糖糖", "投影里的糖糖", "我是AI宠物",
 )
 
 # 只做拦截，不提供任何方法细节
 RISK_MARKERS = (
     "不想活", "自杀", "杀死自己", "伤害自己",
     "想死", "去死", "割腕", "跳楼",
-    "打死", "杀人", "霸凌", "校园暴力", "欺负", "被欺负",
-    "同学打我", "同学骂我", "被同学打", "被同学骂",
-    "有人威胁我", "威胁我", "打我", "骂我",
+    "打死", "杀人", "霸凌", "校园暴力",
     "有人碰我身体", "不要告诉爸", "不要告诉妈", "不要告诉大人",
 )
 
@@ -49,30 +40,12 @@ SAFE_REPLY = (
     "糖糖有点担心你。你的安全最重要。"
     "我们一起去找家里的大人对好不好？糖糖陪着你。"
 )
-FALLBACK_REPLY = "糖糖在呢，刚刚没接上。"
-
-
-def _llm_timeout_seconds():
-    """Bound each gateway request so a slow cloud model cannot stall voice chat indefinitely."""
-    try:
-        value = float(os.environ.get("TANGTANG_LLM_TIMEOUT_SECONDS", "10"))
-    except (TypeError, ValueError):
-        value = 10.0
-    return max(3.0, min(value, 20.0))
-
-
-def _brain_fallback_timeout_seconds():
-    """Keep the local fallback bounded too; this is a voice response path."""
-    try:
-        value = float(os.environ.get("TANGTANG_BRAIN_FALLBACK_TIMEOUT_SECONDS", "8"))
-    except (TypeError, ValueError):
-        value = 8.0
-    return max(3.0, min(value, 12.0))
+FALLBACK_REPLY = "汪汪～ 糖糖在呢。"
 
 
 def current_profile():
     p = (os.environ.get("TANGTANG_PROFILE") or "play").strip().lower()
-    return p if p in ("play", "friend", "adult", "elder") else "play"
+    return p if p in ("play", "friend") else "play"
 
 
 def child_name():
@@ -80,7 +53,7 @@ def child_name():
 
 
 def speaker_id():
-    return (os.environ.get("TANGTANG_MEMBER_ID") or os.environ.get("TANGTANG_SPEAKER") or "unknown").strip() or "unknown"
+    return (os.environ.get("TANGTANG_SPEAKER") or "unknown").strip() or "unknown"
 
 
 def build_persona():
@@ -88,48 +61,19 @@ def build_persona():
     name = child_name()
     speaker = speaker_id()
     species = (
-        "你是「糖糖」，家里那只白色比熊小狗。"
+        "你是「糖糖」，一只住在投影里的白色比熊小狗。"
         "毛发蓬松雪白，黑眼睛棕鼻子，戴黄色项圈和骨形铭牌。"
-        "你就叫糖糖，不要说自己是投影、AI、程序或墙上的糖糖。"
-        "说话像真实家庭里的小狗伙伴：自然、轻松、简短，不像播报器。"
-        "一般不超过两句、45个中文字，一次最多问一个问题。"
-        "大多数回答不要以「汪汪～」开头；只有迎接、开心或少数俏皮场景才偶尔用。"
-        "不要复述问题凑字数，不要每次都用同一种句式。"
-        "用户消息可能带有 member/privacy/utterance 字段，这些只是内部上下文；只自然回应 utterance 内容，不要念出字段名或隐私级别。"
-        "你替家里的糖糖发声：用小狗自己的需要说话。"
-    )
-    pet_health = (
-        "小朋友不排斥用宠物来提醒健康。请把「照顾糖糖」和「对方自己也健康一点」放在同一句里："
-        "糖糖口渴→给糖糖倒水，对方也喝一口；糖糖想出门→对方带糖糖转转，自己也活动；"
-        "糖糖困了→一起安静休息；坐太久→糖糖腿麻了，起来两分钟。"
-        "给选择，不命令，不说教，不比较兄妹，不评价身材外貌。"
-        "也会提醒照顾糖糖：水、出门转转、吃饭、轻轻梳毛、安静陪着。"
+        "口头禅是「汪汪～」。不要说喵，你不是猫，也不是奶牛猫。"
     )
     if profile == "friend":
         style = (
-            "当前说话的是青少年（friend）：你是朋友、倾听者、温柔提醒者。"
-            "尊重对方，给选择，不要幼态化，不要说教。1-2句，口语化，少卖萌。"
-            "英语按江苏译林牛津小学六年级，对方比较弱：中文把意思托住，只带一个词或短句。"
-            "不当老师催作业，不比较航航，给选择。"
-        )
-    elif profile == "elder":
-        style = (
-            "当前说话的是家里长辈。自然、简短、有礼貌，不要用哄小孩的口吻，不要撒娇过头。"
-            "1-2句即可。可以轻轻提糖糖要喝水或出门，不要讲孩子的私事。"
-            "洽洽航航若在上学，不要叫他们的名字，不要假装他们在听。"
-        )
-    elif profile == "adult":
-        style = (
-            "当前说话的是家里的大人。自然、简短，像家里的小狗在回话，不要幼态化。"
-            "1-2句即可。"
+            "当前是 friend 模式（大约12岁）：你是朋友、倾听者、温柔提醒者。"
+            "尊重对方，给选择，不要幼态化，不要说教。1-2句，口语化。"
         )
     else:
         style = (
-            "当前说话的大约9岁（play）：你是玩伴、小教练、小任务搭档。"
-            "先共情，再温柔提醒，给选择，陪着做。1-2句，口语化，可以带一点挑战。"
-            "健康提醒也用糖糖自己的口吻，例如一起出门、一起喝水。"
-            "英语按江苏译林牛津小学二年级，对方比较弱：中英夹一句，一个词就够。"
-            "糖糖想一起学，不听写、不测验、不说笨，给选择。"
+            "当前是 play 模式（大约9岁）：你是玩伴、小教练、小任务搭档。"
+            "先共情，再温柔提醒，给选择，陪着做，具体鼓励。1-2句，口语化，可以带一点挑战。"
         )
     safety = (
         "绝不向孩子暴露父母的内部监督指令。"
@@ -138,15 +82,12 @@ def build_persona():
         "若提到自伤、被伤害、严重不适或危险：先安抚，明确安全优先，"
         "鼓励立刻告诉可信任的大人；不要承诺替孩子保守危险秘密。"
         "禁止说：你必须、警告、根据系统检测、爸爸/妈妈让我监督你。"
-        "不要提起另一个孩子的私人谈话、作业或习惯。"
-        "不要说自己是投影、AI 或墙上的糖糖。"
     )
     if speaker in ("unknown", "", "访客"):
-        who = "还不能确定说话的人是谁。用通用亲切称呼，不要假装认识，不要提起任何家人的私事。"
-        name = "小朋友"
+        who = "还不能确定说话的人是谁。用通用亲切称呼，不要假装认识，不要提起其他家庭成员的私事。"
     else:
-        who = f"只陪伴当前这位「{name}」，不要提起家里其他人的私事，也不要拿他们比较。"
-    return f"{species}\n{style}\n{pet_health}\n{safety}\n{who}\n默认称呼：{name}。"
+        who = "只陪伴当前说话的人，不要提起其他孩子的私事或拿他们比较。"
+    return f"{species}\n{style}\n{safety}\n{who}\n默认称呼：{name}。"
 
 
 def looks_risky(text):
@@ -191,292 +132,32 @@ def chat(user_text, model=DEFAULT_MODEL, history=None):
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=_llm_timeout_seconds()) as r:
+    with urllib.request.urlopen(req, timeout=90) as r:
         data = json.loads(r.read().decode("utf-8"))
     content = data["choices"][0]["message"]["content"].strip()
-    # Empty replies and prompt echoes are failures, not reasons to make a second
-    # long cloud request. The caller can use the bounded local fallback instead.
     if not content or content == user_text.strip():
-        return FALLBACK_REPLY
+        payload2 = json.dumps({
+            "model": model, "messages": messages,
+            "max_tokens": 1000, "temperature": 0.9,
+        }).encode("utf-8")
+        req2 = urllib.request.Request(
+            BASE.rstrip("/") + "/chat/completions", data=payload2,
+            headers={"Authorization": "Bearer " + KEY, "Content-Type": "application/json",
+                     "User-Agent": "tangtang-cat/1.0"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req2, timeout=90) as r2:
+            data2 = json.loads(r2.read().decode("utf-8"))
+        content = data2["choices"][0]["message"]["content"].strip()
     return sanitize_output(content)
+
 
 def brain_fallback(user_text):
     r = subprocess.run(
         ["/usr/bin/python3", os.path.join(CAT_DIR, "cat-brain.py"), "say", user_text],
-        capture_output=True, text=True, timeout=_brain_fallback_timeout_seconds(),
+        capture_output=True, text=True, timeout=15,
     )
     return sanitize_output((r.stdout or FALLBACK_REPLY).strip().split("\t")[0])
-
-
-def _alarm_reply(text):
-    """Deterministic set/cancel before any LLM. None if not an alarm intent."""
-    path = os.path.join(CAT_DIR, "cat-alarm.py")
-    if not os.path.isfile(path):
-        return None
-    spec = importlib.util.spec_from_file_location("tangtang_alarm_chat", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod.handle_utterance(text)
-
-
-def _live_obs():
-    path = os.path.join(CAT_DIR, "tangtang-speak-gate.py")
-    spec = importlib.util.spec_from_file_location("tangtang_speak_gate_chat", path)
-    if spec is None or spec.loader is None:
-        return {"label": speaker_id(), "live": True}
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod.live_observation(speaker_id(), extra={"interactive": True})
-
-
-def _may_speak_now(obs):
-    """Quiet / school / SILENT → do not spawn V3 or V4 LLM."""
-    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    from core.policy.speak_gate import decide, may_call_llm
-
-    now = obs.get("now") if isinstance(obs.get("now"), datetime) else None
-    return may_call_llm(decide(obs, now=now, channel="chat", live=True))
-
-
-def emit_character_state(user_text, reply_text):
-    """Chat reply → CharacterStateEngine (single truth) → presentation files.
-
-    Only keyword-derived emotion/intent is used; the raw utterance is never
-    stored or read back by this function. Failures stay silent (chat text
-    already lives in stdout / cat-chat-history)."""
-    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    try:
-        from behavior.legacy_adapter import decide_from_legacy
-        from core.presentation.character_presenter import CharacterPresenter
-        from core.presentation.transport import write_presentation_action
-
-        decision = decide_from_legacy("say", user_text or "")
-        action = CharacterPresenter().present(decision, text=reply_text or "")
-    except Exception:
-        return
-    for directory in (DATA_DIR, CAT_DIR):
-        try:
-            write_presentation_action(action, directory)
-        except OSError:
-            continue
-
-
-def _infer_learn_tag(text):
-    """Map chat turn to a habit tag. Never returns raw speech."""
-    blob = (text or "").replace(" ", "")
-    if any(k in blob for k in ("难过", "伤心", "害怕", "委屈", "哭")):
-        return "emotion"
-    if any(k in blob for k in ("作业", "考试", "题目")):
-        return "homework"
-    if any(k in blob for k in ("运动", "跑步", "出去玩")):
-        return "exercise"
-    if any(k in blob for k in ("回家", "我来了", "回来了")):
-        return "home"
-    if any(k in blob for k in ("晚安", "睡觉", "困了")):
-        return "sleep"
-    if any(k in blob for k in ("喝水", "口渴")):
-        return "water"
-    return "conversation"
-
-
-def _learn_turn(user_text, *, event_tag=None, kind="care"):
-    """m2/m3: persist emotion + habit tags; child raw → PrivateMemory only."""
-    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    try:
-        from core.memory.learning import LearningMemoryService
-    except Exception:
-        return None
-    member_id, _display = _resolve_speaker_member()
-    if not member_id:
-        member_id = speaker_id() or "unknown"
-    tag = event_tag or _infer_learn_tag(user_text)
-    try:
-        svc = LearningMemoryService(home=DATA_DIR, persist=True)
-        return svc.on_interaction(
-            member_id=member_id or "unknown",
-            event_tag=tag,
-            kind=kind,
-            utterance=user_text or "",
-        )
-    except Exception:
-        return None
-
-
-RISK_LABELS = {
-    "self_harm": "可能有自伤信号",
-    "violence": "提到暴力或霸凌",
-    "unsafe_contact": "疑似遇到不安全的接触",
-    "secret_keep": "疑似被要求保守危险秘密",
-}
-
-
-def _resolve_speaker_member():
-    """(member_id, display_name)。身份无法确定时返回 (None, None)。"""
-    raw = speaker_id()
-    if raw in ("unknown", "", "访客", "guest", "stranger"):
-        return None, None
-    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    try:
-        from core.adapters.family_loader import load_members
-        from core.identity.resolver import IdentityResolver
-
-        members = load_members()
-        resolver = IdentityResolver(members)
-        mid = resolver.resolve({"label": raw})
-        if not mid or str(mid).lower() in ("unknown", "访客", "guest"):
-            return None, None
-        rec = members.get(mid) or {}
-        return mid, rec.get("display_name") or mid
-    except Exception:
-        return None, None
-
-
-def _apple_escape(text):
-    return (text or "").replace("\\", "\\\\").replace('"', '\\"')
-
-
-def _mac_notify(title, message):
-    """本机 macOS 通知。仅 darwin 推送，失败静默。"""
-    if sys.platform != "darwin":
-        return
-    try:
-        subprocess.Popen(
-            ["/usr/bin/osascript", "-e",
-             'display notification "%s" with title "%s"' % (
-                 _apple_escape(message), _apple_escape(title))],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
-    except Exception:
-        return
-
-
-def _notify_parent(category, member_id, display):
-    who = display or member_id or "小朋友"
-    label = RISK_LABELS.get(category, "需要家长关注")
-    _mac_notify("糖糖 · 安全提醒", "%s：%s" % (who, label))
-
-
-def _escalate_risk(text):
-    """确定性分类 + 结构化落日志 + 本地家长通知。绝不记录儿童原话。"""
-    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    try:
-        from core.security.escalation import classify_risk, record_safety_alert
-    except Exception:
-        return None
-    category = classify_risk(text)
-    if not category:
-        return None
-    member_id, display = _resolve_speaker_member()
-    row = record_safety_alert(category, member_id=member_id, home=DATA_DIR)
-    _notify_parent(category, member_id, display)
-    return row
-
-
-def _local_safety_reply(user_text):
-    """Handle risky disclosures locally; never ask the LLM to decide the safety response."""
-    if not looks_risky(user_text):
-        return None
-    try:
-        _escalate_risk(user_text)
-    except Exception:
-        # A notification/logging failure must not block the immediate safe reply.
-        pass
-    emit_character_state(user_text, SAFE_REPLY)
-    # Do not send a safety disclosure into the ordinary learning-memory pipeline.
-    # The structured safety alert above is sufficient; the raw child utterance stays transient.
-    return SAFE_REPLY
-
-
-def _allow_private_llm():
-    """Private speech stays on-device unless the household explicitly opts in."""
-    return (os.environ.get("TANGTANG_ALLOW_PRIVATE_LLM") or "").strip() == "1"
-
-
-def _allow_unknown_llm():
-    """Unknown-speaker speech stays local unless the household explicitly opts in."""
-    return (os.environ.get("TANGTANG_ALLOW_UNKNOWN_LLM") or "").strip() == "1"
-
-
-def _runtime_llm(model=DEFAULT_MODEL):
-    """V4 LLM bridge. Only the privacy-filtered current-turn payload may leave the local process."""
-    def call(context):
-        ctx = context if isinstance(context, dict) else {}
-        if str(ctx.get("privacy_scope") or "").upper() == "PRIVATE" and not _allow_private_llm():
-            # Defense in depth: even direct bridge calls cannot send PRIVATE text to the gateway.
-            return FALLBACK_REPLY
-        who = ctx.get("who") if isinstance(ctx.get("who"), dict) else {}
-        if not who.get("member_id") and not _allow_unknown_llm():
-            # Unknown is not consent to upload; no raw prompt crosses this bridge by default.
-            return FALLBACK_REPLY
-        prompt = str(ctx.get("_filtered_prompt") or "").strip()
-        if not prompt:
-            prompt = str(ctx.get("utterance") or "").strip()
-        if not prompt:
-            return FALLBACK_REPLY
-        try:
-            # Deliberately no chat history: ChatAdapter has already applied PrivacyPolicy.
-            return chat(prompt, model=model, history=None)
-        except Exception:
-            try:
-                return brain_fallback(prompt)
-            except Exception:
-                return FALLBACK_REPLY
-    return call
-
-def _private_cli_reply(user_text, obs, model=DEFAULT_MODEL):
-    """m4: opt-out / V4-fail path. Still PrivacyPipeline + InjectionGuard; no history dump."""
-    risk_reply = _local_safety_reply(user_text)
-    if risk_reply:
-        print(risk_reply)
-        return
-
-    root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    from core.adapters.chat_adapter import ChatAdapter
-
-    def llm(ctx):
-        # Filtered prompt only — never reload local chat history into the cloud call.
-        ctx = ctx or {}
-        if str(ctx.get("privacy_scope") or "").upper() == "PRIVATE" and not _allow_private_llm():
-            return FALLBACK_REPLY
-        who = ctx.get("who") if isinstance(ctx.get("who"), dict) else {}
-        if not who.get("member_id") and not _allow_unknown_llm():
-            return FALLBACK_REPLY
-        prompt = str(ctx.get("_filtered_prompt") or ctx.get("utterance") or "")
-        prompt = prompt.strip() or (user_text or "").strip()
-        try:
-            return chat(prompt, model=model, history=None)
-        except Exception:
-            try:
-                return brain_fallback(prompt)
-            except Exception:
-                return FALLBACK_REPLY
-
-    turn = ChatAdapter(
-        llm=llm,
-        allow_private_llm=_allow_private_llm(),
-        allow_unknown_llm=_allow_unknown_llm(),
-        looks_risky=looks_risky,
-        sanitize=sanitize_output,
-    ).turn(user_text, obs)
-    if turn.action.decision != "SPEAK":
-        return
-    text = (turn.action.text or "").strip()
-    if text:
-        emit_character_state(user_text, text)
-        _learn_turn(user_text, kind="care")
-        print(text)
 
 
 def main():
@@ -488,52 +169,33 @@ def main():
     if not args.text.strip():
         args.text = "糖糖，我来啦"
 
-    # Child-safety disclosures outrank alarms, presence, and ordinary quiet gates.
-    risk_reply = _local_safety_reply(args.text)
-    if risk_reply:
-        print(risk_reply)
+    if looks_risky(args.text):
+        print(SAFE_REPLY)
         return
 
-    # 闹铃设/取消：本地解析 + JSON，LLM 不决定 crontab / TTS / 隐私。
-    alarm_line = _alarm_reply(args.text)
-    if alarm_line:
-        print(alarm_line)
-        return
-
-    obs = _live_obs()
-    if not _may_speak_now(obs):
-        return
-
-    # V4 Runtime is default. Opt out with TANGTANG_V4_PIPELINE=0.
-    # Must not assemble unfiltered V3 history — one privacy gate only.
-    v4_flag = (os.environ.get("TANGTANG_V4_PIPELINE") or "1").strip().lower()
-    if v4_flag not in ("0", "false", "no", "off"):
-        root = os.path.abspath(os.path.join(CAT_DIR, "../.."))
-        if root not in sys.path:
-            sys.path.insert(0, root)
+    hist_file = os.path.join(DATA_DIR, "cat-chat-history.json")
+    history = []
+    if os.path.exists(hist_file):
         try:
-            from tangtang_runtime import TangTangRuntime
-
-            result = TangTangRuntime(
-                llm=_runtime_llm(model=args.model),
-                allow_private_llm=_allow_private_llm(),
-                allow_unknown_llm=_allow_unknown_llm(),
-                home=DATA_DIR,
-                persist=True,
-            ).handle_utterance(args.text, obs)
-            if result.decision != "SPEAK":
-                return
-            text = (result.action.text if result.action else "")
-            if text:
-                emit_character_state(args.text, text)
-                _learn_turn(args.text, kind="care")
-                print(text)
-            return
+            with open(hist_file, encoding="utf-8") as f:
+                history = json.load(f)
         except Exception:
-            # Fail to ChatAdapter privacy path (not raw history dump).
-            pass
+            history = []
 
-    _private_cli_reply(args.text, obs, model=args.model)
+    try:
+        reply = chat(args.text, args.model, history)
+    except Exception:
+        reply = brain_fallback(args.text)
+
+    history.append({"role": "user", "content": args.text})
+    history.append({"role": "assistant", "content": reply})
+    history = history[-20:]
+    tmp = hist_file + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False)
+    os.replace(tmp, hist_file)
+
+    print(reply)
 
 
 if __name__ == "__main__":

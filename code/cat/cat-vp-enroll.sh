@@ -1,13 +1,11 @@
 #!/bin/bash
 # 糖糖 · 一键声纹建档
-# 用法: ./cat-vp-enroll.sh <爷爷|奶奶|爸爸|洽洽|航航> [段数=3]
-# 会引导用户录 N 段语音（每段 5 秒），然后按家庭名册 member_id 建档
+# 用法: ./cat-vp-enroll.sh <名字> [段数=3]
+# 会引导用户录 N 段语音（每段 5 秒），然后建档
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
 . "$SCRIPT_DIR/cat-lib.sh"
-# 用法: ./cat-vp-enroll.sh <家人> [段数=3]
-# 家人：爷爷 / 奶奶 / 爸爸 / 洽洽 / 航航
-NAME="${1:?用法: cat-vp-enroll.sh <爷爷|奶奶|爸爸|洽洽|航航> [段数=3]}"
+NAME="${1:?用法: cat-vp-enroll.sh <名字> [段数=3]}"
 N="${2:-3}"
 FF="$(tangtang_ffmpeg)"
 VP="$CAT_DIR/cat-vp.py"
@@ -26,7 +24,7 @@ for i in $(seq 1 "$N"); do
   echo "🎙️  第 $i 段：3 秒后开始录音…（请说话）"
   sleep 3
   PCM="$TMP/sample_$i.pcm"
-  "$FF" -hide_banner -loglevel error -f avfoundation -i ":2" -t 5 -ar 16000 -ac 1 -af "volume=20dB" -f s16le -y "$PCM" 2>/dev/null
+  "$FF" -hide_banner -loglevel error -f avfoundation -i ":2" -t 5 -ar 16000 -ac 1 -af "volume=15dB" -f s16le -y "$PCM" 2>/dev/null
   SIZE=$(stat -f%z "$PCM" 2>/dev/null || echo 0)
   if [ "$SIZE" -gt 80000 ]; then
     echo "  ✅ 录到 $SIZE 字节"

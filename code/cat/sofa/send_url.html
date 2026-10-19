@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='utf-8'>
+	<meta http-equiv="X-UA-COMPATIBLE" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>网址推送 - 沙发管家远程控制</title>
+	<link rel="stylesheet" href="css/index.css">
+	<link rel="stylesheet" type="text/css" href="/css/dropzone.css">
+	<script type="text/javascript">
+	var sf = {};
+	sf.userAgent=navigator.userAgent.toLowerCase();sf.is_ios=/(iphone|ipad|ipod)/i.test(sf.userAgent)?true:false;sf.userAgent=navigator.userAgent.toLowerCase();sf.is_ios=/(iphone|ipad|ipod)/i.test(sf.userAgent)?true:false;sf.is_ipad=/(ipad)/i.test(sf.userAgent)?true:false;sf.is_firefox=sf.userAgent.indexOf("firefox")>=0?true:false;sf.is_opera=navigator.appName.indexOf("Opera")>=0?true:false;sf.is_safari=sf.userAgent.indexOf("safari")>=0?true:false;sf.is_chrome=sf.userAgent.indexOf("chrome")>=0?true:false;if(sf.is_chrome){sf.is_safari=false}sf.is_ie=navigator.appName=="Microsoft Internet Explorer"?true:false;sf.ie=(sf.userAgent.indexOf("msie")!=-1&&!sf.is_opera)&&sf.userAgent.substr(sf.userAgent.indexOf("msie")+5,3);sf.is_ipad=/(ipad)/i.test(sf.userAgent)?true:false;sf.is_firefox=sf.userAgent.indexOf("firefox")>=0?true:false;sf.is_opera=navigator.appName.indexOf("Opera")>=0?true:false;sf.is_safari=sf.userAgent.indexOf("safari")>=0?true:false;sf.is_chrome=sf.userAgent.indexOf("chrome")>=0?true:false;if(sf.is_chrome){sf.is_safari=false}sf.is_ie=navigator.appName=="Microsoft Internet Explorer"?true:false;sf.ie=(sf.userAgent.indexOf("msie")!=-1&&!sf.is_opera)&&sf.userAgent.substr(sf.userAgent.indexOf("msie")+5,3);
+	</script>
+	<style type="text/css">
+		.container {
+		width: 100%;
+		max-width: 800px;
+		}
+		.tips {
+		color: #888;
+		margin: 80px auto 0;
+		text-align: right;
+		}
+		#dropzone {
+		margin: 10px auto 0;
+		width: 100%;
+		max-width: 800px;
+		background-color: #ffffff;
+		border-radius: 10px;
+		-webkit-box-shadow:  1px 1px 10px 1px rgba(0, 0, 0, 0.2);
+		box-shadow:  1px 1px 10px 1px rgba(0, 0, 0, 0.2);
+		overflow: hidden;
+		}
+		.dropzone {
+		border: 5px solid #ffffff;
+		background-color: #eee;
+		}
+		.fallback-file-wrapper {
+		width:100%;
+		text-align:center;
+		}
+		.fallback-file-wrapper input,button {
+		font-size: 1.5em;
+		color: #333;
+		}
+		.fallback-file-wrapper .input {
+		width: 80%;
+		}
+		.fallback-file-wrapper .btn {
+		}
+		.fallback {
+		text-align: center;
+		position: absolute;
+		width: 428px;
+		height: 123px;
+		margin-left: -214px;
+		margin-top: -61.5px;
+		top: 50%;
+		left: 50%;
+		font-size:3em;
+		color:#999;
+		}
+	</style>
+	<!--[if IE 6]>
+	<style type="text/css">
+		.dropzone {
+		height:400px;
+		}
+	</style>
+	<![endif]-->
+</head>
+<body>
+<div class="topbar">
+	<a href="/" title="返回首页"><img src="/images/index_logo.png" alt="沙发管家远程控制" title="沙发管家远程控制"></a>
+</div>
+<div class="container">
+	<p class="tips" id="available_size"></p>
+	<div id="dropzone">
+		<form action="" method="get" class="dropzone" id="shafa-dropzone">
+			<div class="fallback" id="fallback">网址推送</div>
+			<div class="fallback-file-wrapper">
+				<input id="url_input" class="input" name="url" type="text" placeholder="http://www.shafa.com"/>
+				<button class="btn" type="submit">推送</button>
+			</div>
+		</form>
+	</div>
+</div>
+<div class="footer">
+	<a target="_blank" href="http://app.shafa.com">沙发管家</a>/<a target="_blank" href="http://www.shafa.com">沙发网</a>/<span>心梦想公司版权所有</span>
+</div>
+<script type="text/javascript" src="/js/jquery-1.10.2.min.js"></script>
+<script type="text/javascript">
+		var getURLParameter = function(sParam) {
+			var sPageURL = window.location.search.substring(1);
+			var sURLVariables = sPageURL.split('&');
+			for (var i = 0; i < sURLVariables.length; i++) {
+				var sParameterName = sURLVariables[i].split('=');
+				if (sParameterName[0] == sParam) {
+					return decodeURIComponent(sParameterName[1]);
+				}
+			}
+		}
+
+		var fallback_foo = function() {
+			$('#url_input').val(getURLParameter('url'));
+			$('#url_input').change(function(e){
+				var val = $(this).val();
+				if (val && !val.match(/^.*\/\/.*/)) {
+					$(this).val('http://' + val);
+				}
+			});
+			$('#fallback').css('background-image','none');
+			$('#shafa-dropzone').submit(function(event) {
+				var val = $('#url_input').val();
+				if (val && !val.match(/^.*\/\/.*/)) {
+					$('#url_input').val('http://' + val);
+				}
+				return true;
+			});
+			$('#shafa-dropzone').addClass('dz-browser-not-supported');
+		};
+	fallback_foo();
+	</script>
+
+</body>
+</html>

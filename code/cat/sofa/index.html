@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="UTF-8">
+    <meta http-equiv="X-UA-COMPATIBLE" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>沙发管家远程控制</title>
+	<link rel="stylesheet" href="css/index.css">
+	<script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
+	<script type="text/javascript" src="js/index.js"></script>
+</head>
+<body>
+	<div class="topbar">
+		<a href="/" title="返回首页"><img src="/images/index_logo.png" alt="沙发管家远程控制" title="沙发管家远程控制"></a>
+	</div>
+	<div class="container">
+		<div class="jumbotron">
+			<a href="upload.html" target="_blank">
+				<img src="/images/ic_install_normal.png" alt="文件推送" title="文件推送">
+			</a>
+			<a href="send_url.html" target="_blank">
+				<img src="/images/ic_web_normal.png" alt="网址推送" title="网址推送">
+			</a>
+			<a id="screencap" href="/interface?mod=screencap_web&data=null&callback=null" target="_blank">
+				<img src="/images/ic_shot_normal.png" alt="远程截图" title="远程截图">
+			</a>
+		</div>
+	</div>
+	<div class="footer">
+		<a target="_blank" href="http://app.shafa.com">沙发管家</a>/<a target="_blank" href="http://www.shafa.com">沙发网</a>/<span>心梦想公司版权所有</span>
+	</div>
+	<script>
+		var can_screencap = false;
+		if (can_screencap) {
+			$('#screencap').show();
+		}
+	</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+$(function()
+{
+	$(".install").hover(
+		function()
+		{
+			$(this).attr('src', '/images/ic_install_hover.png');
+		}, function()
+		{
+			$(this).attr('src', '/images/ic_install_normal.png');
+		});
+
+	$(".install").click(function()
+	{
+		$(this).attr('src', '/images/ic_install_pressed.png');
+	});
+
+	$(".shot").hover(
+		function()
+		{
+			$(this).attr('src', '/images/ic_shot_hover.png');
+		}, function()
+		{
+			$(this).attr('src', '/images/ic_shot_normal.png');
+		});
+
+	$(".shot").click(function()
+	{
+		$(this).attr('src', '/images/ic_shot_pressed.png');
+	});
+});
