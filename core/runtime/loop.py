@@ -373,6 +373,22 @@ class TangTangRuntime:
         else:
             obs.pop("member_id", None)
         obs.setdefault("interactive", True)
+        # Record explicit opt-out language locally so proactive scenes can respect it.
+        # This plan never suppresses a user-initiated turn.
+        planner_obs = dict(obs)
+        if not isinstance(planner_obs.get("now"), datetime):
+            planner_obs["now"] = datetime.now().astimezone()
+        companion_plan = isolate(
+            lambda: self.brain.plan(
+                member_id=str(member_id) if member_id else None,
+                observation=planner_obs,
+                utterance=utterance,
+                proactive=False,
+            ),
+            fallback=None,
+        )
+        if companion_plan.ok and companion_plan.value is not None:
+            obs["companion_plan"] = companion_plan.value.to_dict()
         when = obs.get("now")
         gate = speak_decide(
             obs,
@@ -550,10 +566,13 @@ class TangTangRuntime:
             )
         gate = isolate(lambda: self.pipeline.interrupt.decide(obs), fallback="SILENT")
         decision = gate.value if gate.ok and isinstance(gate.value, str) else "SILENT"
+        planner_obs = dict(obs)
+        if not isinstance(planner_obs.get("now"), datetime):
+            planner_obs["now"] = datetime.now().astimezone()
         plan = isolate(
             lambda: self.brain.plan(
                 member_id=str(mid) if mid else None,
-                observation=obs,
+                observation=planner_obs,
                 proactive=True,
             ),
             fallback=None,
@@ -562,7 +581,9 @@ class TangTangRuntime:
         if companion_plan is not None:
             obs["companion_plan"] = companion_plan.to_dict()
             # Planner is a veto for proactive output only; it never forces speech.
-            if companion_plan.decision in {"SILENT", "WAIT"}:
+            if companion_plan.decision in {"SILENT", "WAIT"} and decision == "SPEAK":
+                # Planner may veto speech, but must not overwrite a stronger
+                # policy result such as LOG_ONLY or DELAY.
                 decision = "SILENT"
         ctx = isolate(
             lambda: self.pipeline.builder.build(
