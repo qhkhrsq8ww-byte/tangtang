@@ -22,6 +22,7 @@ from core.adapters.observation import Observation
 from core.adapters.projection_adapter import ProjectionAdapter
 from core.adapters.tts_adapter import TTSAdapter
 from core.adapters.voice_adapter import VoiceAdapter
+from core.brain.planner import CompanionPlanner
 from core.events.event import Event
 from core.events.event_bus import EventBus, PublishResult
 from core.identity.resolver import IdentityResolver
@@ -93,6 +94,8 @@ class TangTangRuntime:
         self.offline = offline
         self.logger = logger or SafeLogger()
         self.identity = IdentityResolver(roster)
+        # Deterministic local planner; it can suppress proactive scenes but never user turns.
+        self.brain = CompanionPlanner()
         self.persist = bool(persist)
         self.home = tangtang_home(home) if self.persist else (Path(home).expanduser().resolve() if home is not None else None)
         if pipeline is not None:
@@ -547,6 +550,20 @@ class TangTangRuntime:
             )
         gate = isolate(lambda: self.pipeline.interrupt.decide(obs), fallback="SILENT")
         decision = gate.value if gate.ok and isinstance(gate.value, str) else "SILENT"
+        plan = isolate(
+            lambda: self.brain.plan(
+                member_id=str(mid) if mid else None,
+                observation=obs,
+                proactive=True,
+            ),
+            fallback=None,
+        )
+        companion_plan = plan.value if plan.ok else None
+        if companion_plan is not None:
+            obs["companion_plan"] = companion_plan.to_dict()
+            # Planner is a veto for proactive output only; it never forces speech.
+            if companion_plan.decision in {"SILENT", "WAIT"}:
+                decision = "SILENT"
         ctx = isolate(
             lambda: self.pipeline.builder.build(
                 who={"member_id": mid},
@@ -559,6 +576,8 @@ class TangTangRuntime:
         context = ctx.value if isinstance(ctx.value, dict) else {}
         context["scene"] = obs.get("scene")
         context["utterance"] = ""
+        if companion_plan is not None:
+            context["companion_plan"] = companion_plan.to_dict()
         spoken = isolate(
             lambda: self.pipeline.orchestrator.run(
                 decision=decision, context=context, action="remind"
