@@ -470,7 +470,7 @@ tangtang_tts_lock() {
     attempt=0
   done
   TANGTANG_TTS_LOCK_ACQUIRED=1
-  if ! printf '%s\\n' "$$" > "$TANGTANG_TTS_LOCK_DIR/pid"; then
+  if ! printf '%s\n' "$$" > "$TANGTANG_TTS_LOCK_DIR/pid"; then
     rmdir "$TANGTANG_TTS_LOCK_DIR" 2>/dev/null || true
     TANGTANG_TTS_LOCK_ACQUIRED=0
     echo "无法记录糖糖语音输出锁 PID，本次跳过。" >&2
