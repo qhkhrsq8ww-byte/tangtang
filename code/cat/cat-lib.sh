@@ -429,6 +429,58 @@ tangtang_ffmpeg() {
 # 客厅互动：蓝牙音箱应作为 Mac 默认输出，回话才能在客厅听见。
 # 不要做第二只音箱。若音箱仍在儿童房，客厅听不见糖糖回话。
 # 播放音频；按真实秒数超时，避免 sleep 0.3 却 +3 导致约 12 秒被掐断
+# 全局语音输出互斥锁：cat-say 与 cat-talk 共用 /tmp/cat_tts.mp3，不能并发生成/播放。
+TANGTANG_TTS_LOCK_DIR="${TMPDIR:-/tmp}/tangtang-tts-output.lock"
+TANGTANG_TTS_LOCK_ACQUIRED=0
+
+tangtang_tts_unlock() {
+  if [ "${TANGTANG_TTS_LOCK_ACQUIRED:-0}" = "1" ] && [ -f "$TANGTANG_TTS_LOCK_DIR/pid" ]; then
+    local lock_pid
+    lock_pid="$(cat "$TANGTANG_TTS_LOCK_DIR/pid" 2>/dev/null || true)"
+    if [ "$lock_pid" = "$" ]; then
+      rm -f "$TANGTANG_TTS_LOCK_DIR/pid"
+      rmdir "$TANGTANG_TTS_LOCK_DIR" 2>/dev/null || true
+    fi
+  fi
+}
+
+tangtang_tts_lock() {
+  local attempt=0 lock_pid stale_dir
+  while ! mkdir "$TANGTANG_TTS_LOCK_DIR" 2>/dev/null; do
+    attempt=$((attempt + 1))
+    if [ "$attempt" -le 5 ] && [ ! -f "$TANGTANG_TTS_LOCK_DIR/pid" ]; then
+      sleep 0.1
+      continue
+    fi
+    lock_pid="$(cat "$TANGTANG_TTS_LOCK_DIR/pid" 2>/dev/null || true)"
+    case "$lock_pid" in
+      ''|*[!0-9]*)
+        echo "糖糖语音输出锁状态不明；为避免重复播放，本次跳过。请检查 $TANGTANG_TTS_LOCK_DIR" >&2
+        return 75
+        ;;
+    esac
+    if kill -0 "$lock_pid" 2>/dev/null; then
+      echo "糖糖正在说话（PID: $lock_pid）；本次语音跳过，避免重叠播放。" >&2
+      return 75
+    fi
+    stale_dir="$TANGTANG_TTS_LOCK_DIR.stale.$"
+    if mv "$TANGTANG_TTS_LOCK_DIR" "$stale_dir" 2>/dev/null; then
+      rm -rf "$stale_dir"
+    fi
+    attempt=0
+  done
+  TANGTANG_TTS_LOCK_ACQUIRED=1
+  if ! printf '%s\\n' "$" > "$TANGTANG_TTS_LOCK_DIR/pid"; then
+    rmdir "$TANGTANG_TTS_LOCK_DIR" 2>/dev/null || true
+    TANGTANG_TTS_LOCK_ACQUIRED=0
+    echo "无法记录糖糖语音输出锁 PID，本次跳过。" >&2
+    return 1
+  fi
+  trap tangtang_tts_unlock EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+}
+
 tangtang_play_audio() {
   local f="$1"
   local limit="${2:-40}"
