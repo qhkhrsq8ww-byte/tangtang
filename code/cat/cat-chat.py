@@ -392,7 +392,8 @@ def _local_safety_reply(user_text):
         # A notification/logging failure must not block the immediate safe reply.
         pass
     emit_character_state(user_text, SAFE_REPLY)
-    _learn_turn(user_text, event_tag="emotion", kind="care")
+    # Do not send a safety disclosure into the ordinary learning-memory pipeline.
+    # The structured safety alert above is sufficient; the raw child utterance stays transient.
     return SAFE_REPLY
 
 

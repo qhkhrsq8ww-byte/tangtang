@@ -147,7 +147,7 @@ class TestVoiceCliLlmBridge(unittest.TestCase):
                 setattr(CAT, name, original)
         self.assertEqual(calls[0], ("escalate", "risk-signal"))
         self.assertEqual(calls[1], ("state", CAT.SAFE_REPLY))
-        self.assertEqual(calls[2], ("learn", "emotion"))
+        self.assertEqual(len(calls), 2)  # no ordinary learning-memory write for risk text
 
     def test_local_risk_gate_is_before_runtime_llm_call(self):
         source = CAT_CHAT.read_text(encoding="utf-8")
