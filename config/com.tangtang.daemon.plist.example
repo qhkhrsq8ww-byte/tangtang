@@ -5,7 +5,7 @@
   <key>Label</key><string>com.tangtang.daemon</string>
   <!-- 部署时把 __TANGTANG_HOME__ 换成本机 TANGTANG_HOME 绝对路径。只装用户 LaunchAgent。 -->
   <!-- start-cat.sh 是一次性启动器：只启动舞台/宠物页面后退出，不是常驻守护进程。 -->
-  <!-- 用户闹铃每分钟检查请用 crontab.example 的 due --ring，或另建 StartInterval 60；不要接到本 KeepAlive 守护。 -->
+  <!-- 用户闹铃每分钟检查请用 crontab.example 中的 due ring 模式，或另建 StartInterval 60；不要接到本启动任务。 -->
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
