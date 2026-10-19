@@ -14,7 +14,11 @@ OUT="${2:-/tmp/cat_voice.pcm}"
 # 避免并发写入同一设备/PCM。mkdir 为原子操作，兼容未安装 flock 的 macOS。
 LOCK_DIR="${TMPDIR:-/tmp}/tangtang-mic-capture.lock"
 LOCK_ACQUIRED=0
+RECORDING_COMPLETE=0
 release_capture_lock() {
+  if [ "$LOCK_ACQUIRED" = "1" ] && [ "$RECORDING_COMPLETE" != "1" ]; then
+    rm -f "$OUT"
+  fi
   if [ "$LOCK_ACQUIRED" = "1" ] && [ -f "$LOCK_DIR/pid" ]; then
     lock_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
     if [ "$lock_pid" = "$$" ]; then
@@ -68,4 +72,5 @@ if [ ! -s "$OUT" ]; then
   echo "录音程序退出成功，但没有生成有效录音文件" >&2
   exit 1
 fi
+RECORDING_COMPLETE=1
 ls -la "$OUT" 2>/dev/null | awk '{print "录音文件:", $5, "字节"}'

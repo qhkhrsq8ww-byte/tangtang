@@ -202,7 +202,6 @@ run_turn() {
       TEXT="$(set -o pipefail; "$CAT_DIR/cat-stt-baidu.sh" "$PCM" 2>/dev/null | tr -d '\n')"
       stt_status=$?
       DID_STT=1
-      PCM=""
       if [ "$stt_status" -ne 0 ]; then
         TEXT=""
         STT_STATUS="fail"

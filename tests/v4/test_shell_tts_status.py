@@ -59,6 +59,24 @@ class TestShellTtsStatus(unittest.TestCase):
         self.assertIn('tangtang_ensure_server || return $?', source)
         self.assertIn('糖糖本地页面服务启动失败', source)
         self.assertIn('tangtang_ensure_pet() {\n  tangtang_ensure_server || return $?', source)
+    def test_aborted_recording_cleans_partial_pcm_and_releases_lock(self):
+        source = (CAT / "cat-listen.sh").read_text(encoding="utf-8")
+        self.assertIn('RECORDING_COMPLETE=0', source)
+        self.assertIn('if [ "$LOCK_ACQUIRED" = "1" ] && [ "$RECORDING_COMPLETE" != "1" ]; then', source)
+        self.assertIn('trap release_capture_lock EXIT', source)
+        self.assertIn('RECORDING_COMPLETE=1', source)
+
+    def test_voice_cli_installs_temp_audio_cleanup_after_successful_capture(self):
+        source = (CAT / "cat-voice.sh").read_text(encoding="utf-8")
+        self.assertIn('trap \'rm -f "$PCM"\' EXIT', source)
+        self.assertLess(source.index('trap \'rm -f "$PCM"\' EXIT'), source.index('MEMBER_ID="unknown"'))
+
+    def test_short_turn_retains_pcm_path_until_exit_cleanup(self):
+        source = (CAT / "cat-turn.sh").read_text(encoding="utf-8")
+        stt = source.index('stt_status=$?')
+        decide = source.index('case "$TEXT" in', stt)
+        self.assertNotIn('PCM=""', source[stt:decide])
+
     def test_recording_cli_propagates_ffmpeg_failure(self):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
