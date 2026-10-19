@@ -52,5 +52,18 @@ class TestShellTtsStatus(unittest.TestCase):
             self.assertIn("status:7", result.stdout)
 
 
+
+    def test_voice_cli_preserves_tts_failure_status_on_both_reply_paths(self):
+        source = (CAT / "cat-voice.sh").read_text(encoding="utf-8")
+        self.assertEqual(source.count('say_status=$?'), 2)
+        self.assertIn('闹铃回复语音播放失败', source)
+        self.assertIn('糖糖回复语音播放失败', source)
+        self.assertIn('exit "$say_status"', source)
+        self.assertLess(
+            source.index('say_status=$?', source.index('ALARM_LINE=') ),
+            source.index('rm -f "$PCM"', source.index('ALARM_LINE=') ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
