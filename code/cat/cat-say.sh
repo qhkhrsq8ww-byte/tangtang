@@ -23,6 +23,9 @@ if [ "${TANGTANG_TTS}" = "dry" ] || [ "$(uname -s)" != "Darwin" ]; then
   exit 0
 fi
 
+# 在生成共享 TTS 文件前就拿锁，避免多个入口覆盖同一个 /tmp/cat_tts.mp3。
+tangtang_tts_lock || exit $?
+
 speak_with_fallback() {
   local rate="$1"
   local pitch="$2"
