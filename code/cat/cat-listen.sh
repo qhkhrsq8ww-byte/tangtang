@@ -18,7 +18,7 @@ RECORDING_COMPLETE=0
 release_capture_lock() {
   if [ "$LOCK_ACQUIRED" = "1" ] && [ "$RECORDING_COMPLETE" != "1" ]; then
     rm -f "$OUT"
-  }
+  fi
   if [ "$LOCK_ACQUIRED" = "1" ] && [ -f "$LOCK_DIR/pid" ]; then
     lock_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
     if [ "$lock_pid" = "$$" ]; then
