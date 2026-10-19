@@ -43,6 +43,21 @@ class TestReminderIntent(unittest.TestCase):
         self.assertEqual(intent.action, "time_reply")
         self.assertEqual(intent.due_at, "2026-10-16T20:00:00+00:00")
 
+    def test_hour_without_period_is_not_silently_scheduled(self):
+        intent = parse_reminder_intent(
+            "明天八点提醒我带水杯", now=self.now, timezone_name="UTC"
+        )
+        self.assertEqual(intent.action, "needs_period")
+        self.assertEqual(intent.title, "带水杯")
+        self.assertIsNone(intent.due_at)
+
+    def test_explicit_period_still_schedules(self):
+        intent = parse_reminder_intent(
+            "明天早上八点提醒我带水杯", now=self.now, timezone_name="UTC"
+        )
+        self.assertEqual(intent.action, "schedule")
+        self.assertEqual(intent.due_at, "2026-10-16T08:00:00+00:00")
+
     def test_list_cancel_and_reschedule_commands_parse(self):
         self.assertEqual(parse_reminder_intent("查看提醒").action, "list")
         cancelled = parse_reminder_intent("取消提醒：带水杯")
