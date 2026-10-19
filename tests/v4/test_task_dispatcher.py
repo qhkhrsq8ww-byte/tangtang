@@ -123,10 +123,13 @@ class TestReminderDispatcher(unittest.TestCase):
             self.task.task_id, owner_member_id="child", now=self.now,
         )
         self.assertIsNotNone(claimed)
+        self.service.finish_delivery(
+            self.task.task_id, owner_member_id="child", success=True,
+        )
         with self.assertRaises(ValueError):
             self.service.finish_delivery(
                 self.task.task_id, owner_member_id="child", success=True,
-            ) if self.service.get_task(self.task.task_id, viewer_id="child").status != "running" else None
+            )
 
     def test_running_state_survives_restart_and_is_recovered_without_replay(self):
         claimed = self.service.claim_due(
