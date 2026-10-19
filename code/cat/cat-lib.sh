@@ -437,7 +437,7 @@ tangtang_tts_unlock() {
   if [ "${TANGTANG_TTS_LOCK_ACQUIRED:-0}" = "1" ] && [ -f "$TANGTANG_TTS_LOCK_DIR/pid" ]; then
     local lock_pid
     lock_pid="$(cat "$TANGTANG_TTS_LOCK_DIR/pid" 2>/dev/null || true)"
-    if [ "$lock_pid" = "$" ]; then
+    if [ "$lock_pid" = "$$" ]; then
       rm -f "$TANGTANG_TTS_LOCK_DIR/pid"
       rmdir "$TANGTANG_TTS_LOCK_DIR" 2>/dev/null || true
     fi
@@ -463,14 +463,14 @@ tangtang_tts_lock() {
       echo "糖糖正在说话（PID: $lock_pid）；本次语音跳过，避免重叠播放。" >&2
       return 75
     fi
-    stale_dir="$TANGTANG_TTS_LOCK_DIR.stale.$"
+    stale_dir="$TANGTANG_TTS_LOCK_DIR.stale.$$"
     if mv "$TANGTANG_TTS_LOCK_DIR" "$stale_dir" 2>/dev/null; then
       rm -rf "$stale_dir"
     fi
     attempt=0
   done
   TANGTANG_TTS_LOCK_ACQUIRED=1
-  if ! printf '%s\\n' "$" > "$TANGTANG_TTS_LOCK_DIR/pid"; then
+  if ! printf '%s\\n' "$$" > "$TANGTANG_TTS_LOCK_DIR/pid"; then
     rmdir "$TANGTANG_TTS_LOCK_DIR" 2>/dev/null || true
     TANGTANG_TTS_LOCK_ACQUIRED=0
     echo "无法记录糖糖语音输出锁 PID，本次跳过。" >&2
