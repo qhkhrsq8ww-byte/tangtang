@@ -92,5 +92,69 @@ class TestReminderDispatcher(unittest.TestCase):
         self.assertEqual(delivered, [])
 
 
+
+    def test_delivery_exception_is_recorded_as_failure(self):
+        def explode(task):
+            raise RuntimeError("simulated audio command failure")
+
+        result = run_due(
+            self.service, member_ids=self.members, deliver=explode, now=self.now,
+        )
+        self.assertEqual(result, {"claimed": 1, "succeeded": 0, "failed": 1})
+        failed = self.service.get_task(self.task.task_id, viewer_id="child")
+        self.assertEqual(failed.status, "failed")
+        self.assertEqual(failed.result, "delivery_command_failed")
+        replay = run_due(
+            self.service, member_ids=self.members,
+            deliver=lambda task: self.fail("failed task must not replay automatically"),
+            now=self.now,
+        )
+        self.assertEqual(replay["claimed"], 0)
+
+    def test_claim_and_finish_are_owner_scoped_and_state_checked(self):
+        self.assertIsNone(self.service.claim_due(
+            self.task.task_id, owner_member_id="dad", now=self.now,
+        ))
+        with self.assertRaises(PermissionError):
+            self.service.finish_delivery(
+                self.task.task_id, owner_member_id="dad", success=True,
+            )
+        claimed = self.service.claim_due(
+            self.task.task_id, owner_member_id="child", now=self.now,
+        )
+        self.assertIsNotNone(claimed)
+        self.service.finish_delivery(
+            self.task.task_id, owner_member_id="child", success=True,
+        )
+        with self.assertRaises(ValueError):
+            self.service.finish_delivery(
+                self.task.task_id, owner_member_id="child", success=True,
+            )
+
+    def test_running_state_survives_restart_and_is_recovered_without_replay(self):
+        claimed = self.service.claim_due(
+            self.task.task_id, owner_member_id="child", now=self.now,
+        )
+        self.assertIsNotNone(claimed)
+
+        restarted = TaskService(
+            home=Path(self.tmp.name), persist=True, members=self.members,
+            clock=lambda: self.now + timedelta(minutes=20),
+        )
+        changed = restarted.recover_stale_running(
+            now=self.now + timedelta(minutes=20),
+        )
+        self.assertEqual(changed, 1)
+        recovered = restarted.get_task(self.task.task_id, viewer_id="child")
+        self.assertEqual(recovered.status, "failed")
+        self.assertEqual(recovered.result, "interrupted_delivery_unknown_manual_review")
+        result = run_due(
+            restarted, member_ids=self.members,
+            deliver=lambda task: self.fail("recovered uncertain task must not replay"),
+            now=self.now + timedelta(minutes=20),
+        )
+        self.assertEqual(result["claimed"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
