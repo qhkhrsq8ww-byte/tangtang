@@ -86,8 +86,8 @@ class TestShellTtsStatus(unittest.TestCase):
         source = (CAT / "cat-talk.sh").read_text(encoding="utf-8")
         self.assertIn('rm -f /tmp/cat_tts.mp3', source)
         self.assertIn('&& [ -s /tmp/cat_tts.mp3 ]', source)
-        self.assertIn('tangtang_play_audio /tmp/cat_tts.mp3\\n    return $?', source)
-        self.assertIn('esac\\nexit $?\\n', source)
+        self.assertIn('tangtang_play_audio /tmp/cat_tts.mp3\n    return $?', source)
+        self.assertIn('esac\nexit $?\n', source)
 
     def test_startup_script_stops_when_stage_or_pet_startup_fails(self):
         source = (CAT / "start-cat.sh").read_text(encoding="utf-8")
