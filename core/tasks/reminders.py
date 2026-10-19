@@ -130,7 +130,8 @@ def parse_reminder_intent(
             return ReminderIntent("reschedule", title[:120], due_at, tz_label)
     if not due_at:
         # Preserve the reminder subject and ask for an explicit morning/afternoon/evening.
-        if re.search(r"(?:今天|明天|后天)\s*\S{0,8}(?:\d{1,2}|[零〇一二两三四五六七八九十]{1,3})(?:点|时)", raw):
+        ambiguous_clock = _CLOCK.search(raw)
+        if ambiguous_clock and not ambiguous_clock.group(1):
             title = re.sub(r"^(?:糖糖[，, ]*)?(?:请)?(?:到时候)?提醒(?:一下)?我(?:一下)?", "", raw).strip(" ，,。.!！?？:：")
             title = re.sub(_DATE, " ", title)
             title = re.sub(_CLOCK, " ", title)
