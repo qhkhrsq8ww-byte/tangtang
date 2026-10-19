@@ -23,7 +23,7 @@
 | 任务 | 实现 | 实测证据 |
 |---|---|---|
 | 对话驱动层（全语音） | cat-voice-chat.sh：listen 6s → 百度 STT → glm-4-flash → 晓晓 TTS；静音 2 轮/说"到此为止"退出；儿童语音即用即删 | 三段分别实测：STT 转写 ✓ / LLM 生成 ✓ / TTS 播放 ✓ |
-| 记忆注入人设 | cat-chat.py build_persona() 注入 cat-memory.json（昵称/年龄/年级/生日）+ cat-state.json（心情数值） | 问"你知道我叫什么吗" → "航航是小主人嘛"（之前答不上） |
+| 记忆注入人设 | cat-chat.py build_persona() 注入 cat-memory.json（昵称/年龄/年级/生日）+ cat-state.json（心情数值） | 问"你知道我叫什么吗" → "孩子是小主人嘛"（之前答不上） |
 | 主动性恢复 | com.tangtang.proactive LaunchAgent 每 30 分钟 → cat-proactive-bridge.sh 按小时挑事件 → cat-remind.sh（冷却在 cat-brain） | TANGTANG_INTERACTIVE=1 实测 water 事件："来喝水啦，咕嘟咕嘟，身体棒棒～" |
 
 ## 四、测试矩阵（规整后第二轮，全 PASS）
@@ -59,5 +59,5 @@
 
 - 媒体资产变更（assets/video ~100MB+）未随本次推送，建议 Git LFS 或网络良好时单独提交
 - repo 中尚有未部署的 V2 实验模块（cat-turn.py、cat-memory.py 等），deploy.sh 本次已一并部署到 live，但它们与 live 演进版的关系需团队评审
-- 睡觉文案中"洽洽"与配置"航航"并存，请家庭确认统一
+- 睡觉文案中"姐姐"与配置"孩子"并存，请家庭确认统一
 - 智谱 API key 曾在即时对话出现，建议控制台轮换（.llm_key 一换即生效）
