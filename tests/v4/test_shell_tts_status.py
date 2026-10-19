@@ -27,6 +27,12 @@ class TestShellTtsStatus(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
 
 
+    def test_microphone_lock_uses_current_pid_for_acquire_and_release(self):
+        source = (CAT / "cat-listen.sh").read_text(encoding="utf-8")
+        self.assertIn('if [ "$lock_pid" = "$" ]; then', source)
+        self.assertIn('stale_dir="$LOCK_DIR.stale.$"', source)
+        self.assertIn('printf \'%s\\n\' "$" > "$LOCK_DIR/pid"', source)
+
     def test_concurrent_recording_is_rejected_while_microphone_is_locked(self):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
