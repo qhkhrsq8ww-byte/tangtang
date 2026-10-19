@@ -17,7 +17,7 @@ LOCK_ACQUIRED=0
 release_capture_lock() {
   if [ "$LOCK_ACQUIRED" = "1" ] && [ -f "$LOCK_DIR/pid" ]; then
     lock_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
-    if [ "$lock_pid" = "$" ]; then
+    if [ "$lock_pid" = "$$" ]; then
       rm -f "$LOCK_DIR/pid"
       rmdir "$LOCK_DIR" 2>/dev/null || true
     fi
@@ -45,14 +45,14 @@ while ! mkdir "$LOCK_DIR" 2>/dev/null; do
     exit 75
   fi
   # PID 已不存在：先原子移走旧锁目录，再尝试获取。
-  stale_dir="$LOCK_DIR.stale.$"
+  stale_dir="$LOCK_DIR.stale.$$"
   if mv "$LOCK_DIR" "$stale_dir" 2>/dev/null; then
     rm -rf "$stale_dir"
   fi
   attempt=0
 done
 LOCK_ACQUIRED=1
-printf '%s\n' "$" > "$LOCK_DIR/pid"
+printf '%s\n' "$$" > "$LOCK_DIR/pid"
 # 外置麦索引 :2（MAONO AU-BM10），信号弱需增益
 "$FF" -hide_banner -loglevel error \
   -f avfoundation -i ":2" \
