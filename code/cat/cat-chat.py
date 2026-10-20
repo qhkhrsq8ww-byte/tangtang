@@ -52,6 +52,55 @@ def _llm_timeout_seconds():
     return max(1.0, min(value, 20.0))
 
 
+def _escalate_risk(text):
+    try:
+        from core.security.escalation import classify_risk, record_safety_alert
+        category = classify_risk(text)
+        if category:
+            record_safety_alert(category, member_id=speaker_id())
+    except Exception:
+        pass
+
+
+def emit_character_state(text, reply):
+    # Character-state output is optional; do not persist raw utterances here.
+    return None
+
+
+def _learn_turn(text, **kwargs):
+    # Risk turns are intentionally excluded from ordinary learning memory.
+    return None
+
+
+def _local_safety_reply(text):
+    if not looks_risky(text):
+        return None
+    _escalate_risk(text)
+    emit_character_state(text, SAFE_REPLY)
+    return SAFE_REPLY
+
+
+def _runtime_llm(model=DEFAULT_MODEL):
+    """Privacy-gated bridge; only a caller-supplied filtered prompt may leave local code."""
+    def call(context):
+        ctx = context if isinstance(context, dict) else {}
+        scope = str(ctx.get("privacy_scope") or "PRIVATE").upper()
+        who = ctx.get("who") if isinstance(ctx.get("who"), dict) else {}
+        member_id = who.get("member_id")
+        if scope == "PRIVATE" and os.environ.get("TANGTANG_ALLOW_PRIVATE_LLM") != "1":
+            return FALLBACK_REPLY
+        if not member_id and os.environ.get("TANGTANG_ALLOW_UNKNOWN_LLM") != "1":
+            return FALLBACK_REPLY
+        prompt = str(ctx.get("_filtered_prompt") or "")
+        if not prompt:
+            return FALLBACK_REPLY
+        try:
+            return chat(prompt, model=model, history=None)
+        except Exception:
+            return FALLBACK_REPLY
+    return call
+
+
 def current_profile():
     p = (os.environ.get("TANGTANG_PROFILE") or "play").strip().lower()
     return p if p in ("play", "friend") else "play"
