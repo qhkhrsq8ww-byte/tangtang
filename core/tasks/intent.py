@@ -84,6 +84,7 @@ def _clean_title(text: str) -> str:
     title = text
     for phrase in ADD_MARKERS:
         title = title.replace(phrase, "", 1)
+    title = re.sub(r"(全家一起|大家一起|我们家一起|全家都|大家都|家庭共享)\s*", " ", title)
     title = re.sub(r"(后天|明天|明早|今天|今晚|早上|上午|中午|下午|傍晚|晚上|夜里|凌晨)\s*", " ", title)
     title = CLOCK_RE.sub(" ", title)
     title = CN_CLOCK_RE.sub(" ", title)
@@ -154,7 +155,7 @@ def handle_voice_task(
     if len(title) < 2:
         return "你想让我提醒你做什么？告诉我具体事情就好。"
     due_at = parse_due(utterance, now=now, timezone_name=timezone_name)
-    visibility = "FAMILY" if any(word in utterance for word in ("全家", "大家", "我们家一起", "家庭")) else "PRIVATE"
+    visibility = "FAMILY" if any(word in utterance for word in ("全家一起", "大家一起", "我们家一起", "全家都", "大家都", "家庭共享")) else "PRIVATE"
     key = f"voice:{owner}:{due_at or 'unscheduled'}:{title}"
     task = service.create_task(
         owner_member_id=owner,
