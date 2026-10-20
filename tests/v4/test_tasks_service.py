@@ -15,7 +15,12 @@ if str(ROOT) not in sys.path:
 from core.adapters.family_loader import load_members
 from core.tasks.service import TaskService
 
-MEMBERS = load_members()
+# Isolated public test roster; production still loads only the user's local family.json.
+MEMBERS = {
+    "dad": {"member_id": "dad", "display_name": "爸爸", "profile": "adult"},
+    "qiaqia": {"member_id": "qiaqia", "display_name": "姐姐", "profile": "friend"},
+    "hanghang": {"member_id": "hanghang", "display_name": "弟弟", "profile": "play"},
+}
 NOW = datetime(2026, 10, 14, 12, 0, tzinfo=timezone.utc)
 
 
