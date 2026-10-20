@@ -88,7 +88,7 @@ tangtang_ensure_server() {
   if curl -fsS -o /dev/null --max-time 3 "$url"; then
     return 0
   fi
-  nohup /usr/bin/python3 -m http.server 8080 --bind 127.0.0.1 --directory "$CAT_DIR" >/tmp/cathttp.log 2>&1 &
+  nohup python3 -m http.server 8080 --bind 127.0.0.1 --directory "$CAT_DIR" >/tmp/cathttp.log 2>&1 &
   local attempt
   for attempt in 1 2 3 4 5 6 7 8 9 10; do
     sleep 0.5
@@ -111,9 +111,9 @@ tangtang_ensure_stage() {
 
 tangtang_ensure_pet() {
   tangtang_ensure_server || return $?
-  if ! pgrep -f "Safari.*cat-pet" >/dev/null 2>&1; then
-    open "http://127.0.0.1:8080/cat-pet.html" || return $?
-    ( osascript -e "tell application \\"Safari\\" to if (count of windows) > 0 then set URL of front document to \\"http://127.0.0.1:8080/cat-pet.html\\"" 2>/dev/null & )
+  if ! pgrep -f "Safari.*cat-desktop-pet" >/dev/null 2>&1; then
+    open "http://127.0.0.1:8080/cat-desktop-pet.html" || return $?
+    ( osascript -e "tell application \\"Safari\\" to if (count of windows) > 0 then set URL of front document to \\"http://127.0.0.1:8080/cat-desktop-pet.html\\"" 2>/dev/null & )
   fi
   return 0
 }
@@ -121,3 +121,6 @@ tangtang_ensure_pet() {
 tangtang_projector_on() {
   nc -z -w 3 "$TANGTANG_PROJECTOR_IP" "$TANGTANG_AIRPLAY_PORT" 2>/dev/null
 }
+
+# Local-only fallback for direct file opening.
+tangtang_open_local_pet() { open "file://$CAT_DIR/cat-desktop-pet.html"; }
