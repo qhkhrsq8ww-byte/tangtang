@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 CAT_DIR = Path(__file__).resolve().parent
-ROOT = CAT_DIR.parents[1]
+ROOT = CAT_DIR.parent if (CAT_DIR.parent / "core").is_dir() else CAT_DIR.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(CAT_DIR) not in sys.path:
