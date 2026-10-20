@@ -36,7 +36,7 @@ while [ $# -gt 0 ]; do
     alarm) ALARM_REQ=1; shift; if [ $# -gt 0 ]; then ALARM_ACTION="$1"; shift; fi;;
     status) STATUS_REQ=1; shift;;
     chat) CHAT_REQ=1; shift;;
-    alarm) ALARM_REQ=1; shift;;
+    alarm) ALARM_REQ=1; shift; if [ $# -gt 0 ]; then ALARM_ACTION="$1"; shift; fi;;
     *) TEXT="$1"; shift;;
   esac
 done
