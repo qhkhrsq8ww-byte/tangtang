@@ -20,13 +20,24 @@ def run_due(
     The callback returns True only when its delivery command completed successfully.
     It cannot prove a human heard the reminder; callers should phrase status honestly.
     """
-    counts = {"claimed": 0, "succeeded": 0, "failed": 0}
+    counts = {"claimed": 0, "succeeded": 0, "failed": 0, "deferred": 0}
     seen: set[str] = set()
     for viewer_id in member_ids:
         for candidate in service.due_tasks(now=now, viewer_id=viewer_id):
             if candidate.task_id in seen or candidate.owner_member_id != viewer_id:
                 continue
             seen.add(candidate.task_id)
+            reason = "private_reminder_requires_private_channel" if candidate.visibility != "FAMILY" else (
+                defer_reason(candidate) if defer_reason else None
+            )
+            if reason:
+                service.defer_delivery(
+                    candidate.task_id,
+                    owner_member_id=candidate.owner_member_id,
+                    reason=reason,
+                )
+                counts["deferred"] += 1
+                continue
             claimed = service.claim_due(
                 candidate.task_id, owner_member_id=candidate.owner_member_id, now=now
             )
