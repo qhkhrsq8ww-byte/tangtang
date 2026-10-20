@@ -18,3 +18,6 @@ export TANGTANG_AIRPLAY_PORT="61949"
 
 # V4 runtime is the default conversation path.
 export TANGTANG_V4_PIPELINE=1
+
+# Optional alarm music override; defaults to bundled local audio.
+# export TANGTANG_ALARM_MUSIC="/path/to/local/alarm-music.mp3"
