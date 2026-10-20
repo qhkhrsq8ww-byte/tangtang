@@ -133,16 +133,6 @@ class PrivacyPipeline:
             raise PrivacyError("SafeLogger leaked PRIVATE / unknown utterance")
 
         result = IngestResult(event=event, decision=decision)
-        # Safety disclosures are actionable events, not ordinary memories.
-        # Record only a risk category; do not retain the raw disclosure in any store.
-        try:
-            from core.security.escalation import classify_risk, record_safety_alert
-            risk_category = classify_risk(utterance)
-        except Exception:
-            risk_category = None
-        if risk_category:
-            record_safety_alert(risk_category, member_id=decision.member_id, event_id=event.id)
-            return result
         if decision.privacy == "PRIVATE" and decision.member_id and store_private_memory:
             put = isolate(lambda: self.stores.private.put(
                 member_id=decision.member_id,
