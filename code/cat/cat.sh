@@ -41,6 +41,12 @@ brain_say(){
   fi
 }
 
+if [ "${1:-}" = "memory" ]; then
+  shift
+  /usr/bin/python3 "$CAT_DIR/cat-memory.py" "${@:-today}"
+  exit $?
+fi
+
 if [ "$STATUS_REQ" = "1" ]; then
   /usr/bin/python3 "$CAT_DIR/cat-brain.py" status
   exit 0
