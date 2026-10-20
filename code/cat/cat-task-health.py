@@ -84,6 +84,8 @@ def inspect(home: Path, *, now: datetime | None = None, cron_text: str | None = 
         issues.append("last_delivery_run_not_ok")
     if counts["failed"]:
         issues.append("failed_tasks_need_review")
+    if counts["needs_confirmation"]:
+        issues.append("deferred_tasks_need_followup")
     if log_error:
         issues.append(log_error)
 
