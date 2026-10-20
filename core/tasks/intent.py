@@ -92,6 +92,15 @@ def _clean_title(text: str) -> str:
     return title
 
 
+def looks_like_task_intent(text: str) -> bool:
+    utterance = (text or "").strip()
+    return (
+        any(marker in utterance for marker in ADD_MARKERS + LIST_MARKERS)
+        or DONE_RE.match(utterance) is not None
+        or CANCEL_RE.match(utterance) is not None
+    )
+
+
 def handle_voice_task(
     text: str,
     *,
