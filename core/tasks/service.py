@@ -365,7 +365,7 @@ class TaskService:
 
     def reschedule(self, task_id: str, *, owner_member_id: str, due_at: str, timezone_name: str | None = None) -> Task:
         task = self._require_owner(task_id, owner_member_id)
-        if task.status not in {"proposed", "needs_confirmation", "scheduled", "failed"}:
+        if task.status not in {"proposed", "needs_confirmation", "scheduled", "delivered", "failed"}:
             raise ValueError("task is not reschedulable in its current status")
         due = _parse_aware(due_at)
         if due is None:
