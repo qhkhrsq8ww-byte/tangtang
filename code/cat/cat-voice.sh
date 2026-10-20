@@ -17,6 +17,13 @@ case "$PROFILE" in
 esac
 export TANGTANG_PROFILE="$PROFILE"
 
+# Unified policy gate runs before microphone capture / STT.
+GATE="$("$CAT_DIR/tangtang-speak-gate.py" --channel voice --member "${TANGTANG_SPEAKER:-unknown}" 2>/dev/null || true)"
+if [ "$GATE" != "speak" ]; then
+  rm -f "$PCM"
+  exit 0
+fi
+
 echo "🎤 糖糖在听...（${DUR}秒，${PROFILE}模式）"
 if ! "$CAT_DIR/cat-listen.sh" "$DUR" "$PCM" >/dev/null 2>&1; then
   echo "❌ 麦克风录音失败"
@@ -30,9 +37,8 @@ echo "👤 识别状态: $WHO"
 echo "🧠 识别中..."
 TEXT=$("$CAT_DIR/cat-stt-baidu.sh" "$PCM" 2>/dev/null | tr -d '\n')
 if [ -z "$TEXT" ]; then
-  "$CAT_DIR/cat-say.sh" "没听清，再说一次好不好？" cute
   rm -f "$PCM"
-  exit 0
+  exit 1
 fi
 
 echo "   你说: $TEXT"
