@@ -51,6 +51,19 @@ class TestVoiceTaskIntent(unittest.TestCase):
             self.assertEqual(len(service.list_tasks(viewer_id="hanghang")), 1)
             self.assertEqual(service.list_tasks(viewer_id="qiaqia"), [])
 
+    def test_family_visibility_requires_explicit_sharing_phrase(self):
+        with tempfile.TemporaryDirectory() as home:
+            handle_voice_task("提醒我明天晚上八点整理家庭作业", owner_member_id="hanghang",
+                              members=MEMBERS, home=home, now=NOW)
+            handle_voice_task("提醒我全家一起明天晚上八点整理客厅", owner_member_id="dad",
+                              members=MEMBERS, home=home, now=NOW)
+            service = TaskService(home=home, persist=True, members=MEMBERS)
+            dad_rows = service.list_tasks(viewer_id="dad")
+            child_rows = service.list_tasks(viewer_id="hanghang")
+            self.assertEqual(dad_rows[0].visibility, "FAMILY")
+            self.assertEqual(child_rows[0].visibility, "PRIVATE")
+            self.assertNotIn("全家一起", dad_rows[0].title)
+
     def test_missing_time_asks_for_confirmation_and_unknown_identity_does_not_store(self):
         with tempfile.TemporaryDirectory() as home:
             reply = handle_voice_task("提醒我做作业", owner_member_id="hanghang",
