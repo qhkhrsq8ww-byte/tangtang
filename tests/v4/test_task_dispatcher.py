@@ -41,7 +41,7 @@ class TestReminderDispatcher(unittest.TestCase):
             deliver=lambda task: delivered.append(task.task_id) or True,
             now=self.now,
         )
-        self.assertEqual(result, {"claimed": 1, "succeeded": 1, "failed": 0, "deferred_private": 0})
+        self.assertEqual(result, {"claimed": 1, "succeeded": 1, "failed": 0, "deferred": 0})
         self.assertEqual(delivered, [self.task.task_id])
         self.assertEqual(self.service.get_task(self.task.task_id, viewer_id="child").status, "done")
         second = run_due(
@@ -98,10 +98,24 @@ class TestReminderDispatcher(unittest.TestCase):
             now=self.now,
         )
         self.assertEqual(delivered, [self.task.task_id])  # only FAMILY task
-        self.assertEqual(result["deferred_private"], 1)
+        self.assertEqual(result["deferred"], 1)
         stored = self.service.get_task(private.task_id, viewer_id="child")
         self.assertEqual(stored.status, "needs_confirmation")
         self.assertEqual(stored.result, "private_reminder_requires_private_channel")
+
+    def test_family_reminder_is_deferred_when_quiet_hours_policy_says_so(self):
+        delivered = []
+        result = run_due(
+            self.service, member_ids=self.members,
+            deliver=lambda task: delivered.append(task.task_id) or True,
+            defer_reason=lambda task: "quiet_hours" if task.visibility == "FAMILY" else None,
+            now=self.now,
+        )
+        self.assertEqual(delivered, [])
+        self.assertEqual(result["deferred"], 1)
+        stored = self.service.get_task(self.task.task_id, viewer_id="child")
+        self.assertEqual(stored.status, "needs_confirmation")
+        self.assertEqual(stored.result, "quiet_hours")
 
     def test_private_task_is_only_dispatched_for_its_owner(self):
         delivered = []
@@ -121,7 +135,7 @@ class TestReminderDispatcher(unittest.TestCase):
         result = run_due(
             self.service, member_ids=self.members, deliver=explode, now=self.now,
         )
-        self.assertEqual(result, {"claimed": 1, "succeeded": 0, "failed": 1, "deferred_private": 0})
+        self.assertEqual(result, {"claimed": 1, "succeeded": 0, "failed": 1, "deferred": 0})
         failed = self.service.get_task(self.task.task_id, viewer_id="child")
         self.assertEqual(failed.status, "failed")
         self.assertEqual(failed.result, "delivery_command_failed")
