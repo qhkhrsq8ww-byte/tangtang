@@ -38,7 +38,7 @@ class TestCoreHasNoForbiddenClients(unittest.TestCase):
         self.assertEqual(hits, [])
 
     def test_family_json_not_rewritten_this_branch(self):
-        family = (ROOT / "data" / "family.json").read_text(encoding="utf-8")
+        family = (ROOT / "tests" / "fixtures" / "family.json").read_text(encoding="utf-8")
         self.assertIn('"display_name": "洽洽"', family)
         self.assertIn('"display_name": "航航"', family)
         self.assertIn('"member_id": "qiaqia"', family)
