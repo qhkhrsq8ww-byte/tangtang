@@ -80,7 +80,7 @@ def inspect(home: Path, *, now: datetime | None = None, cron_text: str | None = 
         issues.append("no_delivery_run_record")
     elif age_seconds is not None and age_seconds > 180:
         issues.append("last_delivery_run_is_stale")
-    if last and last.get("outcome") not in {"ok", "skipped"}:
+    if last and last.get("outcome") != "ok":
         issues.append("last_delivery_run_not_ok")
     if counts["failed"]:
         issues.append("failed_tasks_need_review")
