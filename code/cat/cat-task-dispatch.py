@@ -15,7 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from core.adapters.family_loader import load_members
-from core.memory.paths import tangtang_home
+from tangtang_paths import data_dir
 from core.tasks.dispatcher import run_due
 from core.tasks.service import TaskService
 
@@ -42,11 +42,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="糖糖本地到期提醒派发器")
     parser.add_argument("--deliver", action="store_true", help="实际调用本机语音播放；默认仅预览")
     args = parser.parse_args()
+    home = Path(data_dir())
+    os.environ.setdefault("TANGTANG_HOME", str(home))
+    os.environ.setdefault("TANGTANG_DATA_DIR", str(home))
     members = load_members()
     if not members:
         print("未读取到家庭成员配置；未执行提醒。", file=sys.stderr)
         return 2
-    home = tangtang_home()
     service = TaskService(home=home, persist=True, members=members)
 
     if not args.deliver:
