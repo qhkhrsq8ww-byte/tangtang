@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import os
-import os
 import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-FIXTURE_FAMILY = ROOT / "tests" / "fixtures" / "family.test.json"
+FIXTURE_FAMILY = ROOT / "tests" / "fixtures" / "family.json"
 os.environ.setdefault("TANGTANG_FAMILY_FILE", str(FIXTURE_FAMILY))
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 if __name__ == "__main__":
     # All CI tests use a synthetic roster; never depend on a real family.json.
-    os.environ["TANGTANG_FAMILY_FILE"] = str(ROOT / "tests" / "fixtures" / "family.json")
+    os.environ["TANGTANG_FAMILY_FILE"] = str(FIXTURE_FAMILY)
     suite = unittest.defaultTestLoader.discover(
         start_dir=str(Path(__file__).parent),
         pattern="test_*.py",
