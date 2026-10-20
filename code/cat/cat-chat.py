@@ -256,6 +256,70 @@ def _may_speak_now(obs):
         return False
 
 
+def _resolve_speaker_member():
+    candidate = speaker_id()
+    try:
+        from core.identity.resolver import IdentityResolver
+        from core.adapters.family_loader import load_members
+        resolved = IdentityResolver(load_members()).resolve({"label": candidate, "member_id": candidate})
+        if resolved:
+            return resolved, candidate
+    except Exception:
+        pass
+    return (None, candidate)
+
+
+def _infer_learn_tag(text):
+    value = (text or "").lower()
+    if any(word in value for word in ("难过", "伤心", "委屈", "害怕", "欺负", "生气", "开心")):
+        return "emotion"
+    if any(word in value for word in ("作业", "功课", "考试", "上课", "老师")):
+        return "homework"
+    return "conversation"
+
+
+def _learn_turn(text, event_tag=None, **kwargs):
+    # Keep only a category counter; never place the utterance itself in trend storage.
+    try:
+        from core.memory.habit_trends import HabitTrendStore
+        member_id, _display = _resolve_speaker_member()
+        if not member_id:
+            return None
+        store = HabitTrendStore(home=DATA_DIR, persist=True)
+        return store.record(member_id=member_id, tag=event_tag or _infer_learn_tag(text))
+    except Exception:
+        return None
+
+
+def _private_cli_reply(text, observation=None, model=DEFAULT_MODEL, llm=None):
+    obs = dict(observation or {})
+    if looks_risky(text):
+        _escalate_risk(text)
+        emit_character_state(text, SAFE_REPLY)
+        print(SAFE_REPLY)
+        return SAFE_REPLY
+    try:
+        from core.adapters.chat_adapter import ChatAdapter
+        from core.adapters.family_loader import load_members
+        adapter = ChatAdapter(
+            members=load_members(),
+            llm=llm or _runtime_llm(model=model),
+            allow_private_llm=os.environ.get("TANGTANG_ALLOW_PRIVATE_LLM") == "1",
+            allow_unknown_llm=os.environ.get("TANGTANG_ALLOW_UNKNOWN_LLM") == "1",
+            looks_risky=looks_risky,
+            sanitize=sanitize_output,
+        )
+        turn = adapter.turn(text, obs)
+        reply = turn.action.text if turn.action and turn.action.text else FALLBACK_REPLY
+        emit_character_state(text, reply)
+        _learn_turn(text, event_tag=_infer_learn_tag(text))
+        print(reply)
+        return reply
+    except Exception:
+        print(FALLBACK_REPLY)
+        return FALLBACK_REPLY
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("text", nargs="?", default="", help="小朋友说的话")
