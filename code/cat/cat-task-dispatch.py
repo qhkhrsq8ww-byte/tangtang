@@ -38,7 +38,7 @@ def write_health(home: Path, *, mode: str, outcome: str, stats=None, note: str =
     }
     try:
         with path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(row, ensure_ascii=False) + "\\n")
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
         os.chmod(path, 0o600)
     except OSError:
         print("无法写入提醒运行记录。", file=sys.stderr)
