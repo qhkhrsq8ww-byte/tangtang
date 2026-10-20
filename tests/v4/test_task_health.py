@@ -10,7 +10,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-SCRIPT = ROOT / "code" / "cat" / "cat-task-health.py"
+CAT_DIR = ROOT / "code" / "cat"
+if str(CAT_DIR) not in sys.path:
+    sys.path.insert(0, str(CAT_DIR))
+SCRIPT = CAT_DIR / "cat-task-health.py"
 spec = importlib.util.spec_from_file_location("cat_task_health", SCRIPT)
 health = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(health)
