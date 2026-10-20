@@ -20,13 +20,13 @@ release_capture_lock() {
     fi
   fi
 }
-cleanup_recording() {
+release_capture_lock() {
   if [ "$LOCK_ACQUIRED" = "1" ] && [ "$RECORDING_COMPLETE" != "1" ]; then
     rm -f "$OUT"
   fi
   release_capture_lock
 }
-trap cleanup_recording EXIT
+trap release_capture_lock EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
