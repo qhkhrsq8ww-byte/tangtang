@@ -162,6 +162,7 @@ class TestReminderDispatcher(unittest.TestCase):
             self.task.task_id, owner_member_id="child", success=True,
         )
         self.assertEqual(delivered.status, "delivered")
+        self.assertIsNone(delivered.completed_at, "delivery is not user-confirmed completion")
         with self.assertRaises(ValueError):
             self.service.finish_delivery(
                 self.task.task_id, owner_member_id="child", success=True,
