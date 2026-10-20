@@ -302,6 +302,19 @@ class TaskService:
         self._save()
         return task
 
+    def defer_private_delivery(
+        self, task_id: str, *, owner_member_id: str, reason: str = "private_reminder_requires_private_channel"
+    ) -> Task:
+        """Do not speak a PRIVATE reminder into a shared room without a private channel."""
+        task = self._require_owner(task_id, owner_member_id)
+        if task.status != "scheduled":
+            raise ValueError("only a scheduled task can be deferred")
+        task.status = "needs_confirmation"
+        task.updated_at = _iso_now(self._clock)
+        task.result = str(reason or "private_reminder_requires_private_channel")[:300]
+        self._save()
+        return task
+
     def recover_stale_running(
         self, *, older_than: timedelta = timedelta(minutes=10), now: datetime | None = None
     ) -> int:
