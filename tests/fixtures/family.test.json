@@ -1,0 +1,11 @@
+{
+  "version": "2.0",
+  "family_id": "tangtang-test-family",
+  "members": [
+    {"member_id":"grandpa","display_name":"爷爷","relation":"grandfather","profile":"elder","permissions":{"self_private":true,"family_summary":true}},
+    {"member_id":"grandma","display_name":"奶奶","relation":"grandmother","profile":"elder","permissions":{"self_private":true,"family_summary":true}},
+    {"member_id":"dad","display_name":"爸爸","relation":"father","profile":"adult","permissions":{"self_private":true,"family_summary":true}},
+    {"member_id":"qiaqia","display_name":"洽洽","relation":"child","profile":"friend","age":12,"permissions":{"self_private":true,"family_summary":false}},
+    {"member_id":"hanghang","display_name":"航航","relation":"child","profile":"play","age":9,"permissions":{"self_private":true,"family_summary":false}}
+  ]
+}
