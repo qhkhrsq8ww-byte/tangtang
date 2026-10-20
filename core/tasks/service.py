@@ -18,7 +18,7 @@ from core.memory.paths import resolve_under, tangtang_home
 
 STATUSES = frozenset({
     "proposed", "needs_confirmation", "scheduled", "running",
-    "done", "failed", "cancelled",
+    "delivered", "done", "failed", "cancelled",
 })
 KINDS = frozenset({"reminder", "follow_up", "commitment", "task"})
 VISIBILITIES = frozenset({"PRIVATE", "FAMILY"})
@@ -355,7 +355,8 @@ class TaskService:
         if task.status != "running":
             raise ValueError("only a running task can finish delivery")
         now = _iso_now(self._clock)
-        task.status = "done" if success else "failed"
+        # "delivered" means the local adapter returned success; only explicit user feedback is "done".
+        task.status = "delivered" if success else "failed"
         task.updated_at = now
         task.completed_at = now if success else None
         task.result = (str(result or ("delivery_command_succeeded" if success else "delivery_failed")).strip()[:300] or None)
