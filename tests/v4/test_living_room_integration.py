@@ -55,8 +55,8 @@ class TestLivingRoomPolicy(unittest.TestCase):
             pipeline=PrivacyPipeline(members=MEMBERS, interrupt=policy),
             tts=TTSAdapter(speaker=spoken.append),
         )
-        first = rt.handle_living_room("手机", member_id="child_9", observation={"phone_minutes": 43})
-        second = rt.handle_living_room("phone", member_id="child_9", observation={"phone_minutes": 44})
+        first = rt.handle_living_room("手机", member_id="child_9", observation={"phone_minutes": 43, "interactive": True, "presence_home": True})
+        second = rt.handle_living_room("phone", member_id="child_9", observation={"phone_minutes": 44, "interactive": True, "presence_home": True})
         self.assertEqual(first.event.type, "phone.usage")
         self.assertEqual(first.decision, "SPEAK")
         self.assertTrue(first.event_id.startswith("evt_"))
