@@ -21,3 +21,4 @@ export TANGTANG_V4_PIPELINE=1
 
 # Optional alarm music override; defaults to bundled local audio.
 # export TANGTANG_ALARM_MUSIC="/path/to/local/alarm-music.mp3"
+# Bundled fallback includes assets/alarm_light.wav.
