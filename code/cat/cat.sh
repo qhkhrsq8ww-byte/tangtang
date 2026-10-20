@@ -53,7 +53,7 @@ if [ "$CHAT_REQ" = "1" ]; then
   if [ -z "$TEXT" ]; then
     TEXT="糖糖，我来啦"
   fi
-  reply="$(/usr/bin/python3 "$CAT_DIR/cat-chat.py" "$TEXT")"
+  TANGTANG_V4_PIPELINE=1 reply="$(TANGTANG_V4_PIPELINE=1 /usr/bin/python3 "$CAT_DIR/cat-chat.py" "$TEXT")"
   echo "[idle] $reply" > "$MOOD_FILE"
   "$CAT_DIR/cat-say.sh" "$reply" cute
   echo "[糖糖·云端对话] 回复：$reply"
@@ -87,7 +87,7 @@ case "$MODE" in
     ;;
   pet)
     tangtang_ensure_server
-    open "http://127.0.0.1:8080/cat-pet.html"
+    tangtang_ensure_pet || exit $?
     osascript -e "tell application \"Safari\" to if (count of windows) > 0 then set URL of front document to \"http://127.0.0.1:8080/cat-pet.html\"" 2>/dev/null
     if ! system_profiler SPDisplaysDataType 2>/dev/null | grep -q "Mirror: On"; then
       echo "提示：未检测到镜像。点菜单栏『屏幕镜像』选投影；连上后糖糖自动上屏，不弹窗遮挡。"
