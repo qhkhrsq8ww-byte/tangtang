@@ -12,6 +12,9 @@ LOCK_ACQUIRED=0
 RECORDING_COMPLETE=0
 
 release_capture_lock() {
+  if [ "$LOCK_ACQUIRED" = "1" ] && [ "$RECORDING_COMPLETE" != "1" ]; then
+    rm -f "$OUT"
+  fi
   if [ "$LOCK_ACQUIRED" = "1" ] && [ -d "$LOCK_DIR" ]; then
     local lock_pid=""
     [ -f "$LOCK_DIR/pid" ] && lock_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
@@ -19,12 +22,6 @@ release_capture_lock() {
       rm -rf "$LOCK_DIR"
     fi
   fi
-}
-release_capture_lock() {
-  if [ "$LOCK_ACQUIRED" = "1" ] && [ "$RECORDING_COMPLETE" != "1" ]; then
-    rm -f "$OUT"
-  fi
-  release_capture_lock
 }
 trap release_capture_lock EXIT
 trap 'exit 130' INT
