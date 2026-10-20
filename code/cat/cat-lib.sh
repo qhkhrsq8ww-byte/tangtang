@@ -24,7 +24,7 @@ tangtang_ffmpeg() {
   fi
 }
 
-# 播放音频；按真实秒数超时，避免 sleep 0.3 却 +3 导致约 12 秒被掐断
+# 播放音频：保留播放器真实退出状态，超时则终止并返回失败
 tangtang_play_audio() {
   local f="$1"
   local limit="${2:-40}"
@@ -37,37 +37,87 @@ tangtang_play_audio() {
     sleep 0.3
     now=$(date +%s)
     if [ $((now - start)) -ge "$limit" ]; then
-      kill -9 "$ap" 2>/dev/null
-      break
+      kill -TERM "$ap" 2>/dev/null || true
+      wait "$ap" 2>/dev/null || true
+      return 124
     fi
   done
-  wait "$ap" 2>/dev/null
-  return 0
+  wait "$ap"
+  return $?
+}
+
+TANGTANG_TTS_LOCK_DIR=""
+tangtang_tts_unlock() {
+  local lock="${TANGTANG_TTS_LOCK_DIR:-${TMPDIR:-/tmp}/tangtang-tts-output.lock}"
+  if [ -d "$lock" ]; then
+    local lock_pid=""
+    [ -f "$lock/pid" ] && lock_pid="$(cat "$lock/pid" 2>/dev/null || true)"
+    if [ "$lock_pid" = "$$" ]; then
+      rm -rf "$lock"
+    fi
+  fi
+}
+tangtang_tts_lock() {
+  local lock="${TMPDIR:-/tmp}/tangtang-tts-output.lock"
+  if mkdir "$lock" 2>/dev/null; then
+    TANGTANG_TTS_LOCK_DIR="$lock"
+    printf '%s\\n' "$$" > "$lock/pid"
+    trap tangtang_tts_unlock EXIT
+    return 0
+  fi
+  local lock_pid=""
+  [ -f "$lock/pid" ] && lock_pid="$(cat "$lock/pid" 2>/dev/null || true)"
+  if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
+    echo "糖糖语音正在播放，避免重叠播放" >&2
+    return 75
+  fi
+  local stale_dir="$lock.stale.$$"
+  if mv "$lock" "$stale_dir" 2>/dev/null; then rm -rf "$stale_dir"; fi
+  if mkdir "$lock" 2>/dev/null; then
+    TANGTANG_TTS_LOCK_DIR="$lock"
+    printf '%s\\n' "$$" > "$lock/pid"
+    trap tangtang_tts_unlock EXIT
+    return 0
+  fi
+  echo "糖糖语音正在播放，避免重叠播放" >&2
+  return 75
 }
 
 tangtang_ensure_server() {
-  if ! curl -s -o /dev/null --max-time 3 "http://127.0.0.1:8080/cat-stage.html"; then
-    nohup /usr/bin/python3 -m http.server 8080 --bind 127.0.0.1 --directory "$CAT_DIR" >/tmp/cathttp.log 2>&1 &
-    sleep 2
+  local url="http://127.0.0.1:8080/cat-stage.html"
+  if curl -fsS -o /dev/null --max-time 3 "$url"; then
+    return 0
   fi
+  nohup /usr/bin/python3 -m http.server 8080 --bind 127.0.0.1 --directory "$CAT_DIR" >/tmp/cathttp.log 2>&1 &
+  local attempt
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 0.5
+    if curl -fsS -o /dev/null --max-time 3 "$url"; then
+      return 0
+    fi
+  done
+  echo "糖糖本地页面服务启动失败" >&2
+  return 1
 }
 
 tangtang_ensure_stage() {
-  tangtang_ensure_server
+  tangtang_ensure_server || return $?
   if ! pgrep -f "Safari.*cat-stage" >/dev/null 2>&1; then
-    open "http://127.0.0.1:8080/cat-stage.html"
-    ( osascript -e "tell application \"Safari\" to if (count of windows) > 0 then set URL of front document to \"http://127.0.0.1:8080/cat-stage.html\"" 2>/dev/null & )
+    open "http://127.0.0.1:8080/cat-stage.html" || return $?
+    ( osascript -e "tell application \\"Safari\\" to if (count of windows) > 0 then set URL of front document to \\"http://127.0.0.1:8080/cat-stage.html\\"" 2>/dev/null & )
   fi
+  return 0
+}
+
+tangtang_ensure_pet() {
+  tangtang_ensure_server || return $?
+  if ! pgrep -f "Safari.*cat-pet" >/dev/null 2>&1; then
+    open "http://127.0.0.1:8080/cat-pet.html" || return $?
+    ( osascript -e "tell application \\"Safari\\" to if (count of windows) > 0 then set URL of front document to \\"http://127.0.0.1:8080/cat-pet.html\\"" 2>/dev/null & )
+  fi
+  return 0
 }
 
 tangtang_projector_on() {
   nc -z -w 3 "$TANGTANG_PROJECTOR_IP" "$TANGTANG_AIRPLAY_PORT" 2>/dev/null
-}
-
-# 2026-10-19 补：TTS 输出锁（与 repo cat-talk.sh 依赖对齐）
-tangtang_tts_lock() {
-  local lock=/tmp/cat_tts.lock
-  exec 9>"$lock" 2>/dev/null || return 0
-  if flock -w 5 9 2>/dev/null; then return 0; fi
-  return 0
 }
