@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 MOOD_FILE="$CAT_DIR/cat-mood.txt"
 TEXT=""
 MEMORY_REQ=0
+ALARM_REQ=0
+ALARM_ACTION=""
 STATUS_REQ=0
 CHAT_REQ=0
 ALARM_REQ=0
@@ -31,6 +33,7 @@ while [ $# -gt 0 ]; do
     -s) FORCE_STAGE=1; shift;;
     -p) FORCE_PET=1; shift;;
     memory) MEMORY_REQ=1; shift;;
+    alarm) ALARM_REQ=1; shift; if [ $# -gt 0 ]; then ALARM_ACTION="$1"; shift; fi;;
     status) STATUS_REQ=1; shift;;
     chat) CHAT_REQ=1; shift;;
     alarm) ALARM_REQ=1; shift;;
@@ -46,6 +49,14 @@ brain_say(){
     "$CAT_DIR/cat-talk.sh" "$event"
   fi
 }
+
+if [ "$ALARM_REQ" = "1" ]; then
+  case "$ALARM_ACTION" in
+    list) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" list; exit $?;;
+    cancel) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" cancel_all; exit $?;;
+    *) echo "用法: ./cat.sh alarm list | alarm cancel" >&2; exit 2;;
+  esac
+fi
 
 if [ "$MEMORY_REQ" = "1" ]; then
   /usr/bin/python3 "$CAT_DIR/cat-memory.py" "${TEXT:-today}"
