@@ -9,7 +9,7 @@
 """
 import sys, os, asyncio
 
-TEXT = sys.argv[1] if len(sys.argv) > 1 else "汪汪"
+DEFAULT_VOICE = os.environ.get("TANGTANG_EDGE_VOICE", "zh-CN-XiaoxiaoNeural")\nTEXT = sys.argv[1] if len(sys.argv) > 1 else "汪汪"
 
 # rate: 整数 → 转成 "+5%" 或 "-10%"
 r_raw = int(sys.argv[2]) if len(sys.argv) > 2 else -10
@@ -23,7 +23,7 @@ OUT = "/tmp/cat_tts.mp3"
 
 async def main():
     import edge_tts
-    tts = edge_tts.Communicate(TEXT, "zh-CN-XiaoxiaoNeural", rate=RATE, pitch=PITCH)
+    tts = edge_tts.Communicate(TEXT, DEFAULT_VOICE, rate=RATE, pitch=PITCH)
     await tts.save(OUT)
     print(f"OK {OUT} ({os.path.getsize(OUT)}B) rate={RATE} pitch={PITCH}")
 
