@@ -46,7 +46,7 @@ fi
 echo "💬 糖糖思考中..."
 REPLY=$(TANGTANG_PROFILE="$PROFILE" TANGTANG_SPEAKER="$WHO" /usr/bin/python3 "$CAT_DIR/cat-chat.py" "$TEXT" 2>/dev/null | tr -d '\n')
 if [ -z "$REPLY" ]; then
-  REPLY="糖糖刚才有点走神啦，我们再聊聊？"
+  REPLY="汪汪～ 糖糖刚刚没听清。"
 fi
 
 echo "   糖糖: $REPLY"
