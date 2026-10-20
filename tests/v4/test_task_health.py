@@ -51,6 +51,19 @@ class TestTaskHealth(unittest.TestCase):
             self.assertIn("deferred_tasks_need_followup", report["issues"])
             self.assertEqual(report["status"], "attention_required")
 
+    def test_recent_skipped_run_is_not_healthy(self):
+        with tempfile.TemporaryDirectory() as td:
+            home = Path(td)
+            log = home / "tasks" / "dispatch-health.jsonl"
+            log.parent.mkdir(parents=True)
+            now = datetime(2026, 10, 21, 9, tzinfo=timezone.utc)
+            log.write_text('{"ts":"2026-10-21T08:59:30+00:00","mode":"deliver","outcome":"skipped","note":"dispatcher_lock_busy"}\n',
+                           encoding="utf-8")
+            report = health.inspect(home, now=now,
+                                    cron_text="* * * * * cat-task-dispatch.py --deliver")
+            self.assertIn("last_delivery_run_not_ok", report["issues"])
+            self.assertEqual(report["status"], "attention_required")
+
     def test_failed_task_is_flagged_without_exposing_title(self):
         with tempfile.TemporaryDirectory() as td:
             home = Path(td)
