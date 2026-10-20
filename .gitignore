@@ -48,3 +48,6 @@ data/school_calendar.txt
 data/rest_days.txt
 data/habit_growth.json
 data/corpus/child_companion_benchmark_v1.json
+
+# 路由器凭据（cat-router.py）
+code/cat/.router_key
