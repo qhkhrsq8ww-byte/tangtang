@@ -22,7 +22,7 @@ def get_password():
 def login():
     import time, random, subprocess
     # 1) 设备专属 key（web 页面）
-    html = opener.open(ROUTER + "/cgi-bin/luci/web", timeout=10).read().decode("utf-8", "ignore")
+    html = opener.open(ROUTER + "/cgi-bin/luci/web", timeout=25).read().decode("utf-8", "ignore")
     m = re.search(r"key:\s*'([^']+)'", html)
     if not m:
         raise RuntimeError("device key not found")
@@ -39,7 +39,7 @@ def login():
     pwd2 = sha1(nonce + sha1(get_password() + key))
     data = urllib.parse.urlencode({"username": "admin", "password": pwd2,
                                    "logtype": "2", "nonce": nonce}).encode()
-    res = json.loads(opener.open(ROUTER + "/cgi-bin/luci/api/xqsystem/login", data=data, timeout=10).read())
+    res = json.loads(opener.open(ROUTER + "/cgi-bin/luci/api/xqsystem/login", data=data, timeout=25).read())
     if res.get("code") != 0:
         raise RuntimeError("login failed: " + json.dumps(res, ensure_ascii=False)[:120])
     stok = (re.search(r";stok=([^/&]+)", res.get("url", "")) or [None, res.get("token", "")])[1]
@@ -47,7 +47,7 @@ def login():
 
 def api(stok, path):
     u = "%s/cgi-bin/luci/;stok=%s%s" % (ROUTER, stok, path)
-    return json.loads(opener.open(u, timeout=10).read().decode("utf-8", "ignore"))
+    return json.loads(opener.open(u, timeout=25).read().decode("utf-8", "ignore"))
 
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
@@ -72,12 +72,11 @@ def main():
         mac, up, down = sys.argv[2], sys.argv[3], sys.argv[4]
         r = api(stok, "/api/misystem/set_speedlimit?mac=%s&up=%s&down=%s" % (mac, up, down))
         print(json.dumps(r, ensure_ascii=False)[:300])
-    elif cmd == "block":
-        r = api(stok, "/api/misystem/set_wifi_unblock" if False else "/api/misystem/block?mac=" + sys.argv[2])
-        print(json.dumps(r, ensure_ascii=False)[:300])
-    elif cmd == "unblock":
-        r = api(stok, "/api/misystem/unblock?mac=" + sys.argv[2])
-        print(json.dumps(r, ensure_ascii=False)[:300])
+    elif cmd in ("block", "unblock"):
+        mac = sys.argv[2]
+        wan = 0 if cmd == "block" else 1   # 固件官方约定：wan=0 禁止上网，wan=1 恢复
+        r = api(stok, "/api/xqsystem/set_mac_filter?mac=%s&wan=%d" % (mac, wan))
+        print(json.dumps(r, ensure_ascii=False)[:200])
     else:
         print(__doc__)
 
