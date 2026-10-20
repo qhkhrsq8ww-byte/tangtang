@@ -72,7 +72,12 @@ DRIFT=0
 for f in "$REPO"/code/cat/*.py "$REPO"/code/cat/*.sh "$REPO"/code/cat/*.mjs; do
   b=$(basename "$f")
   case "$b" in cat-stt-config.sh) continue;; esac
-  [ -f "$LIVE/$b" ] || continue
+  [ "$b" = "cat-stt-config.sh" ] && continue
+  if [ ! -f "$LIVE/$b" ]; then
+    DRIFT=1
+    echo "  MISSING: $b (repo 有、live 缺失)"
+    continue
+  fi
   cmp -s "$f" "$LIVE/$b" || { DRIFT=1; echo "  DRIFT: $b"; }
 done
 [ "$DRIFT" = "0" ] && ok "脚本零漂移" || bad "存在漂移文件（见上）"
