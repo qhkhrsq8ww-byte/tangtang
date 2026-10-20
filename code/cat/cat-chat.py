@@ -231,9 +231,15 @@ def brain_fallback(user_text):
 
 
 def _alarm_reply(text):
-    # Alarm parsing is handled by the dedicated alarm command; this CLI only
-    # reserves a hook so alarm intents can be routed before ordinary chat.
-    return None
+    try:
+        result = subprocess.run(
+            ["/usr/bin/python3", os.path.join(CAT_DIR, "cat-alarm.py"), "handle", text],
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+        line = (result.stdout or "").strip()
+        return line if result.returncode == 0 and line else None
+    except Exception:
+        return None
 
 
 def _live_obs():
@@ -249,8 +255,12 @@ def _live_obs():
 
 def _may_speak_now(obs):
     try:
-        from core.policy.speak_gate import decide
-        return decide(obs, channel="chat") == "SPEAK"
+        result = subprocess.run(
+            ["/usr/bin/python3", os.path.join(CAT_DIR, "tangtang-speak-gate.py"),
+             "--channel", "chat", "--member", str((obs or {}).get("member_id") or speaker_id())],
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+        return result.returncode == 0 and (result.stdout or "").strip().lower() == "speak"
     except Exception:
         # Fail closed if the policy gate cannot be evaluated.
         return False
