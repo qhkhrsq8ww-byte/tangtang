@@ -7,7 +7,7 @@
 #       (state/memory/history/habits/mood)永不被覆盖
 # ============================================================
 SRC="$(cd "$(dirname "$0")" && pwd)"
-DST="$HOME/tangtang/cat"
+DST="${TANGTANG_LIVE_DIR:-$HOME/tangtang/cat}"
 [ -d "$DST" ] || { echo "运行目录不存在: $DST" >&2; exit 1; }
 rsync -av \
   --exclude 'bin/' --exclude 'logs/' --exclude '__pycache__/' \
