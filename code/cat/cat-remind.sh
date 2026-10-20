@@ -15,6 +15,13 @@ TANGTANG_LIVING_V4="${TANGTANG_LIVING_V4:-1}"
 case "$EVENT" in
   phone|screen|rest|sitting|meal|exercise|play|sleep|sleepy|home|welcome|away|water|手机|久坐|吃饭|运动|睡觉|回家|离家)
     if [ "$TANGTANG_LIVING_V4" = "1" ]; then
+      # Low-pressure gate: existing habit labels + quiet hours + per-scene cooldown.
+      gate_member="${TANGTANG_MEMBER_ID:-${ARG:-room}}"
+      gate="$("/usr/bin/python3" "$CAT_DIR/cat-proactive-gate.py" check "$EVENT" "$gate_member" 2>/dev/null || true)"
+      case "$gate" in
+        speak\|*) ;;
+        *) echo "主动关怀已抑制：${gate:-gate_unavailable}" >&2; exit 0;;
+      esac
       if [ -n "$ARG" ]; then
         line="$(/usr/bin/python3 "$CAT_DIR/cat-living.py" "$EVENT" "$ARG")"
       else
@@ -34,6 +41,7 @@ case "$EVENT" in
         echo "糖糖语音输出失败或正在播放其它语音，本次提醒跳过" >&2
         exit "$say_status"
       fi
+      /usr/bin/python3 "$CAT_DIR/cat-proactive-gate.py" record "$EVENT" "$gate_member" >/dev/null 2>&1 || true
       exit 0
     fi
     ;;
