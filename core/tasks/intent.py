@@ -158,6 +158,8 @@ def handle_voice_task(
         metadata={"source": "voice_intent", "category": "daily_life"},
     )
     if not due_at:
-        return f"我先记下“{task.title”}。你想让我几点提醒你？例如“明天晚上八点”。"
+        return f"我先记下“{task.title}”。你想让我几点提醒你？例如“明天晚上八点”。"
     visibility_text = "家庭共享" if visibility == "FAMILY" else "只对你可见"
-    return f"好，我会在{due_at}提醒你“{task.title}”。这是{visibility_text}提醒。"
+    local_due = datetime.fromisoformat(due_at).astimezone(ZoneInfo(timezone_name))
+    due_label = local_due.strftime("%m月%d日 %H:%M")
+    return f"好，我会在{due_label}提醒你“{task.title}”。这是{visibility_text}提醒。"
