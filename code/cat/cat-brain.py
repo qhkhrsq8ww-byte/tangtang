@@ -420,6 +420,24 @@ def main():
                   "sleepy": "sleepy", "low": "caring"}.get(label, "idle")
     elif event == "say":
         visual = "idle"
+
+    # Keep the legacy presentation bridge in sync with the deterministic brain.
+    # This file contains only a state/action label, never the user's utterance.
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        action_path = os.path.join(DATA_DIR, "cat-presentation-action.json")
+        action_tmp = action_path + ".tmp"
+        with open(action_tmp, "w", encoding="utf-8") as handle:
+            json.dump(
+                {"state": visual, "action": visual, "event": event, "updated_at": now().isoformat(timespec="seconds")},
+                handle,
+                ensure_ascii=False,
+            )
+            handle.write("\n")
+        os.replace(action_tmp, action_path)
+    except OSError:
+        pass
+
     print(f"{text}\t{label}\t{visual}")
 
 
