@@ -9,6 +9,8 @@
 #   ./cat.sh -s               # 强制全屏舞台
 #   ./cat.sh status           # 查看糖糖当前心情状态
 #   ./cat.sh chat "想聊的"     # 云端真对话
+#   ./cat.sh alarm list        # 查看闹铃
+#   ./cat.sh alarm cancel      # 取消全部闹铃
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
@@ -19,6 +21,7 @@ TEXT=""
 MEMORY_REQ=0
 STATUS_REQ=0
 CHAT_REQ=0
+ALARM_REQ=0
 FORCE_VOICE=0
 FORCE_STAGE=0
 FORCE_PET=0
@@ -30,6 +33,7 @@ while [ $# -gt 0 ]; do
     memory) MEMORY_REQ=1; shift;;
     status) STATUS_REQ=1; shift;;
     chat) CHAT_REQ=1; shift;;
+    alarm) ALARM_REQ=1; shift;;
     *) TEXT="$1"; shift;;
   esac
 done
@@ -45,6 +49,15 @@ brain_say(){
 
 if [ "$MEMORY_REQ" = "1" ]; then
   /usr/bin/python3 "$CAT_DIR/cat-memory.py" "${TEXT:-today}"
+  exit $?
+fi
+
+if [ "$ALARM_REQ" = "1" ]; then
+  case "$TEXT" in
+    list) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" list ;;
+    cancel) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" cancel_all ;;
+    *) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$TEXT" ;;
+  esac
   exit $?
 fi
 
