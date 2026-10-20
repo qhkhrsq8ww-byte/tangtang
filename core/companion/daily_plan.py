@@ -104,9 +104,10 @@ class DailyPlanService:
                     try:
                         self.task_service.complete(row["task_id"], owner_member_id=str(member_id),
                                                    result="daily_plan_feedback_completed")
+                        row.pop("task_sync_error", None)
                     except (ValueError, PermissionError):
-                        # A delivery failure must remain visible for review, not block feedback.
-                        pass
+                        # Keep the child's feedback, but surface the mismatch instead of hiding it.
+                        row["task_sync_error"] = "task_completion_sync_failed"
                 self._save()
                 return dict(row)
         raise PermissionError("plan item not found for this member")
