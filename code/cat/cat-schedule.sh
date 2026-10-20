@@ -80,6 +80,7 @@ case "$CMD" in
     echo "今天会响: ./cat-schedule.sh today"
     echo "今日休息四步: ./cat.sh today    ./cat.sh today --preview"
     echo "预览文案: ./cat-schedule.sh preview"
+    echo "本地任务: ./cat.sh task list | ./cat.sh task add \"带水杯\" --due 2026-10-21T08:00:00+08:00"
     echo "谁在客厅: ./cat-presence.sh"
     echo "客厅试听（说一句→开窗）: ./cat-turn.sh"
     echo "预览各场景反应（不开麦）: ./cat-turn.sh --print"
@@ -151,6 +152,8 @@ case "$CMD" in
     echo "TANGTANG_TURN_EVENTS=english"
     echo "# 用户闹铃：每分钟读 cat-alarms.json，到期走 cat-say（默认输出/蓝牙音箱）。静默不挡响。"
     echo "* * * * * $CAT_DIR/cat-alarm.py due --ring"
+    echo "# 本地任务提醒：仅播报 FAMILY 共享任务；PRIVATE 任务与安静时段转为待确认，不在客厅音箱播报。"
+    echo "* * * * * /usr/bin/python3 $CAT_DIR/cat-task-dispatch.py --deliver"
     while read -r line; do
       [ -n "$line" ] || continue
       tangtang_parse_schedule_line "$line"
