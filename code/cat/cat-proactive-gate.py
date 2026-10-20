@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from tangtang_paths import data_dir
 from core.companion.proactive import ProactiveGate
+from core.adapters.family_loader import load_members
 
 
 def main() -> int:
@@ -21,6 +22,13 @@ def main() -> int:
     event = (sys.argv[2] if len(sys.argv) > 2 else "scene").strip()[:80]
     member = (sys.argv[3] if len(sys.argv) > 3 else os.environ.get("TANGTANG_MEMBER_ID", "room")).strip()[:80]
     home = Path(data_dir())
+    members = load_members()
+    # The second CLI argument is sometimes a scene subtype (e.g. lunch/dinner),
+    # not a child ID. Only registered member IDs may key per-person habits/cooldowns.
+    candidate_member = member
+    if candidate_member not in members:
+        member = "room"
+    habit_member = candidate_member if candidate_member in members else ""
     gate = ProactiveGate(home=home, cooldown_minutes=int(os.environ.get("TANGTANG_SCENE_COOLDOWN_MINUTES", "45")))
     now = datetime.now().astimezone()
     if action == "record":
@@ -38,7 +46,7 @@ def main() -> int:
     if habits.is_file():
         try:
             result = subprocess.run(
-                ["/usr/bin/python3", str(habits), "should-speak", event, member],
+                ["/usr/bin/python3", str(habits), "should-speak", event] + ([habit_member] if habit_member else []),
                 capture_output=True, text=True, timeout=5, check=False,
             )
             if result.returncode == 0 and result.stdout.strip().startswith("skip|"):
