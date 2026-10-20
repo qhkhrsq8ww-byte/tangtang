@@ -58,4 +58,8 @@ if [ "$talk_status" -ne 0 ]; then
   exit "$talk_status"
 fi
 # 上学闹铃：Glass 短铃只允许在上面的语音输出成功后继续执行。
+if [ "$EVENT" = "school" ] || [ "$EVENT" = "school_alarm" ]; then
+  tangtang_alarm_chime || exit $?
+  tangtang_alarm_music || exit $?
+fi
 exit 0
