@@ -72,6 +72,7 @@ if [ -n "$ALARM_LINE" ]; then
     echo "闹铃回复语音播放失败" >&2
     exit "$say_status"
   fi
+  rm -f "$PCM"
   exit 0
 fi
 
