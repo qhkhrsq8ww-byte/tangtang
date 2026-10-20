@@ -118,6 +118,34 @@ tangtang_ensure_pet() {
   return 0
 }
 
+tangtang_alarm_music_path() {
+  local candidate="${TANGTANG_ALARM_MUSIC:-}"
+  if [ -n "$candidate" ] && [ -f "$candidate" ]; then
+    printf '%s\n' "$candidate"
+  elif [ -f "$CAT_DIR/assets/wake_music_3min.mp3" ]; then
+    printf '%s\n' "$CAT_DIR/assets/wake_music_3min.mp3"
+  elif [ -f "$CAT_DIR/assets/alarm_light.wav" ]; then
+    printf '%s\n' "$CAT_DIR/assets/alarm_light.wav"
+  else
+    return 1
+  fi
+}
+
+tangtang_alarm_chime() {
+  local chime="/System/Library/Sounds/Glass.aiff"
+  if [ -f "$chime" ] && command -v afplay >/dev/null 2>&1; then
+    afplay "$chime"
+    return $?
+  fi
+  return 0
+}
+
+tangtang_alarm_music() {
+  local music
+  music="$(tangtang_alarm_music_path)" || return 0
+  tangtang_play_audio "$music" "${TANGTANG_ALARM_MUSIC_SECONDS:-30}"
+}
+
 tangtang_projector_on() {
   nc -z -w 3 "$TANGTANG_PROJECTOR_IP" "$TANGTANG_AIRPLAY_PORT" 2>/dev/null
 }
