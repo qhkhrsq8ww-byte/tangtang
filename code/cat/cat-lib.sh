@@ -61,7 +61,7 @@ tangtang_tts_lock() {
   local lock="${TMPDIR:-/tmp}/tangtang-tts-output.lock"
   if mkdir "$lock" 2>/dev/null; then
     TANGTANG_TTS_LOCK_DIR="$lock"
-    printf '%s\\n' "$$" > "$lock/pid"
+    printf '%s\n' "$$" > "$lock/pid"
     trap tangtang_tts_unlock EXIT
     return 0
   fi
@@ -75,7 +75,7 @@ tangtang_tts_lock() {
   if mv "$lock" "$stale_dir" 2>/dev/null; then rm -rf "$stale_dir"; fi
   if mkdir "$lock" 2>/dev/null; then
     TANGTANG_TTS_LOCK_DIR="$lock"
-    printf '%s\\n' "$$" > "$lock/pid"
+    printf '%s\n' "$$" > "$lock/pid"
     trap tangtang_tts_unlock EXIT
     return 0
   fi
