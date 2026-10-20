@@ -110,7 +110,7 @@ case "$MODE" in
   pet)
     tangtang_ensure_server
     tangtang_ensure_pet || exit $?
-    osascript -e "tell application \"Safari\" to if (count of windows) > 0 then set URL of front document to \"http://127.0.0.1:8080/cat-pet.html\"" 2>/dev/null
+    osascript -e "tell application \"Safari\" to if (count of windows) > 0 then set URL of front document to \"http://127.0.0.1:8080/cat-desktop-pet.html\"" 2>/dev/null
     if ! system_profiler SPDisplaysDataType 2>/dev/null | grep -q "Mirror: On"; then
       echo "提示：未检测到镜像。点菜单栏『屏幕镜像』选投影；连上后糖糖自动上屏，不弹窗遮挡。"
     fi
