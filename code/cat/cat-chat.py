@@ -32,7 +32,7 @@ FORBIDDEN_OUTPUT = (
 RISK_MARKERS = (
     "不想活", "自杀", "杀死自己", "伤害自己",
     "想死", "去死", "割腕", "跳楼",
-    "打死", "杀人", "霸凌", "校园暴力",
+    "打死", "杀人", "霸凌", "校园暴力", "欺负", "被欺负", "同学打我", "同学骂我", "威胁我",
     "有人碰我身体", "不要告诉爸", "不要告诉妈", "不要告诉大人",
 )
 
@@ -41,6 +41,15 @@ SAFE_REPLY = (
     "我们一起去找家里的大人对好不好？糖糖陪着你。"
 )
 FALLBACK_REPLY = "汪汪～ 糖糖在呢。"
+
+
+def _llm_timeout_seconds():
+    """Bound network waits so a voice turn cannot hang indefinitely."""
+    try:
+        value = float(os.environ.get("TANGTANG_LLM_TIMEOUT_SECONDS", "10"))
+    except (TypeError, ValueError):
+        value = 10.0
+    return max(1.0, min(value, 20.0))
 
 
 def current_profile():
@@ -109,8 +118,14 @@ def build_persona():
 
 
 def looks_risky(text):
-    t = (text or "").replace(" ", "")
-    return any(m in t for m in RISK_MARKERS)
+    t = (text or "").replace(" ", "").replace("\n", "").replace("\t", "")
+    if any(m in t for m in RISK_MARKERS):
+        return True
+    try:
+        from core.security.escalation import classify_risk
+        return classify_risk(t) is not None
+    except Exception:
+        return False
 
 
 def sanitize_output(text):
@@ -150,23 +165,11 @@ def chat(user_text, model=DEFAULT_MODEL, history=None):
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=90) as r:
+    with urllib.request.urlopen(req, timeout=_llm_timeout_seconds()) as r:
         data = json.loads(r.read().decode("utf-8"))
     content = data["choices"][0]["message"]["content"].strip()
     if not content or content == user_text.strip():
-        payload2 = json.dumps({
-            "model": model, "messages": messages,
-            "max_tokens": 1000, "temperature": 0.9,
-        }).encode("utf-8")
-        req2 = urllib.request.Request(
-            BASE.rstrip("/") + "/chat/completions", data=payload2,
-            headers={"Authorization": "Bearer " + KEY, "Content-Type": "application/json",
-                     "User-Agent": "tangtang-cat/1.0"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req2, timeout=90) as r2:
-            data2 = json.loads(r2.read().decode("utf-8"))
-        content = data2["choices"][0]["message"]["content"].strip()
+        return FALLBACK_REPLY
     return sanitize_output(content)
 
 
