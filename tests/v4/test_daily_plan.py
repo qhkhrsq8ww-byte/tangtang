@@ -36,6 +36,20 @@ class TestDailyPlan(unittest.TestCase):
             self.assertNotIn("transcript", raw.lower())
             self.assertNotIn("utterance", raw.lower())
 
+    def test_timed_plan_links_to_task_service_and_completion_feedback_closes_it(self):
+        with tempfile.TemporaryDirectory() as td:
+            svc = DailyPlanService(home=td, members={"child": {}})
+            item = svc.add(member_id="child", plan_date="2026-10-21",
+                           title="整理书包", category="habit", due_time="19:30")
+            self.assertIsNotNone(item["task_id"])
+            task = svc.task_service.get_task(item["task_id"], viewer_id="child")
+            self.assertEqual(task.status, "scheduled")
+            self.assertEqual(task.visibility, "PRIVATE")
+            svc.feedback(item["plan_id"], member_id="child", result="completed",
+                         habit_label="joined")
+            closed = svc.task_service.get_task(item["task_id"], viewer_id="child")
+            self.assertEqual(closed.status, "done")
+
     def test_member_cannot_update_another_members_plan(self):
         with tempfile.TemporaryDirectory() as td:
             svc = DailyPlanService(home=td, members={"child1": {}, "child2": {}})
