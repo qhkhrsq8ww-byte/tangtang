@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import json
 import os
 import subprocess
 import sys
@@ -22,6 +23,25 @@ from core.tasks.dispatcher import run_due
 from core.tasks.service import TaskService
 
 SAY = CAT_DIR / "cat-say.sh"
+
+
+def write_health(home: Path, *, mode: str, outcome: str, stats=None, note: str = "") -> None:
+    """Append privacy-minimal dispatch telemetry; never write task titles or speech."""
+    path = home / "tasks" / "dispatch-health.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    row = {
+        "ts": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "mode": mode,
+        "outcome": outcome,
+        "stats": stats if isinstance(stats, dict) else {},
+        "note": str(note or "")[:160],
+    }
+    try:
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\\n")
+        os.chmod(path, 0o600)
+    except OSError:
+        print("无法写入提醒运行记录。", file=sys.stderr)
 
 
 @contextmanager
@@ -79,6 +99,7 @@ def main() -> int:
     os.environ.setdefault("TANGTANG_DATA_DIR", str(home))
     members = load_members()
     if not members:
+        write_health(home, mode="deliver" if args.deliver else "preview", outcome="configuration_error", note="no_family_members")
         print("未读取到家庭成员配置；未执行提醒。", file=sys.stderr)
         return 2
     service = TaskService(home=home, persist=True, members=members)
@@ -94,6 +115,7 @@ def main() -> int:
         for task in due:
             print(f"[预览] {task.owner_member_id}: {task.title} ({task.task_id})")
         print(f"到期任务 {len(due)} 项；预览模式未更改任务状态。实际播放请加 --deliver。")
+        write_health(home, mode="preview", outcome="ok", stats={"due": len(due)})
         return 0
 
     def deliver(task):
@@ -126,8 +148,11 @@ def main() -> int:
                 print(f"有 {recovered} 项中断提醒结果不确定，已标记待人工核查；不会自动重播。")
             stats = run_due(service, member_ids=members.keys(), deliver=deliver, defer_reason=defer_reason_for_context, on_defer=notify_deferred)
     except RuntimeError as exc:
+        write_health(home, mode="deliver", outcome="skipped", note="dispatcher_lock_busy")
         print(str(exc), file=sys.stderr)
         return 0
+    outcome = "ok" if stats["failed"] == 0 else "delivery_failed"
+    write_health(home, mode="deliver", outcome=outcome, stats=stats)
     print("糖糖提醒派发结果：" + ", ".join(f"{key}={value}" for key, value in stats.items()))
     return 0 if stats["failed"] == 0 else 1
 
