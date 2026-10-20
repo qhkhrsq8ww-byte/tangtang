@@ -231,6 +231,7 @@ def brain_fallback(user_text):
 
 
 def _alarm_reply(text):
+    # Delegates to cat-alarm.py handle → handle_utterance; no LLM for alarm intents.
     try:
         result = subprocess.run(
             ["/usr/bin/python3", os.path.join(CAT_DIR, "cat-alarm.py"), "handle", text],
