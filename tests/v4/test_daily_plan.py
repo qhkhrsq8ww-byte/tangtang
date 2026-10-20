@@ -50,6 +50,17 @@ class TestDailyPlan(unittest.TestCase):
             closed = svc.task_service.get_task(item["task_id"], viewer_id="child")
             self.assertEqual(closed.status, "done")
 
+    def test_completion_sync_error_is_visible(self):
+        with tempfile.TemporaryDirectory() as td:
+            svc = DailyPlanService(home=td, members={"child": {}})
+            item = svc.add(member_id="child", plan_date="2026-10-21",
+                           title="整理书包", category="habit", due_time="19:30")
+            svc.task_service.cancel(item["task_id"], owner_member_id="child")
+            updated = svc.feedback(item["plan_id"], member_id="child", result="completed",
+                                   habit_label="joined")
+            self.assertEqual(updated["feedback"], "completed")
+            self.assertEqual(updated["task_sync_error"], "task_completion_sync_failed")
+
     def test_member_cannot_update_another_members_plan(self):
         with tempfile.TemporaryDirectory() as td:
             svc = DailyPlanService(home=td, members={"child1": {}, "child2": {}})
