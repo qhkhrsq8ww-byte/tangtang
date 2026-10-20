@@ -31,6 +31,7 @@ class TestReminderDispatcher(unittest.TestCase):
             due_at=(self.now - timedelta(minutes=1)).isoformat(),
             timezone_name="UTC",
             idempotency_key="water-1",
+            visibility="FAMILY",
         )
 
     def test_success_is_recorded_and_not_replayed(self):
@@ -40,7 +41,7 @@ class TestReminderDispatcher(unittest.TestCase):
             deliver=lambda task: delivered.append(task.task_id) or True,
             now=self.now,
         )
-        self.assertEqual(result, {"claimed": 1, "succeeded": 1, "failed": 0})
+        self.assertEqual(result, {"claimed": 1, "succeeded": 1, "failed": 0, "deferred_private": 0})
         self.assertEqual(delivered, [self.task.task_id])
         self.assertEqual(self.service.get_task(self.task.task_id, viewer_id="child").status, "done")
         second = run_due(
@@ -82,6 +83,26 @@ class TestReminderDispatcher(unittest.TestCase):
         )
         self.assertEqual(replay["claimed"], 0)
 
+    def test_private_due_task_is_deferred_not_spoken_in_shared_room(self):
+        private = self.service.create_task(
+            owner_member_id="child",
+            title="私人提醒：收拾书包",
+            due_at=(self.now - timedelta(minutes=1)).isoformat(),
+            timezone_name="UTC",
+            visibility="PRIVATE",
+        )
+        delivered = []
+        result = run_due(
+            self.service, member_ids=self.members,
+            deliver=lambda task: delivered.append(task.task_id) or True,
+            now=self.now,
+        )
+        self.assertEqual(delivered, [self.task.task_id])  # only FAMILY task
+        self.assertEqual(result["deferred_private"], 1)
+        stored = self.service.get_task(private.task_id, viewer_id="child")
+        self.assertEqual(stored.status, "needs_confirmation")
+        self.assertEqual(stored.result, "private_reminder_requires_private_channel")
+
     def test_private_task_is_only_dispatched_for_its_owner(self):
         delivered = []
         run_due(
@@ -100,7 +121,7 @@ class TestReminderDispatcher(unittest.TestCase):
         result = run_due(
             self.service, member_ids=self.members, deliver=explode, now=self.now,
         )
-        self.assertEqual(result, {"claimed": 1, "succeeded": 0, "failed": 1})
+        self.assertEqual(result, {"claimed": 1, "succeeded": 0, "failed": 1, "deferred_private": 0})
         failed = self.service.get_task(self.task.task_id, viewer_id="child")
         self.assertEqual(failed.status, "failed")
         self.assertEqual(failed.result, "delivery_command_failed")
