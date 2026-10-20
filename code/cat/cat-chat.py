@@ -311,6 +311,7 @@ def _private_cli_reply(text, observation=None, model=DEFAULT_MODEL, llm=None):
     try:
         from core.adapters.chat_adapter import ChatAdapter
         from core.adapters.family_loader import load_members
+        # history=None by design: V4 never forwards V3 transcript history.
         adapter = ChatAdapter(
             members=load_members(),
             llm=llm or _runtime_llm(model=model),
