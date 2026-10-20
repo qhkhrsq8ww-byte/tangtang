@@ -13,6 +13,8 @@
 #   ./cat.sh alarm cancel      # 取消全部闹铃
 #   ./cat.sh task list       # 查看当前成员可见的待办
 #   ./cat.sh task add "带水杯" --due 2026-10-21T08:00:00+08:00
+#   ./cat.sh plan add --member hanghang --date 2026-10-21 --title "读英语10分钟" --category habit --time 19:30
+#   ./cat.sh task-health
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
@@ -22,6 +24,14 @@ MOOD_FILE="$CAT_DIR/cat-mood.txt"
 if [ "${1:-}" = "task" ]; then
   shift
   exec /usr/bin/python3 "$CAT_DIR/cat-tasks.py" "$@"
+fi
+if [ "${1:-}" = "plan" ]; then
+  shift
+  exec /usr/bin/python3 "$CAT_DIR/cat-plan.py" "$@"
+fi
+if [ "${1:-}" = "task-health" ]; then
+  shift
+  exec /usr/bin/python3 "$CAT_DIR/cat-task-health.py" "$@"
 fi
 TEXT=""
 MEMORY_REQ=0
