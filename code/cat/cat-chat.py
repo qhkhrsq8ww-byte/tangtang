@@ -230,6 +230,32 @@ def brain_fallback(user_text):
     return sanitize_output((r.stdout or FALLBACK_REPLY).strip().split("\t")[0])
 
 
+def _alarm_reply(text):
+    # Alarm parsing is handled by the dedicated alarm command; this CLI only
+    # reserves a hook so alarm intents can be routed before ordinary chat.
+    return None
+
+
+def _live_obs():
+    return {
+        "label": speaker_id(),
+        "member_id": None if speaker_id() in ("unknown", "访客", "") else speaker_id(),
+        "interactive": True,
+        "school_hours": os.environ.get("TANGTANG_SCHOOL_HOURS") == "1",
+        "audience_child": speaker_id() in ("hanghang", "qiaqia", "child_9", "child_12"),
+        "presence_home": os.environ.get("TANGTANG_PRESENCE_HOME", "1") == "1",
+    }
+
+
+def _may_speak_now(obs):
+    try:
+        from core.policy.speak_gate import decide
+        return decide(obs, channel="chat") == "SPEAK"
+    except Exception:
+        # Fail closed if the policy gate cannot be evaluated.
+        return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("text", nargs="?", default="", help="小朋友说的话")
@@ -239,8 +265,18 @@ def main():
     if not args.text.strip():
         args.text = "糖糖，我来啦"
 
-    if looks_risky(args.text):
-        print(SAFE_REPLY)
+    risk_reply = _local_safety_reply(args.text)
+    if risk_reply:
+        print(risk_reply)
+        return
+
+    alarm_line = _alarm_reply(args.text)
+    if alarm_line:
+        print(alarm_line)
+        return
+
+    obs = _live_obs()
+    if not _may_speak_now(obs):
         return
 
     hist_file = os.path.join(DATA_DIR, "cat-chat-history.json")
