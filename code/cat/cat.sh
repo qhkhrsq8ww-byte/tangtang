@@ -26,6 +26,7 @@ while [ $# -gt 0 ]; do
     -f) FORCE_VOICE=1; shift;;
     -s) FORCE_STAGE=1; shift;;
     -p) FORCE_PET=1; shift;;
+    memory) MEMORY_REQ=1; shift;;
     status) STATUS_REQ=1; shift;;
     chat) CHAT_REQ=1; shift;;
     *) TEXT="$1"; shift;;
@@ -44,6 +45,11 @@ brain_say(){
 if [ "${1:-}" = "memory" ]; then
   shift
   /usr/bin/python3 "$CAT_DIR/cat-memory.py" "${@:-today}"
+  exit $?
+fi
+
+if [ "${MEMORY_REQ:-0}" = "1" ]; then
+  /usr/bin/python3 "$CAT_DIR/cat-memory.py" today
   exit $?
 fi
 
