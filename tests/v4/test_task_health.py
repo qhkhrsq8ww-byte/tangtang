@@ -39,6 +39,18 @@ class TestTaskHealth(unittest.TestCase):
             self.assertEqual(report["status"], "healthy")
             self.assertEqual(report["last_delivery_age_seconds"], 60)
 
+    def test_deferred_task_is_flagged_for_followup(self):
+        with tempfile.TemporaryDirectory() as td:
+            home = Path(td)
+            task_path = home / "tasks" / "tasks.json"
+            task_path.parent.mkdir(parents=True)
+            task_path.write_text('{"tasks":[{"title":"private reminder","status":"needs_confirmation"}]}',
+                                 encoding="utf-8")
+            report = health.inspect(home, now=datetime(2026, 10, 21, 9, tzinfo=timezone.utc),
+                                    cron_text="* * * * * cat-task-dispatch.py --deliver")
+            self.assertIn("deferred_tasks_need_followup", report["issues"])
+            self.assertEqual(report["status"], "attention_required")
+
     def test_failed_task_is_flagged_without_exposing_title(self):
         with tempfile.TemporaryDirectory() as td:
             home = Path(td)
