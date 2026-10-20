@@ -11,6 +11,8 @@
 #   ./cat.sh chat "想聊的"     # 云端真对话
 #   ./cat.sh alarm list        # 查看闹铃
 #   ./cat.sh alarm cancel      # 取消全部闹铃
+#   ./cat.sh task list       # 查看当前成员可见的待办
+#   ./cat.sh task add "带水杯" --due 2026-10-21T08:00:00+08:00
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
