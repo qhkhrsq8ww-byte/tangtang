@@ -5,7 +5,7 @@
 #   ./cat.sh                  # 上糖糖（投影开着->全屏舞台；没开->语音报平安）
 #   ./cat.sh "想说的话"       # 说一句话（带人设语气包装）
 #   ./cat.sh -f               # 强制仅声音（不管投影）
-#   ./cat.sh -p               # 强制透明宠物浮现
+#   ./cat.sh -p               # 强制透明宠物浮现（cat-desktop-pet.html）
 #   ./cat.sh -s               # 强制全屏舞台
 #   ./cat.sh status           # 查看糖糖当前心情状态
 #   ./cat.sh chat "想聊的"     # 云端真对话
@@ -53,6 +53,8 @@ if [ "$STATUS_REQ" = "1" ]; then
 fi
 
 if [ "$CHAT_REQ" = "1" ]; then
+  gate="$("$CAT_DIR/tangtang-speak-gate.py" --channel chat --member "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-unknown}}" 2>/dev/null || true)"
+  if [ "$gate" != "speak" ]; then exit 0; fi
   if tangtang_projector_on; then
     tangtang_ensure_stage
   fi
