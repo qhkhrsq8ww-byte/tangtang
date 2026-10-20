@@ -60,7 +60,7 @@ def inspect(home: Path, *, now: datetime | None = None, cron_text: str | None = 
             log_error = "health_timestamp_invalid"
 
     task_path = home / "tasks" / "tasks.json"
-    counts = {"scheduled": 0, "failed": 0, "needs_confirmation": 0, "done": 0}
+    counts = {"scheduled": 0, "delivered": 0, "failed": 0, "needs_confirmation": 0, "done": 0}
     if task_path.is_file():
         try:
             data = json.loads(task_path.read_text(encoding="utf-8"))
