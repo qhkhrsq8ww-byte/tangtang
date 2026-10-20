@@ -75,6 +75,15 @@ speak_with_fallback() {
   local say_rate="$4"
   local say_pitch="$5"
   rm -f /tmp/cat_tts.mp3
+  # Keep proactive speech on the same optional voice route as ordinary replies.
+  if [ "${TANGTANG_VOICESTUDIO_ENABLED:-0}" = "1" ]; then
+    if /usr/bin/python3 "$CAT_DIR/cat-tts-voicestudio.py" "$text" "$rate" >/dev/null 2>&1 \
+        && [ -s /tmp/cat_tts.mp3 ]; then
+      tangtang_play_audio /tmp/cat_tts.mp3
+      return $?
+    fi
+    rm -f /tmp/cat_tts.mp3
+  fi
   if /usr/bin/python3 "$CAT_DIR/cat-tts-edge.py" "$text" "$rate" "$pitch" >/dev/null 2>&1 \
       && [ -s /tmp/cat_tts.mp3 ]; then
     tangtang_play_audio /tmp/cat_tts.mp3
