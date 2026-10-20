@@ -89,7 +89,7 @@ class TestPresentationRuntimeIsolation(unittest.TestCase):
         self.assertTrue(delivered.projection_ok)
 
     def test_family_json_untouched_by_presentation(self) -> None:
-        family = (ROOT / "data" / "family.json").read_text(encoding="utf-8")
+        family = (ROOT / "tests" / "fixtures" / "family.json").read_text(encoding="utf-8")
         src = (ROOT / "presentation" / "animation_controller.py").read_text(encoding="utf-8")
         self.assertNotIn("family.json", src)
         self.assertIn("member", family.lower() + family)
