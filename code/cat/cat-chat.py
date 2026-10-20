@@ -343,6 +343,16 @@ def main():
     if not _may_speak_now(obs):
         return
 
+    v4_flag = (os.environ.get("TANGTANG_V4_PIPELINE") or "1").strip().lower()
+    if v4_flag not in ("0", "false", "no", "off"):
+        _private_cli_reply(
+            args.text,
+            obs,
+            model=args.model,
+            llm=_runtime_llm(model=args.model),
+        )
+        return
+
     hist_file = os.path.join(DATA_DIR, "cat-chat-history.json")
     history = []
     if os.path.exists(hist_file):
