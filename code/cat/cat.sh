@@ -16,6 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 MOOD_FILE="$CAT_DIR/cat-mood.txt"
 TEXT=""
+MEMORY_REQ=0
 STATUS_REQ=0
 CHAT_REQ=0
 FORCE_VOICE=0
@@ -28,6 +29,7 @@ while [ $# -gt 0 ]; do
     -p) FORCE_PET=1; shift;;
     memory) MEMORY_REQ=1; shift;;
     status) STATUS_REQ=1; shift;;
+    memory) MEMORY_REQ=1; shift;;
     chat) CHAT_REQ=1; shift;;
     *) TEXT="$1"; shift;;
   esac
@@ -42,9 +44,8 @@ brain_say(){
   fi
 }
 
-if [ "${1:-}" = "memory" ]; then
-  shift
-  /usr/bin/python3 "$CAT_DIR/cat-memory.py" "${@:-today}"
+if [ "$MEMORY_REQ" = "1" ]; then
+  /usr/bin/python3 "$CAT_DIR/cat-memory.py" "${TEXT:-today}"
   exit $?
 fi
 
