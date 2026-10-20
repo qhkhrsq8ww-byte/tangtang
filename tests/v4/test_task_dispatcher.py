@@ -43,7 +43,7 @@ class TestReminderDispatcher(unittest.TestCase):
         )
         self.assertEqual(result, {"claimed": 1, "succeeded": 1, "failed": 0, "deferred": 0})
         self.assertEqual(delivered, [self.task.task_id])
-        self.assertEqual(self.service.get_task(self.task.task_id, viewer_id="child").status, "done")
+        self.assertEqual(self.service.get_task(self.task.task_id, viewer_id="child").status, "delivered")
         second = run_due(
             self.service, member_ids=self.members,
             deliver=lambda task: self.fail("completed reminder replayed"),
@@ -158,9 +158,10 @@ class TestReminderDispatcher(unittest.TestCase):
             self.task.task_id, owner_member_id="child", now=self.now,
         )
         self.assertIsNotNone(claimed)
-        self.service.finish_delivery(
+        delivered = self.service.finish_delivery(
             self.task.task_id, owner_member_id="child", success=True,
         )
+        self.assertEqual(delivered.status, "delivered")
         with self.assertRaises(ValueError):
             self.service.finish_delivery(
                 self.task.task_id, owner_member_id="child", success=True,
