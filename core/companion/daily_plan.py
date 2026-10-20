@@ -7,6 +7,9 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
+from zoneinfo import ZoneInfo
+
+from core.tasks.service import TaskService
 
 FEEDBACK = frozenset({"completed", "partial", "skipped", "not_applicable"})
 HABIT_LABELS = frozenset({"joined", "oppose", "silent", "defer", "wont", "unclear", "stop_today", "skip"})
@@ -19,9 +22,13 @@ def _stamp() -> str:
 class DailyPlanService:
     """Small local-only plan store. It accepts structured items and coarse feedback only."""
 
-    def __init__(self, *, home: str | Path, members: dict[str, Any]):
+    def __init__(self, *, home: str | Path, members: dict[str, Any],
+                 task_service: TaskService | None = None):
         self.home = Path(home).expanduser().resolve()
         self.members = {str(k) for k in members}
+        self.task_service = task_service or TaskService(
+            home=self.home, persist=True, members=members
+        )
         self.path = self.home / "daily-plan" / "daily-plan.json"
         self._rows: list[dict[str, Any]] = []
         self._load()
@@ -65,8 +72,19 @@ class DailyPlanService:
             raise ValueError("unsupported plan category")
         row = {"plan_id": "plan_" + uuid4().hex, "member_id": member,
                "plan_date": plan_date, "title": title, "category": category,
-               "due_time": due_time, "feedback": None, "habit_label": None,
+               "due_time": due_time, "task_id": None, "feedback": None, "habit_label": None,
                "created_at": _stamp(), "updated_at": _stamp()}
+        if due_time:
+            due_at = datetime.fromisoformat(f"{plan_date}T{due_time}:00").replace(
+                tzinfo=ZoneInfo("Asia/Shanghai")
+            ).isoformat()
+            task = self.task_service.create_task(
+                owner_member_id=member, title=title, due_at=due_at,
+                timezone_name="Asia/Shanghai", kind="task", visibility="PRIVATE",
+                idempotency_key=f"daily-plan:{row['plan_id']}",
+                metadata={"source": "daily_plan", "plan_id": row["plan_id"], "category": category},
+            )
+            row["task_id"] = task.task_id
         self._rows.append(row)
         self._save()
         return dict(row)
@@ -82,6 +100,13 @@ class DailyPlanService:
                 row["feedback"] = result
                 row["habit_label"] = habit_label
                 row["updated_at"] = _stamp()
+                if result == "completed" and row.get("task_id"):
+                    try:
+                        self.task_service.complete(row["task_id"], owner_member_id=str(member_id),
+                                                   result="daily_plan_feedback_completed")
+                    except (ValueError, PermissionError):
+                        # A delivery failure must remain visible for review, not block feedback.
+                        pass
                 self._save()
                 return dict(row)
         raise PermissionError("plan item not found for this member")
