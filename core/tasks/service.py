@@ -358,7 +358,7 @@ class TaskService:
         # "delivered" means the local adapter returned success; only explicit user feedback is "done".
         task.status = "delivered" if success else "failed"
         task.updated_at = now
-        task.completed_at = now if success else None
+        task.completed_at = None
         task.result = (str(result or ("delivery_command_succeeded" if success else "delivery_failed")).strip()[:300] or None)
         self._save()
         return task
