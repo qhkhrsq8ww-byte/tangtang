@@ -63,3 +63,12 @@ printf '/*\n!/code/cat/assets/\n' > .git/info/sparse-checkout
 git read-tree -mu HEAD
 ```
 （git 2.32 的 cone 模式 CLI 会把 --no-cone 误当模式；非 cone 直接写文件可绕过。已有完整本地克隆的同事可用 objects/info/alternates 指向本地对象库秒级完成。）
+
+## 追加（2026-10-20 20:5x）：第三个兼容断点确认
+
+V4 部署实测（经 deploy.sh 常规漂移修复带入 live）暴露完整兼容链：
+1. `collections.abc.Callable[...]`（event_bus.py，已补 typing.Callable 并提交）
+2. `zoneinfo`（core/tasks/reminders.py）——Python 3.9+ 标准库，3.8 无对应标准模块
+3. 修复 1+2 后 gate 通过、V4 管线可运行，但 context 数据面在克隆/部署环境仍走兜底（需 V2 数据目录 ~/Library/Application Support/Tangtang 完整）
+
+**处置**：live 的 cat-chat.py 已回退至直连版（b29ee95，含记忆注入，实测 GLM 生成回复正常）——V4 在 py≥3.9 运行时就绪前不部署。本提交同时携带 event_bus.py 的 3.8 兼容补丁。
