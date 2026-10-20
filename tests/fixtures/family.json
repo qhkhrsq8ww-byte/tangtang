@@ -6,6 +6,6 @@
     {"member_id":"grandma","display_name":"奶奶","relation":"grandmother","profile":"elder","aliases":["奶奶"],"permissions":{"self_private":true,"family_summary":true}},
     {"member_id":"dad","display_name":"爸爸","relation":"father","profile":"adult","aliases":["爸爸"],"permissions":{"self_private":true,"family_summary":true}},
     {"member_id":"qiaqia","display_name":"洽洽","relation":"sister","profile":"friend","age":12,"aliases":["姐姐","child_12"],"permissions":{"self_private":true,"family_summary":false}},
-    {"member_id":"hanghang","display_name":"航航","relation":"brother","profile":"play","age":9,"aliases":["弟弟","child_9"],"permissions":{"self_private":true,"family_summary":false}}
+    {"member_id":"hanghang","display_name":"航航","relation":"brother","profile":"play","age":9,"aliases":["弟弟","child_9"],"permissions":{"self_private":true ,"family_summary":false}}
   ]
 }
