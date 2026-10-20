@@ -23,14 +23,14 @@
 
 ## Mac 命令
 
-在已部署的运行目录中：
+在已部署的运行目录中：终端命令需提供真实的成员 ID（示例使用 hanghang）；语音入口会根据当前已识别的家庭成员自动确定 owner。
 
 ```bash
-./cat.sh task list
-./cat.sh task add "带水杯" --due 2026-10-21T08:00:00+08:00
-./cat.sh task add "整理书包"
-./cat.sh task done <task_id>
-./cat.sh task cancel <task_id>
+./cat.sh task --owner hanghang list
+./cat.sh task --owner hanghang add "带水杯" --due 2026-10-21T08:00:00+08:00
+./cat.sh task --owner hanghang add "整理书包"
+./cat.sh task --owner hanghang done <task_id>
+./cat.sh task --owner hanghang cancel <task_id>
 ```
 
 添加命令的 `--due` 必须是带时区偏移的 ISO 8601，例如 `2026-10-21T08:00:00+08:00`。个人任务默认不公开播报。需要共享的任务必须显式使用 `--visibility FAMILY`。
