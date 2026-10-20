@@ -15,3 +15,6 @@ export TANGTANG_AIRPLAY_PORT="61949"
 # 百度语音识别（优先环境变量；也可放在 gitignore 的 cat-stt-config.sh）
 # export BAIDU_STT_API_KEY=""
 # export BAIDU_STT_SECRET_KEY=""
+
+# V4 runtime is the default conversation path.
+export TANGTANG_V4_PIPELINE=1
