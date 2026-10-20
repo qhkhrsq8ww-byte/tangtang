@@ -7,10 +7,12 @@ import fcntl
 import os
 import subprocess
 import sys
+from datetime import datetime, time
 from pathlib import Path
 from contextlib import contextmanager
 
-ROOT = Path(__file__).resolve().parents[2]
+CAT_DIR = Path(__file__).resolve().parent
+ROOT = CAT_DIR.parent if (CAT_DIR.parent / "core").is_dir() else CAT_DIR.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -19,7 +21,7 @@ from tangtang_paths import data_dir
 from core.tasks.dispatcher import run_due
 from core.tasks.service import TaskService
 
-SAY = ROOT / "code" / "cat" / "cat-say.sh"
+SAY = CAT_DIR / "cat-say.sh"
 
 
 @contextmanager
@@ -36,6 +38,22 @@ def dispatch_lock(home: Path):
             yield
         finally:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def defer_reason_for_context(task):
+    """No ordinary proactive speech during local quiet hours."""
+    raw_start = os.environ.get("TANGTANG_QUIET_START", "22:30")
+    raw_end = os.environ.get("TANGTANG_QUIET_END", "07:00")
+    try:
+        start = time.fromisoformat(raw_start)
+        end = time.fromisoformat(raw_end)
+    except ValueError:
+        start, end = time(22, 30), time(7, 0)
+    now = datetime.now().astimezone().time()
+    quiet = (start <= now < end) if start <= end else (now >= start or now < end)
+    if quiet:
+        return "quiet_hours_requires_manual_confirmation"
+    return None
 
 
 def main() -> int:
@@ -92,7 +110,7 @@ def main() -> int:
             recovered = service.recover_stale_running()
             if recovered:
                 print(f"有 {recovered} 项中断提醒结果不确定，已标记待人工核查；不会自动重播。")
-            stats = run_due(service, member_ids=members.keys(), deliver=deliver)
+            stats = run_due(service, member_ids=members.keys(), deliver=deliver, defer_reason=defer_reason_for_context)
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return 0
