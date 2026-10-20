@@ -13,6 +13,7 @@ def run_due(
     member_ids: Iterable[str],
     deliver: Callable[[Task], bool],
     now: datetime | None = None,
+    defer_reason: Callable[[Task], str | None] | None = None,
 ) -> dict[str, int]:
     """Deliver due tasks once per service instance and record adapter outcomes.
 
