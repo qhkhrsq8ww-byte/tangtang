@@ -55,7 +55,7 @@ def main(argv=None) -> int:
 
     service = TaskService(home=home, persist=True, members=members)
     if args.action == "list":
-        tasks = service.list_tasks(viewer_id=owner, statuses={"proposed", "needs_confirmation", "scheduled", "failed"})
+        tasks = service.list_tasks(viewer_id=owner, statuses={"proposed", "needs_confirmation", "scheduled", "delivered", "failed"})
         if not tasks:
             print("没有待办任务。")
             return 0
