@@ -121,7 +121,7 @@ def handle_voice_task(
     if any(marker in utterance for marker in LIST_MARKERS):
         if not owner:
             return "我还没认出你是谁，所以先不读取个人任务。"
-        tasks = service.list_tasks(viewer_id=owner, statuses={"proposed", "needs_confirmation", "scheduled", "failed"}, limit=10)
+        tasks = service.list_tasks(viewer_id=owner, statuses={"proposed", "needs_confirmation", "scheduled", "delivered", "failed"}, limit=10)
         if not tasks:
             return "你现在没有待办任务。想安排什么，可以直接告诉我。"
         rows = []
