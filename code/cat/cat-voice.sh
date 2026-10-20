@@ -61,7 +61,7 @@ fi
 "$CAT_DIR/cat-family.py" observe "$WHO" "$TEXT" >/dev/null 2>&1 || true
 
 # 闹铃意图由本地确定性解析处理，不进入普通 LLM。
-ALARM_LINE="$(/usr/bin/python3 "$CAT_DIR/cat-alarm.py" parse "$TEXT" 2>/dev/null || true)"
+ALARM_LINE="$(/usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$TEXT" 2>/dev/null || true)"
 if [ -n "$ALARM_LINE" ]; then
   echo "   糖糖: $ALARM_LINE"
   set +e
