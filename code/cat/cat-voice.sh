@@ -24,6 +24,13 @@ if [ "$GATE" != "speak" ]; then
   exit 0
 fi
 
+# Unified policy gate runs before microphone capture / STT.
+GATE="$("$CAT_DIR/tangtang-speak-gate.py" --channel voice --member "${TANGTANG_SPEAKER:-unknown}" 2>/dev/null || true)"
+if [ "$GATE" != "speak" ]; then
+  rm -f "$PCM"
+  exit 0
+fi
+
 echo "🎤 糖糖在听...（${DUR}秒，${PROFILE}模式）"
 if ! "$CAT_DIR/cat-listen.sh" "$DUR" "$PCM" >/dev/null 2>&1; then
   echo "❌ 麦克风录音失败"
