@@ -17,6 +17,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/cat-lib.sh"
 
 MOOD_FILE="$CAT_DIR/cat-mood.txt"
+if [ "${1:-}" = "task" ]; then
+  shift
+  exec /usr/bin/python3 "$CAT_DIR/cat-tasks.py" "$@"
+fi
 TEXT=""
 MEMORY_REQ=0
 ALARM_REQ=0
@@ -36,7 +40,6 @@ while [ $# -gt 0 ]; do
     alarm) ALARM_REQ=1; shift; if [ $# -gt 0 ]; then ALARM_ACTION="$1"; shift; fi;;
     status) STATUS_REQ=1; shift;;
     chat) CHAT_REQ=1; shift;;
-    alarm) ALARM_REQ=1; shift; if [ $# -gt 0 ]; then ALARM_ACTION="$1"; shift; fi;;
     *) TEXT="$1"; shift;;
   esac
 done
@@ -60,15 +63,6 @@ fi
 
 if [ "$MEMORY_REQ" = "1" ]; then
   /usr/bin/python3 "$CAT_DIR/cat-memory.py" "${TEXT:-today}"
-  exit $?
-fi
-
-if [ "$ALARM_REQ" = "1" ]; then
-  case "$TEXT" in
-    list) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" list ;;
-    cancel) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" cancel_all ;;
-    *) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$TEXT" ;;
-  esac
   exit $?
 fi
 
