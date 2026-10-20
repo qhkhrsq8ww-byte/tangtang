@@ -332,6 +332,34 @@ def _private_cli_reply(text, observation=None, model=DEFAULT_MODEL, llm=None):
         return FALLBACK_REPLY
 
 
+def _task_reply(text):
+    """Handle explicit task/reminder commands locally before alarm parsing or LLM."""
+    try:
+        from core.tasks.intent import handle_voice_task, looks_like_task_intent
+        if not looks_like_task_intent(text):
+            return None
+        from core.adapters.family_loader import load_members
+        from core.identity.resolver import IdentityResolver
+        from tangtang_paths import data_dir
+        members = load_members()
+        speaker = speaker_id()
+        owner = IdentityResolver(members).resolve({"label": speaker, "member_id": speaker})
+        home = data_dir()
+        os.environ.setdefault("TANGTANG_DATA_DIR", home)
+        return handle_voice_task(
+            text,
+            owner_member_id=owner,
+            members=members,
+            home=home,
+            timezone_name=os.environ.get("TANGTANG_TIMEZONE", "Asia/Shanghai"),
+        )
+    except Exception:
+        # Never fall through to the LLM after a recognized task intent failed.
+        if any(marker in (text or "") for marker in ("提醒我", "帮我提醒", "安排个任务", "安排一个任务", "加个任务", "添加任务", "我的任务", "我的提醒", "我有什么要做", "有哪些任务", "提醒列表", "计划列表", "取消任务", "取消提醒", "删除任务", "做完了", "完成任务")):
+            return "糖糖暂时没能保存这条提醒，我们先别假设它已经设好了。"
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("text", nargs="?", default="", help="小朋友说的话")
@@ -344,6 +372,11 @@ def main():
     risk_reply = _local_safety_reply(args.text)
     if risk_reply:
         print(risk_reply)
+        return
+
+    task_line = _task_reply(args.text)
+    if task_line:
+        print(task_line)
         return
 
     alarm_line = _alarm_reply(args.text)
