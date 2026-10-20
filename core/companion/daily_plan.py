@@ -115,7 +115,7 @@ class DailyPlanService:
         member = str(member_id or "")
         if member not in self.members:
             return {"items": [], "summary": {"total": 0, "completed": 0, "open": 0}}
-        day = plan_date or date.today().isoformat()
+        day = plan_date or datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
         items = [dict(r) for r in self._rows if r["member_id"] == member and r["plan_date"] == day]
         completed = sum(r.get("feedback") == "completed" for r in items)
         return {"items": sorted(items, key=lambda r: (r.get("due_time") or "99:99", r["created_at"])),
@@ -130,7 +130,7 @@ class DailyPlanService:
             label = item.get("habit_label")
             if label in HABIT_LABELS:
                 labels[label] = labels.get(label, 0) + 1
-        return {"date": plan_date or date.today().isoformat(), "summary": snapshot["summary"],
+        return {"date": plan_date or datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat(), "summary": snapshot["summary"],
                 "habit_labels": labels,
                 "prompt": "今天哪件事做起来比较顺？明天只挑一件最重要的事就好。"
                 if items else "今天还没有计划。想先安排一件小事吗？"}
