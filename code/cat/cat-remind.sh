@@ -57,4 +57,5 @@ if [ "$talk_status" -ne 0 ]; then
   echo "糖糖语音输出失败或正在播放其它语音，本次提醒跳过" >&2
   exit "$talk_status"
 fi
+# 上学闹铃：Glass 短铃只允许在上面的语音输出成功后继续执行。
 exit 0
