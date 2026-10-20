@@ -14,6 +14,7 @@ def run_due(
     deliver: Callable[[Task], bool],
     now: datetime | None = None,
     defer_reason: Callable[[Task], str | None] | None = None,
+    on_defer: Callable[[Task, str], None] | None = None,
 ) -> dict[str, int]:
     """Deliver due tasks once per service instance and record adapter outcomes.
 
@@ -37,6 +38,11 @@ def run_due(
                     reason=reason,
                 )
                 counts["deferred"] += 1
+                if on_defer:
+                    try:
+                        on_defer(candidate, reason)
+                    except Exception:
+                        pass
                 continue
             claimed = service.claim_due(
                 candidate.task_id, owner_member_id=candidate.owner_member_id, now=now
