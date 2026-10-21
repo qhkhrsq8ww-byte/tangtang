@@ -56,3 +56,6 @@ code/cat/.router_key
 code/cat/cat-devices.json
 code/cat/.router_key
 code/cat/usage-log/
+
+# 定时管控规则（含设备 MAC 与时段，不入库）
+code/cat/cat-schedule.json
