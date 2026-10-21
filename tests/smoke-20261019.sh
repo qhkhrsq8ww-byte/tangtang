@@ -71,7 +71,7 @@ echo "== 9. repo 与 live 同步（.py/.sh/.mjs）=="
 DRIFT=0
 for f in "$REPO"/code/cat/*.py "$REPO"/code/cat/*.sh "$REPO"/code/cat/*.mjs; do
   b=$(basename "$f")
-  case "$b" in cat-stt-config.sh) continue;; esac
+  case "$b" in cat-stt-config.sh|tangtang-config.sh) continue;; esac  # 本机配置文件（gitignored），不参与漂移检查
   [ "$b" = "cat-stt-config.sh" ] && continue
   if [ ! -f "$LIVE/$b" ]; then
     DRIFT=1
