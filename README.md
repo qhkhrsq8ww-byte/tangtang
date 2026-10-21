@@ -21,6 +21,13 @@ AI 决定“糖糖现在应该做什么”；表现层决定“糖糖具体怎�
 - 小米蓝牙音箱：播放糖糖声音
 - HDMI 方案暂不自动切换
 
+## Python 运行环境
+
+- **V4 核心最低要求 Python 3.10；建议使用 Python 3.11。** 不要用 macOS 自带的旧版 `/usr/bin/python3` 直接启动 V4。
+- 当前生产环境如果仍使用 Python 3.8，继续运行已验证的直连版；在独立 Python 3.10+ 环境安装并通过回归测试前，**不要将 V4 部署到生产目录**。
+- V4 使用 `zoneinfo` 及新式类型注解。仅做 `py_compile` 或单模块测试不能证明语音全链路可用。
+- 环境和部署验收步骤见 [docs/runtime-and-provisioning.md](docs/runtime-and-provisioning.md)。
+
 ## 儿童 Profile
 
 - `play`：9岁 / 小学三年级。糖糖是玩伴、小教练、小任务搭档。
@@ -50,14 +57,7 @@ AI 决定“糖糖现在应该做什么”；表现层决定“糖糖具体怎�
 tangtang/
 ├── README.md
 ├── docs/
-│   ├── 02-糖糖人格.md
-│   ├── 03-动画系统V1.md
-│   ├── 07-糖糖形象设计要求与标准.md
-│   ├── 08-儿童双年龄人格与陪伴策略V2.md
-│   ├── 09-糖糖AI儿童陪伴话术库V2.md
-│   ├── 10-视频动作系统V1.md
-│   ├── 11-隐私与儿童安全边界V1.md
-│   └── 12-OpenClaw行为协议V1.md
+├── core/
 ├── code/cat/
 └── tests/
 ```
