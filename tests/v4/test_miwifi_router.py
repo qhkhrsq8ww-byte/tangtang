@@ -60,7 +60,11 @@ class MiWiFiClientTests(unittest.TestCase):
     def test_control_requires_exact_confirmation_and_protects_devices(self):
         client = self.client({"code": 0})
         mac = "aa:bb:cc:dd:ee:ff"
-        with patch.dict(os.environ, {"TANGTANG_ROUTER_CONTROL_ENABLED": "1"}):
+        with patch.dict(os.environ, {
+            "TANGTANG_ROUTER_CONTROL_ENABLED": "1",
+            "MIWIFI_ROUTER_MAC": "00:11:22:33:44:55",
+            "TANGTANG_ROUTER_PROTECTED_MACS": "00:11:22:33:44:55",
+        }):
             with self.assertRaises(PermissionError):
                 client.set_internet_access(mac, False, parent_approved=True,
                                            confirmed_mac="00:11:22:33:44:55")
