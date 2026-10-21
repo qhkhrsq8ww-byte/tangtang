@@ -119,25 +119,12 @@ class MiWiFiClient:
 
         Voice/LLM callers must not set parent_approved based on the child's utterance.
         """
-        normalized = normalize_mac(mac)
-        if not parent_approved:
-            raise PermissionError("Parent approval is required")
-        if normalize_mac(confirmed_mac) != normalized:
-            raise PermissionError("Typed confirmation must match the target MAC")
-        if os.environ.get("TANGTANG_ROUTER_CONTROL_ENABLED") != "1":
-            raise PermissionError("Router control is disabled; set the local opt-in after review")
-        router_mac_value = os.environ.get("MIWIFI_ROUTER_MAC", "").strip()
-        if not router_mac_value:
-            raise PermissionError("Configure MIWIFI_ROUTER_MAC before enabling device control")
-        router_mac = normalize_mac(router_mac_value)
-        env_protected = os.environ.get("TANGTANG_ROUTER_PROTECTED_MACS", "").split(",")
-        protected = {
-            normalize_mac(value) for value in (env_protected + list(protected_macs or []))
-            if str(value or "").strip()
-        }
-        protected.add(router_mac)
-        if normalized in protected:
-            raise PermissionError("This device is protected from network changes")
+        normalized = validate_control_request(
+            mac,
+            confirmed_mac=confirmed_mac,
+            parent_approved=parent_approved,
+            protected_macs=protected_macs,
+        )
         if not isinstance(allowed, bool):
             raise ValueError("allowed must be a boolean")
         result = self._request(
@@ -145,3 +132,32 @@ class MiWiFiClient:
             {"mac": normalized, "wan": "1" if allowed else "0"},
         )
         return {"mac": normalized, "internet_allowed": allowed, "code": result["code"]}
+
+
+def validate_control_request(mac, *, confirmed_mac=None, parent_approved=False,
+                             protected_macs=None):
+    """Validate local admin authorization before any router mutation."""
+    normalized = normalize_mac(mac)
+    if not parent_approved:
+        raise PermissionError("Parent approval is required")
+    try:
+        confirmed = normalize_mac(confirmed_mac)
+    except ValueError as exc:
+        raise PermissionError("Typed confirmation must match the target MAC") from exc
+    if confirmed != normalized:
+        raise PermissionError("Typed confirmation must match the target MAC")
+    if os.environ.get("TANGTANG_ROUTER_CONTROL_ENABLED") != "1":
+        raise PermissionError("Router control is disabled; set the local opt-in after review")
+    router_mac_value = os.environ.get("MIWIFI_ROUTER_MAC", "").strip()
+    if not router_mac_value:
+        raise PermissionError("Configure MIWIFI_ROUTER_MAC before enabling device control")
+    router_mac = normalize_mac(router_mac_value)
+    env_protected = os.environ.get("TANGTANG_ROUTER_PROTECTED_MACS", "").split(",")
+    protected = {
+        normalize_mac(value) for value in (env_protected + list(protected_macs or []))
+        if str(value or "").strip()
+    }
+    protected.add(router_mac)
+    if normalized in protected:
+        raise PermissionError("This device is protected from network changes")
+    return normalized
