@@ -51,3 +51,8 @@ data/corpus/child_companion_benchmark_v1.json
 
 # 路由器凭据（cat-router.py）
 code/cat/.router_key
+
+# 设备归属映射（含儿童名，不入库）
+code/cat/cat-devices.json
+code/cat/.router_key
+code/cat/usage-log/

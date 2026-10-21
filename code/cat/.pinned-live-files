@@ -1,0 +1,5 @@
+# 受控钉住的生产文件清单（smoke 漂移检查跳过这些文件的 repo↔live 比对）
+# 钉住原因：V4 cat-chat.py 需 Python ≥3.10（docs/runtime-and-provisioning.md），
+# 生产在 3.11 就绪并通过上线验收清单前，保持已验证的直连版。
+# 解除条件：本机完成 Python 3.10+ 安装 + V4 上线验收清单全过 → 删除此行并部署 V4。
+cat-chat.py

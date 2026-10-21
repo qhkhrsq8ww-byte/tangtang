@@ -72,6 +72,9 @@ DRIFT=0
 for f in "$REPO"/code/cat/*.py "$REPO"/code/cat/*.sh "$REPO"/code/cat/*.mjs; do
   b=$(basename "$f")
   case "$b" in cat-stt-config.sh|tangtang-config.sh) continue;; esac  # 本机配置文件（gitignored），不参与漂移检查
+  if [ -f "$REPO/code/cat/.pinned-live-files" ] && grep -qxF "$b" "$REPO/code/cat/.pinned-live-files" 2>/dev/null; then
+    echo "  PINNED: $b（受控钉住，见 .pinned-live-files）"; continue
+  fi
   [ "$b" = "cat-stt-config.sh" ] && continue
   if [ ! -f "$LIVE/$b" ]; then
     DRIFT=1
