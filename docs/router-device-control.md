@@ -16,6 +16,25 @@
 4. 首轮只读检查，不设置 `TANGTANG_ROUTER_CONTROL_ENABLED`。
 5. 只有经过家长审查和设备保护清单配置后，才可在本机启用管控。
 
+## 本机 CLI 示例
+
+只读查看设备：
+
+```bash
+python3 code/cat/cat-router.py devices
+```
+
+管控命令必须在本机管理员终端显式开启，并输入两次完全一致的目标 MAC：
+
+```bash
+export TANGTANG_ROUTER_CONTROL_ENABLED=1
+export MIWIFI_ROUTER_MAC='路由器本机MAC'
+export TANGTANG_ROUTER_PROTECTED_MACS='Mac的MAC,NAS的MAC,投影的MAC,糖糖主机的MAC'
+python3 code/cat/cat-router.py block '目标设备MAC' --confirm-mac '目标设备MAC' --parent-approved
+```
+
+以上占位内容必须替换成真实 MAC；不要把这些值写入仓库。执行 `unblock` 可恢复联网。`limit` 同样要求家长确认，并只接受 1–1000 Mbps 的速度值。
+
 ## Python 调用示例
 
 ```python
