@@ -33,7 +33,7 @@ for device in router.list_devices():
 - 只允许 HTTP 端口 80 上的私有 LAN IPv4，拒绝公网域名/IP、回环地址、IPv6 和 URL 内嵌凭据，防止 SSRF。
 - 请求超时限制 1–8 秒，响应体限制 1 MiB，只开放两个固定 API 路径。
 - 绝不暴露路由器重启、恢复出厂设置、Wi-Fi 密码变更等高影响操作。
-- 建议将 Mac、路由器、NAS、投影和糖糖服务所在设备加入 `protected_macs`；目前必须由本机管理员提供该清单，不能猜测 MAC。
+- 必须将 Mac、路由器、NAS、投影和糖糖服务所在设备加入受保护清单；当前由本机管理员通过 `MIWIFI_ROUTER_MAC` 与 `TANGTANG_ROUTER_PROTECTED_MACS` 配置，不能猜测 MAC。
 - 设备清单包含家庭网络元数据，默认不写入记忆、不上传云端、不提交 Git。
 
 ## 测试与验收
