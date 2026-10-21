@@ -126,10 +126,16 @@ class MiWiFiClient:
             raise PermissionError("Typed confirmation must match the target MAC")
         if os.environ.get("TANGTANG_ROUTER_CONTROL_ENABLED") != "1":
             raise PermissionError("Router control is disabled; set the local opt-in after review")
+        router_mac_value = os.environ.get("MIWIFI_ROUTER_MAC", "").strip()
+        if not router_mac_value:
+            raise PermissionError("Configure MIWIFI_ROUTER_MAC before enabling device control")
+        router_mac = normalize_mac(router_mac_value)
+        env_protected = os.environ.get("TANGTANG_ROUTER_PROTECTED_MACS", "").split(",")
         protected = {
-            normalize_mac(value) for value in (protected_macs or [])
+            normalize_mac(value) for value in (env_protected + list(protected_macs or []))
             if str(value or "").strip()
         }
+        protected.add(router_mac)
         if normalized in protected:
             raise PermissionError("This device is protected from network changes")
         if not isinstance(allowed, bool):
