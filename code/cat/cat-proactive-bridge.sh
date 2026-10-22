@@ -11,4 +11,14 @@ case "$hour" in
   19) E=exercise;; 20) E=water;; 21) E=tidy;; 22) E=sleep;;
   *) exit 0;;
 esac
-exec "$SCRIPT_DIR/cat-remind.sh" "$E"
+# Keep scheduler diagnostics local and timestamped; logging failure must not block reminders.
+LOG_DIR="${HOME}/Library/Logs/tangtang"
+LOG_FILE="${LOG_DIR}/proactive.log"
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+{
+  printf '[%s] scheduled event=%s start\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$E"
+  "$SCRIPT_DIR/cat-remind.sh" "$E"
+  rc=$?
+  printf '[%s] scheduled event=%s exit=%s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$E" "$rc"
+  exit "$rc"
+} >> "$LOG_FILE" 2>&1
