@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=cat-lib.sh
 . "$SCRIPT_DIR/cat-lib.sh"
 
-MUSIC="$CAT_DIR/assets/wake_music_3min.wav"
+MUSIC="$CAT_DIR/assets/wake_music.mp3"
 VOICE_SCRIPT="$CAT_DIR/cat-say.sh"
 LOG_DIR="$HOME/Library/Logs/tangtang"
 LOG_FILE="$LOG_DIR/wake-music.log"
