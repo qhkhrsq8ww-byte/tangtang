@@ -4,7 +4,7 @@
 规则 cat-schedule.json: 18:00 断孩子手机 → 20:00 静默（保持断网）→ 次日 07:00 恢复
 家长/IoT 设备永不管控。状态机：仅状态变化时调用路由器 API。
 """
-import sys, os, json, time, datetime, importlib.util, re
+import sys, os, json, time, datetime, importlib.util, urllib.parse, re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCHED = os.path.join(HERE, "cat-schedule.json")
@@ -105,7 +105,8 @@ def main():
             try:
                 stok = cr.login()
                 mac = normalize_mac(target["mac"])
-                r = cr.api(stok, "/api/xqsystem/set_mac_filter?mac=%s&wan=%d" % (mac, 0 if action == "block" else 1))
+                query = urllib.parse.urlencode({"mac": mac, "wan": 0 if action == "block" else 1})
+                r = cr.api(stok, "/api/xqsystem/set_mac_filter?" + query)
                 if r.get("code") != 0:
                     failed = True
                     results.append("%s:API_ERROR %s" % (target["member"], r.get("code")))
