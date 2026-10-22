@@ -1,0 +1,3 @@
+# Optional speech synthesis dependencies for the legacy macOS TTS path.
+# Edge TTS 7.3.1 fixed the Microsoft 403 observed in the 2026-10-22 live test.
+edge-tts>=7.3.1,<8
