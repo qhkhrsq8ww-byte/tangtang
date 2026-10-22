@@ -4,7 +4,7 @@
 规则 cat-schedule.json: 18:00 断孩子手机 → 20:00 静默（保持断网）→ 次日 07:00 恢复
 家长/IoT 设备永不管控。状态机：仅状态变化时调用路由器 API。
 """
-import sys, os, json, time, datetime, subprocess, importlib.util, re
+import sys, os, json, time, datetime, importlib.util, re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCHED = os.path.join(HERE, "cat-schedule.json")
@@ -40,6 +40,11 @@ def validate_schedule(sched):
         h, m = map(int, value.split(":"))
         if h > 23 or m > 59:
             raise ValueError("时间超出有效范围")
+    start_minutes = parse_hm(start)
+    restore_minutes = parse_hm(restore)
+    if start_minutes <= restore_minutes:
+        raise ValueError("当前调度仅支持跨午夜管控窗口，start 必须晚于 restore")
+
     targets = sched.get("targets")
     if not isinstance(targets, list) or not targets:
         raise ValueError("targets 必须是非空列表")
