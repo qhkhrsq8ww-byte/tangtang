@@ -160,7 +160,9 @@ case "$CMD" in
       [ -n "$TANGTANG_SCHED_EVENT" ] || continue
       dow="${TANGTANG_SCHED_DOW:-*}"
       prefix="$(cron_env_prefix)"
-      if [ -n "${TANGTANG_SCHED_ARG:-}" ]; then
+      if [ "$TANGTANG_SCHED_EVENT" = "wake_music" ]; then
+        echo "$TANGTANG_SCHED_MIN $TANGTANG_SCHED_HOUR * * $dow $CAT_DIR/wake-music.sh"
+      elif [ -n "${TANGTANG_SCHED_ARG:-}" ]; then
         echo "$TANGTANG_SCHED_MIN $TANGTANG_SCHED_HOUR * * $dow ${prefix}$CAT_DIR/cat-remind.sh $TANGTANG_SCHED_EVENT $TANGTANG_SCHED_ARG"
       else
         echo "$TANGTANG_SCHED_MIN $TANGTANG_SCHED_HOUR * * $dow ${prefix}$CAT_DIR/cat-remind.sh $TANGTANG_SCHED_EVENT"
