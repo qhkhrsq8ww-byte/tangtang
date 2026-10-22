@@ -33,11 +33,16 @@ def guard_block_target(mac):
         raise RuntimeError("缺少本机 cat-schedule.json；拒绝执行断网操作")
     with open(config_path, encoding="utf-8") as f:
         config = json.load(f)
+    protected_items = config.get("protected")
+    if not isinstance(protected_items, list) or not protected_items:
+        raise RuntimeError("protected 保护名单缺失或为空，拒绝断网操作")
     protected = {
         normalize_mac(item.get("mac"))
-        for item in config.get("protected", [])
+        for item in protected_items
         if isinstance(item, dict) and item.get("mac")
     }
+    if not protected:
+        raise RuntimeError("protected 未包含有效 MAC，拒绝断网操作")
     targets = {
         normalize_mac(item.get("mac"))
         for item in config.get("targets", [])
