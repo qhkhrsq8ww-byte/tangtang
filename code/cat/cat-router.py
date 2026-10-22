@@ -110,9 +110,21 @@ def main():
         mac, up, down = normalize_mac(sys.argv[2]), sys.argv[3], sys.argv[4]
         if not re.fullmatch(r"\d+(?:\.\d+)?", up) or not re.fullmatch(r"\d+(?:\.\d+)?", down):
             raise ValueError("限速值必须是非负数字")
-        query = urllib.parse.urlencode({"mac": mac, "up": up, "down": down})
-        r = api(stok, "/api/misystem/set_speedlimit?" + query)
-        print(json.dumps(r, ensure_ascii=False)[:300])
+        payload = json.dumps([{"mac": mac, "maxup": up, "maxdown": down}])
+        body = urllib.parse.urlencode({"data": payload}).encode()
+        req = urllib.request.Request(ROUTER + "/cgi-bin/luci/;stok=%s/api/misystem/qos_limits" % stok,
+                                     data=body, method="POST")
+        r = json.loads(opener.open(req, timeout=25).read().decode("utf-8", "ignore"))
+        print(json.dumps(r, ensure_ascii=False)[:200])
+    elif cmd == "limit-off":
+        r = api(stok, "/api/misystem/qos_offlimit?mac=" + normalize_mac(sys.argv[2]))
+        print(json.dumps(r, ensure_ascii=False)[:200])
+    elif cmd == "qos":
+        r = api(stok, "/api/misystem/qos_info")
+        for item in (r.get("list") or []):
+            lim = item.get("limit") or {}
+            print("%-17s 限速: 上%s 下%s KB/S" % (item.get("mac", "?"),
+                  lim.get("maxup", "-"), lim.get("maxdown", "-")))
     elif cmd in ("block", "unblock"):
         mac = normalize_mac(sys.argv[2])
         if cmd == "block":
