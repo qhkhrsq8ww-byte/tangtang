@@ -16,6 +16,39 @@ opener.addheaders = [("User-Agent", "Mozilla/5.0 (Macintosh)")]
 
 def sha1(s): return hashlib.sha1(s.encode()).hexdigest()
 
+def normalize_mac(value):
+    compact = re.sub(r"[:-]", "", str(value or "")).lower()
+    if not re.fullmatch(r"[0-9a-f]{12}", compact):
+        raise ValueError("MAC 地址格式无效")
+    octets = [int(compact[i:i + 2], 16) for i in range(0, 12, 2)]
+    if all(x == 0 for x in octets) or all(x == 255 for x in octets) or octets[0] & 1:
+        raise ValueError("拒绝使用全零、广播或组播 MAC")
+    return ":".join(compact[i:i + 2] for i in range(0, 12, 2))
+
+def guard_block_target(mac):
+    """Block only explicitly configured target devices; never infer ownership."""
+    mac = normalize_mac(mac)
+    config_path = os.path.join(CAT_DIR, "cat-schedule.json")
+    if not os.path.isfile(config_path):
+        raise RuntimeError("缺少本机 cat-schedule.json；拒绝执行断网操作")
+    with open(config_path, encoding="utf-8") as f:
+        config = json.load(f)
+    protected = {
+        normalize_mac(item.get("mac"))
+        for item in config.get("protected", [])
+        if isinstance(item, dict) and item.get("mac")
+    }
+    targets = {
+        normalize_mac(item.get("mac"))
+        for item in config.get("targets", [])
+        if isinstance(item, dict) and item.get("mac")
+    }
+    if mac in protected:
+        raise RuntimeError("目标设备在受保护名单中，拒绝断网")
+    if mac not in targets:
+        raise RuntimeError("目标设备未列入家长确认的 targets 名单，拒绝断网")
+    return mac
+
 def get_password():
     return open(os.path.join(CAT_DIR, ".router_key")).read().strip()
 
@@ -69,13 +102,19 @@ def main():
                 dev.get("name"), ip0.get("ip", "?"), dev.get("mac"),
                 int(ip0.get("online", 0)) / 3600.0, ip0.get("downspeed", "0")))
     elif cmd == "limit":
-        mac, up, down = sys.argv[2], sys.argv[3], sys.argv[4]
-        r = api(stok, "/api/misystem/set_speedlimit?mac=%s&up=%s&down=%s" % (mac, up, down))
+        mac, up, down = normalize_mac(sys.argv[2]), sys.argv[3], sys.argv[4]
+        if not re.fullmatch(r"\d+(?:\.\d+)?", up) or not re.fullmatch(r"\d+(?:\.\d+)?", down):
+            raise ValueError("限速值必须是非负数字")
+        query = urllib.parse.urlencode({"mac": mac, "up": up, "down": down})
+        r = api(stok, "/api/misystem/set_speedlimit?" + query)
         print(json.dumps(r, ensure_ascii=False)[:300])
     elif cmd in ("block", "unblock"):
-        mac = sys.argv[2]
+        mac = normalize_mac(sys.argv[2])
+        if cmd == "block":
+            mac = guard_block_target(mac)
         wan = 0 if cmd == "block" else 1   # 固件官方约定：wan=0 禁止上网，wan=1 恢复
-        r = api(stok, "/api/xqsystem/set_mac_filter?mac=%s&wan=%d" % (mac, wan))
+        query = urllib.parse.urlencode({"mac": mac, "wan": wan})
+        r = api(stok, "/api/xqsystem/set_mac_filter?" + query)
         print(json.dumps(r, ensure_ascii=False)[:200])
     else:
         print(__doc__)
