@@ -4,7 +4,7 @@
 规则 cat-schedule.json: 18:00 断孩子手机 → 20:00 静默（保持断网）→ 次日 07:00 恢复
 家长/IoT 设备永不管控。状态机：仅状态变化时调用路由器 API。
 """
-import sys, os, json, time, datetime, subprocess
+import sys, os, json, time, datetime, subprocess, importlib.util, re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCHED = os.path.join(HERE, "cat-schedule.json")
@@ -20,8 +20,43 @@ def parse_hm(s):
     h, m = s.split(":", 1)
     return int(h) * 60 + int(m)
 
-def desired_state(sched):
-    now = datetime.datetime.now()
+def normalize_mac(value):
+    compact = re.sub(r"[:-]", "", str(value or "")).lower()
+    if not re.fullmatch(r"[0-9a-f]{12}", compact):
+        raise ValueError("MAC 地址格式无效")
+    return ":".join(compact[i:i + 2] for i in range(0, 12, 2))
+
+def validate_schedule(sched):
+    if not isinstance(sched, dict) or not isinstance(sched.get("window"), dict):
+        raise ValueError("缺少有效的 window 配置")
+    start = sched["window"].get("start")
+    restore = sched["window"].get("restore")
+    for value in (start, restore):
+        if not isinstance(value, str) or not __import__("re").fullmatch(r"\\d{2}:\\d{2}", value):
+            raise ValueError("时间必须使用 HH:MM 格式")
+        h, m = map(int, value.split(":"))
+        if h > 23 or m > 59:
+            raise ValueError("时间超出有效范围")
+    targets = sched.get("targets")
+    if not isinstance(targets, list) or not targets:
+        raise ValueError("targets 必须是非空列表")
+    protected = {normalize_mac(x.get("mac")) for x in sched.get("protected", []) if isinstance(x, dict)}
+    seen = set()
+    for target in targets:
+        if not isinstance(target, dict):
+            raise ValueError("target 配置格式无效")
+        mac = normalize_mac(target.get("mac"))
+        if mac in seen:
+            raise ValueError("targets 存在重复 MAC")
+        if mac in protected:
+            raise ValueError("拒绝管控受保护设备：" + mac)
+        seen.add(mac)
+        if not target.get("member") or not target.get("name"):
+            raise ValueError("target 缺少 name/member")
+    return True
+
+def desired_state(sched, now=None):
+    now = now or datetime.datetime.now()
     minutes = now.hour * 60 + now.minute
     start = parse_hm(sched["window"]["start"])
     restore = parse_hm(sched["window"]["restore"])
@@ -32,27 +67,50 @@ def desired_state(sched):
     return "unblock"
 
 def main():
-    sched = json.load(open(SCHED, encoding="utf-8"))
-    desired = desired_state(sched)
-    prev = open(STATE).read().strip() if os.path.exists(STATE) else "init"
-    if prev == desired:
+    try:
+        with open(SCHED, encoding="utf-8") as f:
+            sched = json.load(f)
+        validate_schedule(sched)
+        desired = desired_state(sched)
+        prev = open(STATE).read().strip() if os.path.exists(STATE) else "init"
+        if prev == desired:
+            return 0
+        log("状态切换: %s → %s" % (prev, desired))
+        action = "block" if desired == "block" else "unblock"
+        spec = importlib.util.spec_from_file_location("cr", os.path.join(HERE, "cat-router.py"))
+        cr = importlib.util.module_from_spec(spec)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("无法加载路由器控制模块")
+        spec.loader.exec_module(cr)
+        results = []
+        failed = False
+        for target in sched["targets"]:
+            try:
+                stok = cr.login()
+                mac = normalize_mac(target["mac"])
+                r = cr.api(stok, "/api/xqsystem/set_mac_filter?mac=%s&wan=%d" % (mac, 0 if action == "block" else 1))
+                if r.get("code") != 0:
+                    failed = True
+                    results.append("%s:API_ERROR %s" % (target["member"], r.get("code")))
+                else:
+                    results.append("%s:OK" % target["member"])
+            except Exception as e:
+                failed = True
+                results.append("%s:ERR %s" % (target["member"], str(e)[:80]))
+        log("  执行 %s → %s" % (action, ", ".join(results)))
+        if failed:
+            log("  存在失败设备，不写入状态文件；下次调度将重试")
+            return 1
+        with open(STATE + ".tmp", "w", encoding="utf-8") as f:
+            f.write(desired)
+        os.replace(STATE + ".tmp", STATE)
         return 0
-    log("状态切换: %s → %s" % (prev, desired))
-    action = "block" if desired == "block" else "unblock"
-    spec = importlib.util.spec_from_file_location("cr", os.path.join(HERE, "cat-router.py"))
-    cr = importlib.util.module_from_spec(spec); spec.loader.exec_module(cr)
-    results = []
-    for t in sched["targets"]:
+    except Exception as e:
         try:
-            stok = cr.login()
-            r = cr.api(stok, "/api/xqsystem/set_mac_filter?mac=%s&wan=%d" % (t["mac"], 0 if action == "block" else 1))
-            results.append("%s:%s" % (t["member"], r.get("code")))
-        except Exception as e:
-            results.append("%s:ERR %s" % (t["member"], str(e)[:40]))
-    log("  执行 %s → %s" % (action, ", ".join(results)))
-    with open(STATE, "w") as f:
-        f.write(desired)
-    return 0
+            log("执行失败，保持原状态并等待下次重试：" + str(e))
+        except Exception:
+            pass
+        return 1
 
-import importlib.util
-sys.exit(main())
+if __name__ == "__main__":
+    sys.exit(main())
