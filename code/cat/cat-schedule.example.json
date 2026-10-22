@@ -1,15 +1,16 @@
 {
+  "_notice": "示例模板：先将所有 REPLACE_WITH_* 替换为家庭内网设备真实 MAC，并核对 targets 与 protected 不重叠后再启用。",
   "window": { "start": "18:00", "restore": "07:00" },
   "silent_from": "20:00",
   "weekend_exempt": false,
   "targets": [
-    { "name": "HONOR-70",    "mac": "0A:CD:FD:05:5E:5A", "member": "姐姐" },
-    { "name": "vivo-Y70s",   "mac": "46:C3:4A:90:BD:C3", "member": "弟弟" },
-    { "name": "M2007J17C",   "mac": "4C:02:20:3F:76:49", "member": "姐姐2" }
+    { "name": "HONOR-70",    "mac": "REPLACE_WITH_SISTER_PHONE_MAC", "member": "姐姐" },
+    { "name": "vivo-Y70s",   "mac": "REPLACE_WITH_BROTHER_PHONE_MAC", "member": "弟弟" },
+    { "name": "M2007J17C",   "mac": "REPLACE_WITH_SISTER_PHONE_2_MAC", "member": "姐姐2" }
   ],
   "protected": [
-    { "name": "lvdeMacBook-Air", "mac": "8C:29:37:ED:B3:BA" },
-    { "name": "EPSON310FDE",     "mac": "D4:80:8B:31:0F:DE" },
-    { "name": "Redmi-Note-11-5G（奶奶）", "mac": "94:D3:31:6C:CB:72" }
+    { "name": "lvdeMacBook-Air", "mac": "REPLACE_WITH_MAC_MANAGEMENT_MAC" },
+    { "name": "EPSON310FDE",     "mac": "REPLACE_WITH_PRINTER_MAC" },
+    { "name": "Redmi-Note-11-5G（奶奶）", "mac": "REPLACE_WITH_GRANDMA_PHONE_MAC" }
   ]
 }
