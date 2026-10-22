@@ -66,7 +66,7 @@ REPLY = {
                    "汪汪～ 看到你糖糖就开心得想转圈圈！"],
         "calm":   ["汪汪～ 我在呢。",
                    "你来啦，糖糖一直在等你～"],
-        "lonely": ["你终于来啦……糖糖一个人等了好久，想死你啦～",
+        "lonely": ["你终于来啦～糖糖等到你啦，快来一起玩吧！",
                    "汪汪……你不在的时候，糖糖总觉得空落落的，快来抱抱！"],
         "sleepy": ["汪汪……糖糖刚才打了个盹，你来啦～",
                    "哈欠～ 你来啦，糖糖揉揉眼睛陪你～"],
@@ -255,8 +255,12 @@ def drift(state):
     except Exception:
         last = now()
     h = max(0.0, (now() - last).total_seconds() / 3600.0)
-    state["loneliness"] = min(100, round(state["loneliness"] + h * 5, 1))
-    state["happiness"] = max(0, round(state["happiness"] - h * 1.5, 1))
+    # Bound long-idle drift so the child-facing persona cannot remain in an extreme mood.
+    # Existing persisted values are normalized on the next invocation.
+    state["loneliness"] = min(60, max(0, round(float(state.get("loneliness", 20)) + h * 5, 1)))
+    state["happiness"] = min(100, max(40, round(float(state.get("happiness", 70)) - h * 1.5, 1)))
+    state["energy"] = min(100, max(30, float(state.get("energy", 70))))
+    state["affection"] = min(100, max(0, float(state.get("affection", 50))))
     hr = now().hour
     if 23 <= hr or hr < 6:
         state["energy"] = min(60, state["energy"])
