@@ -63,6 +63,15 @@ class ScheduleSafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "protected 未包含有效 MAC"):
             schedule.validate_schedule(config)
 
+    def test_refuses_window_that_would_block_all_day(self):
+        config = sample()
+        config["window"] = {"start": "07:00", "restore": "18:00"}
+        with self.assertRaisesRegex(ValueError, "start 必须晚于 restore"):
+            schedule.validate_schedule(config)
+        config["window"] = {"start": "07:00", "restore": "07:00"}
+        with self.assertRaisesRegex(ValueError, "start 必须晚于 restore"):
+            schedule.validate_schedule(config)
+
     def test_window_crosses_midnight_and_weekend_exemption(self):
         config = sample()
         self.assertEqual(schedule.desired_state(config, datetime.datetime(2026, 10, 22, 23, 0)), "block")
