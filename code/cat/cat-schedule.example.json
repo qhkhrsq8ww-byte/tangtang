@@ -1,16 +1,44 @@
 {
-  "_notice": "示例模板：先将所有 REPLACE_WITH_* 替换为家庭内网设备真实 MAC，并核对 targets 与 protected 不重叠后再启用。",
-  "window": { "start": "18:00", "restore": "07:00" },
+  "window": {
+    "start": "21:30",
+    "restore": "07:00"
+  },
   "silent_from": "20:00",
   "weekend_exempt": false,
   "targets": [
-    { "name": "HONOR-70",    "mac": "REPLACE_WITH_SISTER_PHONE_MAC", "member": "姐姐" },
-    { "name": "vivo-Y70s",   "mac": "REPLACE_WITH_BROTHER_PHONE_MAC", "member": "弟弟" },
-    { "name": "M2007J17C",   "mac": "REPLACE_WITH_SISTER_PHONE_2_MAC", "member": "姐姐2" }
+    {
+      "name": "设备名1",
+      "mac": "AA:BB:CC:DD:EE:01",
+      "member": "孩子1"
+    },
+    {
+      "name": "设备名2",
+      "mac": "AA:BB:CC:DD:EE:02",
+      "member": "孩子2"
+    },
+    {
+      "name": "设备名3",
+      "mac": "AA:BB:CC:DD:EE:03",
+      "member": "孩子3"
+    }
   ],
   "protected": [
-    { "name": "lvdeMacBook-Air", "mac": "REPLACE_WITH_MAC_MANAGEMENT_MAC" },
-    { "name": "EPSON310FDE",     "mac": "REPLACE_WITH_PRINTER_MAC" },
-    { "name": "Redmi-Note-11-5G（奶奶）", "mac": "REPLACE_WITH_GRANDMA_PHONE_MAC" }
-  ]
+    {
+      "name": "家长/IoT设备1",
+      "mac": "AA:BB:CC:DD:EE:91"
+    },
+    {
+      "name": "家长/IoT设备2",
+      "mac": "AA:BB:CC:DD:EE:92"
+    },
+    {
+      "name": "家长/IoT设备3",
+      "mac": "AA:BB:CC:DD:EE:93"
+    }
+  ],
+  "nag_start": "21:30",
+  "quiet_start": "22:30",
+  "nag_block_min": 2,
+  "nag_unblock_min": 1,
+  "nag_remind": false
 }

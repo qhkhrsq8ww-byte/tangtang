@@ -132,8 +132,8 @@ def main():
         if prev == desired:
             return 0
         log("状态切换: %s → %s" % (prev, desired))
-        # 唠叨模式睡觉提醒：切到 nag-block 时说一次，15 分钟内不重复
-        if desired.startswith("nag") and desired != prev:
+        # 唠叨模式睡觉提醒：仅当 nag_remind=true（默认关闭，家长要求静音）
+        if desired.startswith("nag") and desired != prev and str(sched.get("nag_remind", "true")).lower() in ("1", "true", "yes"):
             import subprocess
             last_r = os.path.join("/tmp", "cat-nag-remind.ts")
             now_ts = time.time()
