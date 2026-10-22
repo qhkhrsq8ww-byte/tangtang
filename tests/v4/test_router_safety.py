@@ -34,6 +34,14 @@ class RouterSafetyTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "未列入"):
                 router.guard_block_target("aa:bb:cc:dd:ee:03")
 
+    def test_block_fails_closed_when_protected_list_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            router.CAT_DIR = tmp
+            config = {"targets": [{"name": "child", "member": "child", "mac": "aa:bb:cc:dd:ee:01"}]}
+            Path(tmp, "cat-schedule.json").write_text(json.dumps(config), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "protected 保护名单缺失"):
+                router.guard_block_target("aa:bb:cc:dd:ee:01")
+
     def test_block_fails_closed_when_local_schedule_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
             router.CAT_DIR = tmp
