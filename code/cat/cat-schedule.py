@@ -72,6 +72,32 @@ def validate_schedule(sched):
             raise ValueError("target 缺少 name/member")
     return True
 
+def resolve_live_macs(cr, stok, sched):
+    """按设备名从路由器 devicelist 解析当前 MAC（免疫 WiFi 随机化）。
+    返回 (执行列表[(name, member, mac)], 受保护当前MAC集合)。"""
+    d = cr.api(stok, "/api/misystem/devicelist")
+    byname = {}
+    for dev in d.get("list") or []:
+        name = dev.get("name")
+        if name:
+            byname[name] = (dev.get("mac") or "").upper()
+    exec_list, live_protected = [], set()
+    for item in sched.get("protected") or []:
+        cur = byname.get(item.get("name"))
+        if cur:
+            live_protected.add(normalize_mac(cur))
+        elif item.get("mac"):
+            live_protected.add(normalize_mac(item["mac"]))
+    for t in sched.get("targets") or []:
+        cur = byname.get(t.get("name"))
+        if cur:
+            exec_list.append((t["name"], t.get("member"), normalize_mac(cur)))
+        elif t.get("mac"):
+            exec_list.append((t["name"], t.get("member"), normalize_mac(t["mac"])))
+        else:
+            log("  设备 %s 不在线且无静态MAC，跳过" % t.get("name"))
+    return exec_list, live_protected
+
 def desired_state(sched, now=None):
     now = now or datetime.datetime.now()
     minutes = now.hour * 60 + now.minute
@@ -99,22 +125,26 @@ def main():
             raise RuntimeError("无法加载路由器控制模块")
         cr = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cr)
+        stok = cr.login()
+        exec_list, live_protected = resolve_live_macs(cr, stok, sched)
+        # 受保护校验用当前真实 MAC（随机化免疫）
+        clash = [x[2] for x in exec_list if x[2] in live_protected]
+        if clash:
+            raise RuntimeError("目标与受保护设备冲突（当前MAC）: " + ",".join(clash))
         results = []
         failed = False
-        for target in sched["targets"]:
+        for name, member, mac in exec_list:
             try:
-                stok = cr.login()
-                mac = normalize_mac(target["mac"])
                 query = urllib.parse.urlencode({"mac": mac, "wan": 0 if action == "block" else 1})
                 r = cr.api(stok, "/api/xqsystem/set_mac_filter?" + query)
                 if r.get("code") != 0:
                     failed = True
-                    results.append("%s:API_ERROR %s" % (target["member"], r.get("code")))
+                    results.append("%s:API_ERROR %s" % (member, r.get("code")))
                 else:
-                    results.append("%s:OK" % target["member"])
+                    results.append("%s(%s):OK" % (member, name))
             except Exception as e:
                 failed = True
-                results.append("%s:ERR %s" % (target["member"], str(e)[:80]))
+                results.append("%s:ERR %s" % (member, str(e)[:80]))
         log("  执行 %s → %s" % (action, ", ".join(results)))
         if failed:
             log("  存在失败设备，不写入状态文件；下次调度将重试")
