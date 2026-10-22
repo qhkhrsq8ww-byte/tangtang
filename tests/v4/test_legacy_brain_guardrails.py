@@ -42,7 +42,8 @@ class LegacyBrainGuardrailTests(unittest.TestCase):
 
     def test_proactive_bridge_writes_timestamped_local_diagnostics(self):
         source = BRIDGE_PATH.read_text(encoding="utf-8")
-        self.assertIn("Library/Logs/tangtang/proactive.log", source)
+        self.assertIn('LOG_DIR="${HOME}/Library/Logs/tangtang"', source)
+        self.assertIn('LOG_FILE="${LOG_DIR}/proactive.log"', source)
         self.assertIn("date '+%Y-%m-%dT%H:%M:%S%z'", source)
         self.assertIn("scheduled event=%s exit=%s", source)
 
