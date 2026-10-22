@@ -99,14 +99,27 @@ def resolve_live_macs(cr, stok, sched):
     return exec_list, live_protected
 
 def desired_state(sched, now=None):
+    """三态策略：
+    - nag 窗口（21:30-22:30，默认）：频繁断网/联网循环 + 睡觉提醒（唠叨模式）
+      子周期由 nag_block_min/nag_unblock_min 决定，无状态计算（幂等可重入）
+    - 静默硬断（22:30-07:00，默认）：保持断网，不出声
+    - 恢复期（07:00-21:30）：正常上网
+    """
     now = now or datetime.datetime.now()
     minutes = now.hour * 60 + now.minute
-    start = parse_hm(sched["window"]["start"])
+    nag_start = parse_hm(sched.get("nag_start", sched["window"]["start"]))
+    quiet_start = parse_hm(sched.get("quiet_start", "22:30"))
     restore = parse_hm(sched["window"]["restore"])
     if sched.get("weekend_exempt") and now.isoweekday() >= 6:
         return "unblock"
-    if minutes >= start or minutes < restore:
-        return "block"
+    if minutes >= quiet_start or minutes < restore:
+        return "block"                      # 静默硬断
+    if minutes >= nag_start:
+        block_min = int(sched.get("nag_block_min", 2))
+        unblock_min = int(sched.get("nag_unblock_min", 1))
+        cycle = block_min + unblock_min
+        offset = (minutes - nag_start) % cycle
+        return "block" if offset < block_min else "unblock"
     return "unblock"
 
 def main():
@@ -119,6 +132,28 @@ def main():
         if prev == desired:
             return 0
         log("状态切换: %s → %s" % (prev, desired))
+        # 唠叨模式睡觉提醒：切到 nag-block 时说一次，15 分钟内不重复
+        if desired.startswith("nag") and desired != prev:
+            import subprocess
+            last_r = os.path.join("/tmp", "cat-nag-remind.ts")
+            now_ts = time.time()
+            due = True
+            if os.path.exists(last_r):
+                try:
+                    due = now_ts - float(open(last_r).read().strip()) >= 900
+                except Exception:
+                    due = True
+            if due:
+                phrases = ["汪汪～该睡觉啦，放下手机，糖糖陪你进入梦乡～",
+                           "汪汪～眼睛要休息了哦，明天还要上学呢～",
+                           "汪汪～手机该充电了，糖糖也要充电了，晚安～"]
+                import random as _r
+                ph = _r.choice(phrases)
+                subprocess.run(["/bin/bash", os.path.join(HERE, "cat-say.sh"), ph, "soft"],
+                               timeout=60, capture_output=True)
+                with open(last_r, "w") as f:
+                    f.write(str(now_ts))
+                log("  睡觉提醒已播: " + ph[:24])
         action = "block" if desired == "block" else "unblock"
         spec = importlib.util.spec_from_file_location("cr", os.path.join(HERE, "cat-router.py"))
         if spec is None or spec.loader is None:
