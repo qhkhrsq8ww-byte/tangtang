@@ -32,7 +32,7 @@ def validate_schedule(sched):
     start = sched["window"].get("start")
     restore = sched["window"].get("restore")
     for value in (start, restore):
-        if not isinstance(value, str) or not __import__("re").fullmatch(r"\\d{2}:\\d{2}", value):
+        if not isinstance(value, str) or not __import__("re").fullmatch(r"\d{2}:\d{2}", value):
             raise ValueError("时间必须使用 HH:MM 格式")
         h, m = map(int, value.split(":"))
         if h > 23 or m > 59:
