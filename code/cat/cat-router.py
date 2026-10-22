@@ -122,9 +122,10 @@ def main():
     elif cmd == "qos":
         r = api(stok, "/api/misystem/qos_info")
         for item in (r.get("list") or []):
-            lim = item.get("limit") or {}
-            print("%-17s 限速: 上%s 下%s KB/S" % (item.get("mac", "?"),
-                  lim.get("maxup", "-"), lim.get("maxdown", "-")))
+            q = item.get("qos") or {}
+            up, down = q.get("upmax", 0), q.get("downmax", 0)
+            tag = "无限制" if (not up and not down) else "上%sKB/s 下%sKB/s" % (up, down)
+            print("%-17s 限速: %s" % (item.get("mac", "?"), tag))
     elif cmd in ("block", "unblock"):
         mac = normalize_mac(sys.argv[2])
         if cmd == "block":
