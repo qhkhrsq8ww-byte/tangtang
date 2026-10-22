@@ -24,6 +24,9 @@ def normalize_mac(value):
     compact = re.sub(r"[:-]", "", str(value or "")).lower()
     if not re.fullmatch(r"[0-9a-f]{12}", compact):
         raise ValueError("MAC 地址格式无效")
+    octets = [int(compact[i:i + 2], 16) for i in range(0, 12, 2)]
+    if all(x == 0 for x in octets) or all(x == 255 for x in octets) or octets[0] & 1:
+        raise ValueError("拒绝使用全零、广播或组播 MAC")
     return ":".join(compact[i:i + 2] for i in range(0, 12, 2))
 
 def validate_schedule(sched):
@@ -40,7 +43,16 @@ def validate_schedule(sched):
     targets = sched.get("targets")
     if not isinstance(targets, list) or not targets:
         raise ValueError("targets 必须是非空列表")
-    protected = {normalize_mac(x.get("mac")) for x in sched.get("protected", []) if isinstance(x, dict)}
+    protected_items = sched.get("protected")
+    if not isinstance(protected_items, list) or not protected_items:
+        raise ValueError("protected 必须是非空的家长/基础设施设备保护名单")
+    protected = {
+        normalize_mac(x.get("mac"))
+        for x in protected_items
+        if isinstance(x, dict) and x.get("mac")
+    }
+    if not protected:
+        raise ValueError("protected 未包含有效 MAC，拒绝启用自动管控")
     seen = set()
     for target in targets:
         if not isinstance(target, dict):
@@ -78,9 +90,9 @@ def main():
         log("状态切换: %s → %s" % (prev, desired))
         action = "block" if desired == "block" else "unblock"
         spec = importlib.util.spec_from_file_location("cr", os.path.join(HERE, "cat-router.py"))
-        cr = importlib.util.module_from_spec(spec)
         if spec is None or spec.loader is None:
             raise RuntimeError("无法加载路由器控制模块")
+        cr = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cr)
         results = []
         failed = False
