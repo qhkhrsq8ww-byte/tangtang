@@ -48,6 +48,21 @@ class ScheduleSafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "MAC 地址格式无效"):
             schedule.validate_schedule(config)
 
+    def test_refuses_multicast_and_zero_macs(self):
+        for mac in ("00:00:00:00:00:00", "ff:ff:ff:ff:ff:ff", "01:00:5e:00:00:01"):
+            with self.subTest(mac=mac), self.assertRaisesRegex(ValueError, "全零、广播或组播"):
+                schedule.normalize_mac(mac)
+
+    def test_protected_list_must_be_explicit_and_nonempty(self):
+        config = sample()
+        config["protected"] = []
+        with self.assertRaisesRegex(ValueError, "protected 必须是非空"):
+            schedule.validate_schedule(config)
+        config = sample()
+        config["protected"] = [{"name": "missing mac"}]
+        with self.assertRaisesRegex(ValueError, "protected 未包含有效 MAC"):
+            schedule.validate_schedule(config)
+
     def test_window_crosses_midnight_and_weekend_exemption(self):
         config = sample()
         self.assertEqual(schedule.desired_state(config, datetime.datetime(2026, 10, 22, 23, 0)), "block")
