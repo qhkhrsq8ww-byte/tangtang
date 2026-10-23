@@ -99,27 +99,16 @@ def resolve_live_macs(cr, stok, sched):
     return exec_list, live_protected
 
 def desired_state(sched, now=None):
-    """三态策略：
-    - nag 窗口（21:30-22:30，默认）：频繁断网/联网循环 + 睡觉提醒（唠叨模式）
-      子周期由 nag_block_min/nag_unblock_min 决定，无状态计算（幂等可重入）
-    - 静默硬断（22:30-07:00，默认）：保持断网，不出声
-    - 恢复期（07:00-21:30）：正常上网
-    """
+    """两态策略（2026-10-22 家长规则）：18:00-07:00 持续断网；其余正常上网。
+    睡觉语音提醒独立于网络状态：21:30-22:30 窗口内节流提醒（见 main）。"""
     now = now or datetime.datetime.now()
     minutes = now.hour * 60 + now.minute
-    nag_start = parse_hm(sched.get("nag_start", sched["window"]["start"]))
-    quiet_start = parse_hm(sched.get("quiet_start", "22:30"))
-    restore = parse_hm(sched["window"]["restore"])
+    start = parse_hm(sched["window"]["start"])      # 18:00
+    restore = parse_hm(sched["window"]["restore"])  # 07:00
     if sched.get("weekend_exempt") and now.isoweekday() >= 6:
         return "unblock"
-    if minutes >= quiet_start or minutes < restore:
-        return "block"                      # 静默硬断
-    if minutes >= nag_start:
-        block_min = int(sched.get("nag_block_min", 2))
-        unblock_min = int(sched.get("nag_unblock_min", 1))
-        cycle = block_min + unblock_min
-        offset = (minutes - nag_start) % cycle
-        return "block" if offset < block_min else "unblock"
+    if minutes >= start or minutes < restore:
+        return "block"
     return "unblock"
 
 def main():
@@ -132,8 +121,12 @@ def main():
         if prev == desired:
             return 0
         log("状态切换: %s → %s" % (prev, desired))
-        # 唠叨模式睡觉提醒：仅当 nag_remind=true（默认关闭，家长要求静音）
-        if desired.startswith("nag") and desired != prev and str(sched.get("nag_remind", "true")).lower() in ("1", "true", "yes"):
+        # 睡觉提醒：21:30-22:30 窗口内节流提醒（nag_remind=true 时启用；网络动作独立）
+        nag_lo = parse_hm(sched.get("nag_start", "21:30"))
+        nag_hi = parse_hm(sched.get("quiet_start", "22:30"))
+        now_min = datetime.datetime.now().hour * 60 + datetime.datetime.now().minute
+        in_nag = nag_lo <= now_min < nag_hi
+        if in_nag and desired == "block" and str(sched.get("nag_remind", "false")).lower() in ("1", "true", "yes"):
             import subprocess
             last_r = os.path.join("/tmp", "cat-nag-remind.ts")
             now_ts = time.time()
