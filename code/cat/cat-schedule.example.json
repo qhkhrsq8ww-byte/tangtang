@@ -34,6 +34,11 @@
     {
       "name": "家长/IoT设备3",
       "mac": "AA:BB:CC:DD:EE:93"
+    },
+    {
+      "name": "DESKTOP-H8AJGJA",
+      "mac": "AA:BB:CC:DD:EE:94",
+      "member": "家长工作电脑"
     }
   ],
   "nag_start": "21:30",
