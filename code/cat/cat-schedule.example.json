@@ -4,7 +4,7 @@
     "restore": "07:00"
   },
   "silent_from": "20:00",
-  "weekend_exempt": false,
+  "weekend_exempt": true,
   "targets": [
     {
       "name": "设备名1",
