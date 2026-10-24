@@ -29,3 +29,15 @@ tail ~/Library/Logs/tangtang/schedule.log            # 断网/恢复状态机轨
 crontab -l | tail -3                                 # 06:40/06:41 每日唤醒条目
 bash tests/smoke-20261019.sh                         # 冒烟套件
 ```
+
+## 追加（2026-10-24 10:0x）：生产钉住机制上线 + 调度器验证
+
+**发现**：live 的 cat-chat.py 再次被覆盖为 V4 版（历史某次 deploy 带回），云端大脑静默兜底。
+
+**修复**：
+1. live cat-chat.py 恢复直连版（b29ee95 基线），实测 GLM 生成式回复正常
+2. **deploy.sh 新增 .pinned-live-files 豁免机制**——生产钉住文件不再被部署覆盖（根治反复覆盖）
+3. com.tangtang.schedule 调度器 kickstart 实测：动态 MAC 解析 + 恢复执行全部正常（周六恢复期三台 code:0）
+4. 昨日"时钟慢 15 小时"结论撤回：NTP 背书系统时间正确（±2s），系审核者时间线误读
+
+**当前生产态**：孩子手机恢复期在线（周六白天）· 今晚 21:30 唠叨模式 → 22:30 静默断网 · Unknown 设备两台（.122 EC:74:8C 高流量 735KB/s、.104）仍待指认
