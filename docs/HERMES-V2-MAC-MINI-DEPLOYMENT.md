@@ -39,7 +39,7 @@
 - 监控磁盘可用空间、内存压力、CPU、进程重启次数和 Agent 调用延迟。
 
 ## 4. 服务管理
-先确认实际采用的 Hermes 运行形态：CLI 单轮调用、Desktop/Backend（hermes serve）和消息平台 Gateway 是不同组件，不能一概称为 Gateway。第一阶段先验证最小对话调用，不预设需要消息平台 Gateway。
+先确认实际采用的 Hermes 运行形态：CLI 单轮调用、Desktop/Backend（`hermes serve`）、消息平台 Gateway 和 API Server 是不同概念。Hermes API Server 由 `hermes gateway` 进程承载（设置 `API_SERVER_ENABLED=true` 或 `gateway.api_server.enabled: true`），不是 `hermes serve` Desktop backend，也不是 MCP Server mode。第一阶段只启用本机 API Server，不配置外部消息渠道。
 
 如确需常驻 Backend 或消息 Gateway，再确认官方支持的 macOS 服务安装方式，并选择一个服务管理者；不得同时启用两个自启动管理器。
 
