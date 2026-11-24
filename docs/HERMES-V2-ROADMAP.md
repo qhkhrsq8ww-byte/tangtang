@@ -27,7 +27,7 @@ Mac mini M6 + Hermes-Agent + TangTang Core。保留糖糖家庭大脑，以 Herm
 - 再次读取 main 最新提交、CI 和开放 PR。
 - 对 V4 运行时、身份、记忆、隐私、人格、陪伴、任务、语音、投影和设备模块建立资产清单。
 - 查明 README 的 MacBook Air 运行口径、旧部署路径和 OpenClaw 依赖。
-- 核对 V4/V5 命名冲突及 CORE_API_VERSION。
+- 确认 `core/brain/planner.py` 的 V5 是规划器模块代际名称，不是 Core API V5；保持 CORE_API_VERSION=4.0.0。
 - 对 Hermes 当前版本做官方文档核验和最小 PoC 设计。
 - 明确 #67、#69、#70 的独立审查结论，不自动合并。
 
@@ -113,7 +113,7 @@ Mac mini M6 + Hermes-Agent + TangTang Core。保留糖糖家庭大脑，以 Herm
 - [ ] PR #78：加入 Hermes API Adapter，并在 V4 对话入口增加 `TANGTANG_LLM_BACKEND=hermes` 显式开关；默认仍走原模型直连。Hermes 模式默认零工具、loopback、逐轮临时会话清理；尚未在真实 Hermes/M6 上验证。
 - [ ] Mac mini 实机 Hermes 安装、API Server 工具集白名单和资源验证尚未开展。
 
-阶段 0 已完成代码主链路和关键风险的静态盘点，但因 V4/V5 命名、旧 PR 重基线和 Mac mini 实机核验尚未全部解决，阶段 0 不宣布完全验收。
+阶段 0 已完成代码主链路和关键风险的静态盘点；已确认 Planner V5 是模块版本名称，不等于 Core API V5。由于旧 PR 重基线和 Mac mini 实机核验尚未完成，阶段 0 暂不宣布完全验收。
 
 ## 下一里程碑
 
