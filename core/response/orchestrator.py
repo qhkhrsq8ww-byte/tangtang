@@ -82,6 +82,7 @@ class ResponseOrchestrator:
         decision: str,
         context: Mapping[str, Any] | None,
         action: str = "idle",
+        responder: Callable[[Mapping[str, Any]], str] | None = None,
     ) -> PresentationAction:
         ctx = dict(context or {})
         member_id = None
@@ -122,7 +123,8 @@ class ResponseOrchestrator:
                 text = "糖糖在呢，刚刚没接上。"
         else:
             try:
-                text = self.responder(ctx)
+                selected_responder = responder or self.responder
+                text = selected_responder(ctx)
             except ActionError:
                 raise
             except Exception:

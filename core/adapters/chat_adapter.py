@@ -338,12 +338,12 @@ class ChatAdapter:
                     {"role": "assistant", "text": text_out[:240]},
                 ])
                 self._recent_turns[speaker_id] = recent[-(self._recent_turn_limit * 2):]
-            original = self.pipeline.orchestrator.responder
-            self.pipeline.orchestrator.responder = lambda _c, t=text_out: t
-            try:
-                action = self.pipeline.orchestrator.run(decision=decision, context=ctx, action="reply")
-            finally:
-                self.pipeline.orchestrator.responder = original
+            action = self.pipeline.orchestrator.run(
+                decision=decision,
+                context=ctx,
+                action="reply",
+                responder=lambda _c, t=text_out: t,
+            )
             return ChatTurn(action=action, ingest=ingested, context=ctx)
         action = self.pipeline.orchestrator.run(decision=decision, context=ctx, action="reply")
         return ChatTurn(action=action, ingest=ingested, context=ctx)
