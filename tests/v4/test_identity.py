@@ -116,5 +116,54 @@ class TestIdentityDecoupledFromEvent(unittest.TestCase):
         self.assertNotIn("EventBus", src)
 
 
+class TestPerceptionEvidence(unittest.TestCase):
+    def test_identity_evidence_requires_verified_fresh_confident_signal(self):
+        from datetime import datetime, timedelta, timezone
+        from core.perception.evidence import evidence_is_usable
+
+        now = datetime(2026, 11, 24, 12, 0, tzinfo=timezone.utc)
+        valid = {
+            "evidence": {
+                "identity": {
+                    "source": "voiceprint_presence_fusion",
+                    "observed_at": (now - timedelta(seconds=5)).isoformat(),
+                    "expires_at": (now + timedelta(seconds=20)).isoformat(),
+                    "confidence": 0.93,
+                    "verification_status": "verified",
+                }
+            }
+        }
+        self.assertTrue(evidence_is_usable(valid, "identity", now=now))
+        stale = {"evidence": {"identity": {**valid["evidence"]["identity"], "observed_at": (now - timedelta(minutes=5)).isoformat()}}}
+        self.assertFalse(evidence_is_usable(stale, "identity", now=now))
+        weak = {"evidence": {"identity": {**valid["evidence"]["identity"], "confidence": 0.5}}}
+        self.assertFalse(evidence_is_usable(weak, "identity", now=now))
+        unverified = {"evidence": {"identity": {**valid["evidence"]["identity"], "verification_status": "candidate"}}}
+        self.assertFalse(evidence_is_usable(unverified, "identity", now=now))
+
+    def test_required_identity_evidence_fails_closed_in_resolver(self):
+        r = IdentityResolver(V4_MEMBERS)
+        self.assertIsNone(r.resolve({
+            "label": "dad",
+            "identity_evidence_required": True,
+            "evidence": {},
+        }))
+        from datetime import datetime, timedelta, timezone
+        now = datetime.now(timezone.utc)
+        self.assertEqual(r.resolve({
+            "label": "dad",
+            "identity_evidence_required": True,
+            "evidence": {
+                "identity": {
+                    "source": "manual_confirmation",
+                    "observed_at": (now - timedelta(seconds=1)).isoformat(),
+                    "expires_at": (now + timedelta(seconds=30)).isoformat(),
+                    "confidence": 1.0,
+                    "verification_status": "verified",
+                }
+            },
+        }), "dad")
+
+
 if __name__ == "__main__":
     unittest.main()
