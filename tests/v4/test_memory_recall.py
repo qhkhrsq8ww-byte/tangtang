@@ -50,6 +50,25 @@ class TestMemoryRecall(unittest.TestCase):
         self.assertNotIn("PRIVATE_RAW_SHOULD_NOT_REACH_PROMPT", prompt)
         self.assertNotIn("raw-utterance-row", prompt)
 
+    def test_speaker_label_and_legacy_viewer_id_do_not_authorize_memory(self):
+        pipe = PrivacyPipeline(members=MEMBERS)
+        pipe.stores.family.put(Memory(
+            memory_id="dad-private-pref",
+            member_id="dad",
+            type="preference",
+            privacy="FAMILY",
+            data={"tag": "preference", "value": "must not leak without viewer context"},
+        ))
+        received = []
+        chat = ChatAdapter(
+            pipeline=pipe,
+            members=MEMBERS,
+            llm=lambda payload: received.append(dict(payload)) or "你好。",
+        )
+        turn = chat.turn("你好", {"label": "dad"}, viewer_id="dad")
+        self.assertEqual(turn.context.get("recall"), [])
+        self.assertNotIn("must not leak without viewer context", received[0]["_filtered_prompt"])
+
     def test_raw_utterance_is_never_recalled_even_for_owner(self):
         pipe = PrivacyPipeline(members=MEMBERS)
         pipe.stores.family.put(Memory(
