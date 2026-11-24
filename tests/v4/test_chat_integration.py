@@ -243,7 +243,9 @@ class TestMemberScopedShortContext(unittest.TestCase):
 
         chat = ChatAdapter(members=MEMBERS, llm=llm)
         from core.policy.privacy_policy import PrivacyPolicy
-        other_adult = next((mid for mid in MEMBERS if mid != "dad" and not PrivacyPolicy(MEMBERS).is_child(mid)), None)
+        from core.identity.resolver import IdentityResolver
+        resolver = IdentityResolver(MEMBERS)
+        other_adult = next((mid for mid in MEMBERS if mid != "dad" and resolver.resolve({"label": mid}) == mid and not PrivacyPolicy(MEMBERS).is_child(mid)), None)
         if other_adult is None:
             self.skipTest("fixture has no second registered adult")
         chat.turn("爸爸的专属上下文标记 DAD_ONLY_481", {"label": "dad"})
