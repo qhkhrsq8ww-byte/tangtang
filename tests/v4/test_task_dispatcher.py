@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from core.tasks.dispatcher import run_due
 from core.tasks.service import TaskService
+from core.security.contexts import ActorContext
 
 
 class TestReminderDispatcher(unittest.TestCase):
@@ -21,6 +22,7 @@ class TestReminderDispatcher(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.now = datetime(2026, 10, 15, 9, 0, tzinfo=timezone.utc)
         self.members = {"dad": {}, "child": {}}
+        self.actor = ActorContext(None, "system", "system", frozenset({"tasks:dispatch"}))
         self.service = TaskService(
             home=Path(self.tmp.name), persist=True, members=self.members,
             clock=lambda: self.now,
@@ -37,7 +39,7 @@ class TestReminderDispatcher(unittest.TestCase):
     def test_success_is_recorded_and_not_replayed(self):
         delivered = []
         result = run_due(
-            self.service, member_ids=self.members,
+            self.service, actor=self.actor,
             deliver=lambda task: delivered.append(task.task_id) or True,
             now=self.now,
         )
@@ -67,7 +69,7 @@ class TestReminderDispatcher(unittest.TestCase):
 
     def test_stale_running_task_is_marked_uncertain_not_replayed(self):
         claimed = self.service.claim_due(
-            self.task.task_id, owner_member_id="child", now=self.now
+            self.task.task_id, owner_member_id="child", actor=self.actor, now=self.now
         )
         self.assertIsNotNone(claimed)
         later = self.now + timedelta(minutes=20)
@@ -117,14 +119,14 @@ class TestReminderDispatcher(unittest.TestCase):
         self.assertEqual(stored.status, "needs_confirmation")
         self.assertEqual(stored.result, "quiet_hours")
 
-    def test_private_task_is_only_dispatched_for_its_owner(self):
+    def test_scheduler_dispatches_as_system_and_preserves_audience(self):
         delivered = []
         run_due(
-            self.service, member_ids=["dad"],
-            deliver=lambda task: delivered.append(task.task_id) or True,
+            self.service, actor=self.actor,
+            deliver=lambda task: delivered.append((task.task_id, task.owner_member_id)) or True,
             now=self.now,
         )
-        self.assertEqual(delivered, [])
+        self.assertEqual(delivered, [(self.task.task_id, "child")])
 
 
 
@@ -146,20 +148,20 @@ class TestReminderDispatcher(unittest.TestCase):
         )
         self.assertEqual(replay["claimed"], 0)
 
-    def test_claim_and_finish_are_owner_scoped_and_state_checked(self):
+    def test_claim_and_finish_are_owner_scoped_and_require_system_actor(self):
         self.assertIsNone(self.service.claim_due(
             self.task.task_id, owner_member_id="dad", now=self.now,
         ))
         with self.assertRaises(PermissionError):
             self.service.finish_delivery(
-                self.task.task_id, owner_member_id="dad", success=True,
+                self.task.task_id, owner_member_id="dad", actor=self.actor, success=True,
             )
         claimed = self.service.claim_due(
             self.task.task_id, owner_member_id="child", now=self.now,
         )
         self.assertIsNotNone(claimed)
         delivered = self.service.finish_delivery(
-            self.task.task_id, owner_member_id="child", success=True,
+            self.task.task_id, owner_member_id="child", actor=self.actor, success=True,
         )
         self.assertEqual(delivered.status, "delivered")
         self.assertIsNone(delivered.completed_at, "delivery is not user-confirmed completion")
