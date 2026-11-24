@@ -47,6 +47,13 @@ case "$EVENT" in
     ;;
 esac
 
+# Non-V4 reminder events are legacy business paths. Keep them disabled by default;
+# only an explicit operator opt-in may execute the old cat-talk/cat-brain route.
+if [ "${TANGTANG_ALLOW_LEGACY_PROACTIVE:-0}" != "1" ]; then
+  echo "旧主动提醒入口未授权，已安全抑制：$EVENT" >&2
+  exit 0
+fi
+
 # 投影在线只保证舞台在，不再 greet，避免一次提醒说三遍
 if tangtang_projector_on; then
   if ! tangtang_ensure_stage; then
