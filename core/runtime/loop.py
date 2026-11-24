@@ -510,24 +510,24 @@ class TangTangRuntime:
         self,
         kind: str,
         *,
+        audience_id: str | None = None,
         member_id: str | None = None,
         observation: Mapping[str, Any] | None = None,
         event_id: str | None = None,
     ) -> RuntimeResult:
-        """Proactive scene → Event → InterruptPolicy → Response. Never speaks to a child by skipping policy."""
+        """System-initiated scene for an audience; target IDs never authenticate a speaker."""
         extra = dict(observation or {})
         obs = self.living_room.observation_for(kind, extra)
-        mid = member_id or extra.get("member_id") or extra.get("label")
-        if mid:
-            resolved = self._identify({"label": mid, "member_id": mid, **obs})
-            mid = resolved or (None if str(mid).lower() in {"unknown", "访客"} else str(mid))
-        if mid:
-            obs["member_id"] = mid
-            obs.setdefault("label", mid)
+        # member_id is retained as a compatibility alias, but is interpreted only
+        # as the service audience. It is never sent through IdentityResolver.
+        audience = audience_id or member_id or extra.get("audience_id")
+        if audience:
+            obs["audience_id"] = str(audience)[:80]
+        obs["actor_kind"] = "system"
         event = isolate(
             lambda: self.living_room.to_event(
                 kind,
-                member_id=mid,
+                member_id=None,
                 privacy="PUBLIC",
                 extra=obs,
                 event_id=event_id,
@@ -537,11 +537,11 @@ class TangTangRuntime:
             fallback = Event.create(type="living.unknown", source="living-room")
             return RuntimeResult(
                 event=fallback,
-                member_id=mid,
+                member_id=None,
                 privacy="PUBLIC",
                 decision="LOG_ONLY",
                 action=PresentationAction(
-                    decision="LOG_ONLY", text="", action="idle", member_id=mid, sink="none"
+                    decision="LOG_ONLY", text="", action="idle", member_id=None, sink="none"
                 ),
                 delivery=DeliveryResult(event_id=fallback.id, event_kept=True),
                 observation=obs,
@@ -571,7 +571,7 @@ class TangTangRuntime:
             planner_obs["now"] = datetime.now().astimezone()
         plan = isolate(
             lambda: self.brain.plan(
-                member_id=str(mid) if mid else None,
+                member_id=None,
                 observation=planner_obs,
                 proactive=True,
             ),
@@ -585,7 +585,7 @@ class TangTangRuntime:
             # quiet hours, school presence, sleep, and cooldown were already gated.
         ctx = isolate(
             lambda: self.pipeline.builder.build(
-                who={"member_id": mid},
+                who={},
                 event=ev,
                 observation=obs,
                 privacy_scope="PUBLIC",
@@ -607,7 +607,7 @@ class TangTangRuntime:
                 decision=decision if decision != "SPEAK" else "SILENT",
                 text="" if decision != "SPEAK" else "",
                 action="remind",
-                member_id=mid,
+                member_id=None,
                 sink="none",
             )
             if decision == "SPEAK":
@@ -615,7 +615,7 @@ class TangTangRuntime:
                     decision="SPEAK",
                     text=FALLBACK,
                     action="remind",
-                    member_id=mid,
+                    member_id=None,
                     sink="voice",
                 )
         else:
@@ -623,7 +623,7 @@ class TangTangRuntime:
         delivery, frames = self._deliver(ev, action, observation=obs)
         return RuntimeResult(
             event=ev,
-            member_id=mid,
+            member_id=None,
             privacy=ev.privacy,
             decision=action.decision,
             action=action,

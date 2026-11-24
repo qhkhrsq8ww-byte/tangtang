@@ -120,6 +120,9 @@ class LivingRoomAdapter:
         }
         if obs.get("sleeping"):
             payload["sleeping"] = True
+        if obs.get("audience_id"):
+            payload["audience_id"] = str(obs["audience_id"])[:80]
+        payload["actor_kind"] = "system"
         return Event.create(
             id=event_id,
             type=event_type[:64],
