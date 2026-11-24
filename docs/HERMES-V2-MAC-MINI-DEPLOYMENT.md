@@ -39,7 +39,9 @@
 - 监控磁盘可用空间、内存压力、CPU、进程重启次数和 Agent 调用延迟。
 
 ## 4. 服务管理
-先确认 Hermes 官方支持的 macOS 服务安装方式，再决定使用其内置服务管理或 LaunchAgent；不得同时启用两个自启动管理器。
+先确认实际采用的 Hermes 运行形态：CLI 单轮调用、Desktop/Backend（hermes serve）和消息平台 Gateway 是不同组件，不能一概称为 Gateway。第一阶段先验证最小对话调用，不预设需要消息平台 Gateway。
+
+如确需常驻 Backend 或消息 Gateway，再确认官方支持的 macOS 服务安装方式，并选择一个服务管理者；不得同时启用两个自启动管理器。
 
 TangTang Core 可独立由 LaunchAgent 管理，建议：
 - 独立 plist 和日志。
@@ -49,11 +51,13 @@ TangTang Core 可独立由 LaunchAgent 管理，建议：
 - 健康检查只读，不触发设备操作。
 
 ## 5. 网络与远程维护
-- Hermes Gateway 默认仅 loopback；如确需局域网访问，必须启用认证并限制来源。
+- Hermes Backend/Gateway 如需监听网络，默认仅 loopback；如确需局域网访问，必须启用认证并限制来源。
 - 不直接将 Gateway 或家长管理页面暴露公网。
 - MacBook Air 远程维护走 VPN/零信任网络，使用单独管理身份。
 - 远程维护权限与孩子日常对话权限分离。
 - 生产环境不开放任意 shell 工具给 Agent。
+- 初始 Hermes 配置建议关闭内置持久记忆（memory.memory_enabled=false、memory.user_profile_enabled=false），并启用 skills.write_approval=true、approvals.mode=manual、cron_mode=deny、single_query_mode=deny、unattended_mode=deny；具体键名以锁定版本官方配置校验为准。
+- Hermes memory/skill 写入审批不等于文件系统隔离，必须同时限制 Terminal、File Operations 和 MCP 工具集。
 
 ## 6. 部署步骤
 1. 记录 Mac mini 硬件、macOS、可用磁盘空间。
