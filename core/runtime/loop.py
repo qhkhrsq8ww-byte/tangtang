@@ -366,12 +366,15 @@ class TangTangRuntime:
         """STT/text → Identity → Event → PrivacyPolicy → Memory → Context → LLM → TTS."""
         errors = list(extra_errors or [])
         obs = dict(observation or {})
-        member_id = self._identify(obs) or obs.get("member_id")
+        # The Core resolver is the sole authority. Never fall back to caller-supplied
+        # member_id after resolution fails; that would turn an untrusted field into identity.
+        member_id = self._identify(obs)
         if member_id:
             obs["member_id"] = member_id
-            obs.setdefault("label", member_id)
+            obs["label"] = member_id
         else:
             obs.pop("member_id", None)
+            obs.pop("label", None)
         obs.setdefault("interactive", True)
         # Record explicit opt-out language locally so proactive scenes can respect it.
         # This plan never suppresses a user-initiated turn.
@@ -517,13 +520,18 @@ class TangTangRuntime:
         """Proactive scene → Event → InterruptPolicy → Response. Never speaks to a child by skipping policy."""
         extra = dict(observation or {})
         obs = self.living_room.observation_for(kind, extra)
-        mid = member_id or extra.get("member_id") or extra.get("label")
-        if mid:
-            resolved = self._identify({"label": mid, "member_id": mid, **obs})
-            mid = resolved or (None if str(mid).lower() in {"unknown", "访客"} else str(mid))
+        candidate = member_id or extra.get("label") or extra.get("member_id")
+        # Remove caller-provided identity fields before the scene policy/context sees them.
+        obs.pop("member_id", None)
+        obs.pop("label", None)
+        mid = None
+        if candidate:
+            identity_observation = dict(obs)
+            identity_observation["label"] = str(candidate)
+            mid = self._identify(identity_observation)
         if mid:
             obs["member_id"] = mid
-            obs.setdefault("label", mid)
+            obs["label"] = mid
         event = isolate(
             lambda: self.living_room.to_event(
                 kind,

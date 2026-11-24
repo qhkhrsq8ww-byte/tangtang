@@ -52,6 +52,26 @@ class TestLiveWrappersSetV4(unittest.TestCase):
         self.assertIn("def chat(", src)
         self.assertIn("def build_persona(", src)
 
+    def test_legacy_reminder_path_requires_explicit_opt_in(self):
+        import os
+        import subprocess
+        import tempfile
+
+        remind = CAT / "cat-remind.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            env = os.environ.copy()
+            env["TANGTANG_DATA_DIR"] = tmp
+            env["TANGTANG_ALLOW_LEGACY_PROACTIVE"] = "0"
+            result = subprocess.run(
+                ["bash", str(remind), "school"],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=10,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("旧主动提醒入口未授权", result.stderr)
+
     def test_cat_living_cli_exists(self):
         src = (CAT / "cat-living.py").read_text(encoding="utf-8")
         self.assertIn("handle_living_room", src)

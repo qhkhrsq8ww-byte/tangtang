@@ -170,6 +170,32 @@ class TestRuntimeEvidenceChains(unittest.TestCase):
         )
 
 
+class TestRuntimeIdentityFailClosed(unittest.TestCase):
+    def test_utterance_does_not_fall_back_to_unresolved_member_id(self):
+        rt = TangTangRuntime(members=MEMBERS, offline=True)
+        result = rt.handle_utterance(
+            "你好",
+            {"label": "not-a-family-member", "member_id": "not-a-family-member"},
+        )
+        self.assertIsNone(result.member_id)
+        self.assertNotIn("member_id", result.observation)
+        self.assertNotIn("label", result.observation)
+
+    def test_living_room_does_not_fall_back_to_unresolved_member_id(self):
+        rt = TangTangRuntime(members=MEMBERS, offline=True)
+        result = rt.handle_living_room(
+            "手机",
+            member_id="not-a-family-member",
+            observation={
+                "label": "not-a-family-member",
+                "member_id": "not-a-family-member",
+            },
+        )
+        self.assertIsNone(result.member_id)
+        self.assertNotIn("member_id", result.observation)
+        self.assertNotIn("label", result.observation)
+
+
 class TestV3NotDeleted(unittest.TestCase):
     def test_v3_modules_remain(self):
         self.assertTrue((ROOT / "code" / "cat" / "cat-vp.py").is_file())
