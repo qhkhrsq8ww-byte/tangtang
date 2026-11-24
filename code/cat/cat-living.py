@@ -70,7 +70,6 @@ def main(argv=None) -> int:
     member = (args[1] if len(args) > 1 else "").strip()
     member = member or (
         os.environ.get("TANGTANG_MEMBER_ID")
-        or os.environ.get("TANGTANG_SPEAKER")
         or ""
     ).strip()
 
