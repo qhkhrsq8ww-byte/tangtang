@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Callable
 
-from core.security.contexts import ActorContext
+from core.security.contexts import ActorContext, AudienceContext
 from core.tasks.service import Task, TaskService
 
 
@@ -12,7 +12,7 @@ def run_due(
     service: TaskService,
     *,
     actor: ActorContext,
-    deliver: Callable[[Task], bool],
+    deliver: Callable[[Task, AudienceContext], bool],
     now: datetime | None = None,
     defer_reason: Callable[[Task], str | None] | None = None,
     on_defer: Callable[[Task, str], None] | None = None,
@@ -52,8 +52,9 @@ def run_due(
         if claimed is None:
             continue
         counts["claimed"] += 1
+        audience = AudienceContext(claimed.owner_member_id, "task_reminder")
         try:
-            ok = bool(deliver(claimed))
+            ok = bool(deliver(claimed, audience))
         except Exception:
             ok = False
         service.finish_delivery(
