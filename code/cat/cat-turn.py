@@ -798,6 +798,9 @@ def main():
         who = sys.argv[3] if len(sys.argv) > 3 else "hanghang"
         sys.stdout.write(preview_scenes(event, who))
         return
+    if cmd in ("today-report", "report") and os.environ.get("TANGTANG_ALLOW_LEGACY_MEMBER_MEMORY_CLI") != "1":
+        print("成员行为报告已关闭：当前 CLI 尚未接入经过 Core 验证的 viewer。", file=sys.stderr)
+        sys.exit(2)
     if cmd in ("today-report", "report"):
         who = sys.argv[2] if len(sys.argv) > 2 else "hanghang"
         day = sys.argv[3] if len(sys.argv) > 3 else None
@@ -825,7 +828,7 @@ def main():
         return
     print(
         "用法: energy | pcm | sentence | canned | classify | decide | "
-        "reply | gate | preview | today-report AUDIENCE | ledger EVENT AUDIENCE ... | selftest",
+        "reply | gate | preview | today-report AUDIENCE (legacy viewer switch required) | ledger EVENT AUDIENCE ... | selftest",
         file=sys.stderr,
     )
     sys.exit(1)
