@@ -76,6 +76,48 @@ class TestProactiveScenes(unittest.TestCase):
             "SPEAK",
         )
 
+    def test_sensor_scene_requires_fresh_verified_evidence_when_enabled(self):
+        now = _dt("16:00")
+        stale = {
+            "scene": "phone",
+            "member_id": "child_9",
+            "perception_evidence_required": True,
+            "evidence": {
+                "scene": {
+                    "source": "phone_sensor",
+                    "observed_at": (now - timedelta(minutes=5)).isoformat(),
+                    "expires_at": (now + timedelta(minutes=1)).isoformat(),
+                    "confidence": 0.99,
+                    "verification_status": "verified",
+                }
+            },
+        }
+        self.assertEqual(self.p.decide(stale, now=now), "SILENT")
+
+    def test_verified_fresh_sensor_scene_can_be_used(self):
+        now = _dt("16:00")
+        valid = {
+            "scene": "phone",
+            "member_id": "child_9",
+            "perception_evidence_required": True,
+            "evidence": {
+                "scene": {
+                    "source": "phone_sensor",
+                    "observed_at": (now - timedelta(seconds=5)).isoformat(),
+                    "expires_at": (now + timedelta(seconds=30)).isoformat(),
+                    "confidence": 0.95,
+                    "verification_status": "verified",
+                }
+            },
+        }
+        self.assertEqual(self.p.decide(valid, now=now), "SPEAK")
+
+    def test_interactive_turn_not_blocked_by_missing_ambient_evidence(self):
+        self.assertEqual(
+            self.p.decide({"interactive": True, "perception_evidence_required": True}, now=_dt("16:00")),
+            "SPEAK",
+        )
+
 
 class TestProactiveEmptyUnknown(unittest.TestCase):
     def test_unknown_scene_ignored(self):
