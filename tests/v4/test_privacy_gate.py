@@ -133,6 +133,24 @@ class TestPrivacyGateEmptyUnknown(unittest.TestCase):
         result = pipe.ingest("你好", {"label": "邻居"})
         self.assertTrue(result.event.id)
 
+    def test_unresolved_label_cannot_fall_back_to_claimed_family_member(self):
+        members = {"dad": {"display_name": "爸爸", "aliases": ["爸爸"]}}
+        pipe = PrivacyPipeline(members=members)
+
+        result = pipe.ingest(
+            "访客你好",
+            {"member_id": "dad", "label": "unregistered-visitor"},
+        )
+
+        self.assertEqual(result.decision.privacy, "PUBLIC")
+        self.assertIsNone(result.decision.member_id)
+        self.assertEqual(result.event.payload, {"redacted": True})
+        self.assertFalse(result.stored_family)
+        self.assertFalse(result.stored_summary)
+        self.assertFalse(result.stored_parent)
+        self.assertFalse(result.stored_habit)
+        self.assertFalse(pipe.stores.family.contains_text("访客你好"))
+
 
 if __name__ == "__main__":
     unittest.main()
