@@ -107,10 +107,16 @@ code/cat/cat-voice.sh
 - [x] PR #76 隐私修复 CI 通过并合并。
 - [x] 已核对 planner V5 与 Core API 4.0.0：属于模块版本口径，不需要升级 Core API。
 - [ ] 重新审查并更新 #67/#69/#70，明确是否保留/重写/关闭。
-- [ ] 完成 Hermes API Server 最小工具集 PoC；当前客户端默认零工具，先验证 `/v1/toolsets` 实际只返回空工具集，再逐步考虑 `mcp-tangtang`。
+- [ ] 完成 Hermes API Server 最小工具集 PoC；PR #78 已合并本地客户端和 V4 feature flag，默认工具 allowlist 为空；需在 M6 验证 `/v1/toolsets` 实际只返回空工具集，再逐步考虑 `mcp-tangtang`。
 - [ ] 在 Mac mini 上记录真实硬件/macOS/磁盘/模型配置。
 
-## 10. 下一步
+## 10. 最新执行状态（2026-11-24）
+
+- PR #78 已合并到 main（commit `da7c513`），新增 Hermes API Adapter、成员人格系统提示词、V4 `TANGTANG_LLM_BACKEND=hermes` 开关、配置示例和回归测试。
+- 默认仍使用原模型直连；Hermes 模式未在真实 Hermes/Mac mini 上验证，不应启用。
+- PR #78 的 Python 3.10/3.11 CI 通过；main 合并后 CI 正在运行。
+
+## 11. 下一步
 
 1. 合并并验证 PR #76 的语音原话隐私修复。
 2. 完成版本口径和 OpenClaw 遗留配置盘点。
