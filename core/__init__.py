@@ -41,8 +41,17 @@ from core.policy.injection import InjectionGuard, REFUSE_TEXT
 from core.policy.interrupt_policy import InterruptPolicy
 from core.policy.privacy_policy import PrivacyPolicy
 from core.response.orchestrator import PresentationAction, ResponseOrchestrator
+from core.security.contexts import (
+    ActorContext, AudienceContext, ViewerContext,
+    authorize_actor_action, authorize_viewer,
+)
 
 __all__ = [
+    "ActorContext",
+    "AudienceContext",
+    "ViewerContext",
+    "authorize_actor_action",
+    "authorize_viewer",
     "ActionError",
     "CORE_API_VERSION",
     "CompatibilityError",
