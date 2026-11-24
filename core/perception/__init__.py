@@ -1,0 +1,1 @@
+"""Perception evidence validation primitives."""
