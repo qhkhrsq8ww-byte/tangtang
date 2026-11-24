@@ -104,5 +104,25 @@ Mac mini M6 + Hermes-Agent + TangTang Core。保留糖糖家庭大脑，以 Herm
 6. 不自动合并 PR，不直接部署到家庭设备。
 7. 每轮结束更新本路线图的状态、提交、PR、测试结果和下一步。
 
+## 当前执行记录（2026-11-24）
+
+- [x] PR #74：修复 wake music 测试对旧文件名的断言；主分支 Python 3.10/3.11 CI 通过。
+- [x] PR #75：合并 Hermes V2 架构规划、接口契约、Mac mini 部署和验收文档。
+- [x] PR #77：合并当前代码资产与迁移风险审计。
+- [x] PR #76：停止把语音原话写入旧互动日志；新日志仅保留互动元数据。**旧本机日志中的历史原话仍需在迁移前单独清理，代码合并不会自动删除本地数据。**
+- [ ] PR #78：Hermes API Adapter 最小客户端，当前待 CI/审查；默认零工具、loopback、短期会话清理，尚未接入生产对话路径。
+- [ ] Mac mini 实机 Hermes 安装、API Server 工具集白名单和资源验证尚未开展。
+
+阶段 0 已完成代码主链路和关键风险的静态盘点，但因 V4/V5 命名、旧 PR 重基线和 Mac mini 实机核验尚未全部解决，阶段 0 不宣布完全验收。
+
+## 下一里程碑
+
+1. 完成 PR #78 的 Python 3.10/3.11 CI 和代码审查。
+2. 在 Mac mini M6 上安装锁定版本 Hermes；不导入真实家庭数据。
+3. 启动本地 API Server，配置 loopback 和强随机 API key。
+4. 查询 `/v1/toolsets`，证明默认工具集已被收缩为零工具；若返回 terminal/file/memory 等工具，立即停止，不连接糖糖数据。
+5. 完成一次单轮对话、超时、重启、会话删除和资源占用测试。
+6. 通过后再把 HermesAdapter 接入 `ChatAdapter`，先以 feature flag 小范围启用。
+
 ## 当前下一步
 阶段 0：补齐现有代码资产审计、当前 CI/PR 证据和 Hermes 官方接口验证；确认后才开始 Mac mini 安装与 Agent Adapter 开发。
