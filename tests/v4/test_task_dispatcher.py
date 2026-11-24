@@ -76,7 +76,7 @@ class TestReminderDispatcher(unittest.TestCase):
     def test_family_reminder_can_be_deferred_by_quiet_hours_policy(self):
         result = self.dispatch(
             deliver=lambda task, audience: self.fail("quiet-hours task must not be spoken"),
-            defer_reason=lambda task, audience: "quiet_hours",
+            defer_reason=lambda task: "quiet_hours",
         )
         self.assertEqual(result["deferred"], 1)
         stored = self.service.get_task(self.task.task_id, viewer_id="child")
