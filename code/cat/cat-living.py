@@ -41,6 +41,20 @@ EVENT_TO_KIND = {
 }
 
 
+KIND_TO_TAG = {
+    "手机": "screen", "phone": "screen", "久坐": "rest", "sitting": "rest",
+    "吃饭": "meal", "meal": "meal", "运动": "exercise", "exercise": "exercise",
+    "play": "exercise", "睡觉": "sleep", "sleep": "sleep", "回家": "home",
+    "home": "home", "离家": "away", "away": "away",
+}
+
+
+def _habit_tag(kind: str) -> str:
+    """Map a scene to its legacy habit label; mapping alone does not record behavior."""
+    normalized = EVENT_TO_KIND.get((kind or "").strip().lower(), (kind or "").strip())
+    return KIND_TO_TAG.get(normalized) or KIND_TO_TAG.get(normalized.lower()) or "conversation"
+
+
 def _normalize(kind: str) -> str:
     raw = (kind or "").strip()
     return EVENT_TO_KIND.get(raw.lower(), raw) or "久坐"
