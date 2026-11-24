@@ -95,7 +95,7 @@ agent:
 
 Hermes API Server 通过 `hermes gateway` 进程提供（由 `API_SERVER_ENABLED=true` 或 `gateway.api_server.enabled: true` 启用），不是独立的 `hermes serve` Desktop backend，也不是 Hermes 自身作为 MCP Server 的 `mcp-serve` 插件。第一阶段只启动本机 API Server 所需的 Gateway，不配置外部消息渠道；进程生命周期、端口和日志要作为一个服务单独验收。
 
-## 4. 运行形态选择
+## 5. 运行形态选择
 
 优先验证 API Server 的本地 HTTP 接口与会话能力，作为 TangTang Core 的 LLM/Agent Adapter 候选；同时保留 `hermes -z` 单次 CLI 作为最小 PoC/故障诊断入口。不要直接使用默认完整工具集的 API Server。
 
@@ -112,7 +112,7 @@ Hermes API Server 通过 `hermes gateway` 进程提供（由 `API_SERVER_ENABLED
 3. Hermes Messaging Gateway：只在需要 Telegram/其他消息平台时评估，不作为本地麦克风/投影的默认前提。
 4. MCP：优先让 Hermes 作为 MCP Client 调用 TangTang Core 暴露的只读/有限写工具；工具过滤、认证、超时和错误语义必须验证。
 
-## 4. 官方资料
+## 6. 官方资料
 
 - 首页与功能总览：https://hermes-agent.nousresearch.com/docs
 - 安装指南：https://hermes-agent.nousresearch.com/docs/getting-started/installation
@@ -124,6 +124,6 @@ Hermes API Server 通过 `hermes gateway` 进程提供（由 `API_SERVER_ENABLED
 - CLI 命令参考：https://hermes-agent.nousresearch.com/docs/reference/cli-commands
 - Messaging Gateway：https://hermes-agent.nousresearch.com/docs/user-guide/messaging
 
-## 5. 重要结论
+## 7. 重要结论
 
 Hermes 的持续学习能力很有价值，但其默认记忆会自动写入，且 memory/skill approval 并不等同于文件系统隔离。因此糖糖必须先关闭内置持久记忆、严格限制工具和终端权限，再通过 TangTang Core 提供家庭上下文。只有完成这层隔离，才进入真实儿童语音数据测试。
