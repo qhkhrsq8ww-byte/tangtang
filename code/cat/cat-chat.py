@@ -252,10 +252,15 @@ def brain_fallback(user_text):
 
 
 def _alarm_reply(text):
-    # Delegates to cat-alarm.py handle → handle_utterance; no LLM for alarm intents.
+    # Alarm commands remain local, but their owner is resolved against the family roster.
+    # cat-alarm.py enforces owner-scoped list/cancel/set operations.
     try:
+        candidate = speaker_id()
         result = subprocess.run(
-            ["/usr/bin/python3", os.path.join(CAT_DIR, "cat-alarm.py"), "handle", text],
+            [
+                "/usr/bin/python3", os.path.join(CAT_DIR, "cat-alarm.py"),
+                "handle", text, "--member", candidate,
+            ],
             capture_output=True, text=True, timeout=5, check=False,
         )
         line = (result.stdout or "").strip()
@@ -395,11 +400,8 @@ def main():
         print(risk_reply)
         return
 
-    task_line = _task_reply(args.text)
-    if task_line:
-        print(task_line)
-        return
-
+    # Explicit task/reminder intents are handled inside ChatAdapter after V4 ingest.
+    # Alarm commands are owner-scoped by cat-alarm.py; they do not fall back to LLM.
     alarm_line = _alarm_reply(args.text)
     if alarm_line:
         print(alarm_line)
