@@ -16,7 +16,7 @@ case "$EVENT" in
   phone|screen|rest|sitting|meal|exercise|play|sleep|sleepy|home|welcome|away|water|手机|久坐|吃饭|运动|睡觉|回家|离家)
     if [ "$TANGTANG_LIVING_V4" = "1" ]; then
       # Low-pressure gate: existing habit labels + quiet hours + per-scene cooldown.
-      audience_id="${TANGTANG_MEMBER_ID:-${ARG:-room}}"
+      audience_id="${ARG:-${TANGTANG_MEMBER_ID:-room}}"
       gate="$("/usr/bin/python3" "$CAT_DIR/cat-proactive-gate.py" check "$EVENT" "$audience_id" 2>/dev/null || true)"
       case "$gate" in
         speak\|*) ;;
