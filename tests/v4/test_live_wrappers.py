@@ -54,7 +54,8 @@ class TestLiveWrappersSetV4(unittest.TestCase):
     def test_cat_chat_cli_defaults_v4_opt_out(self):
         src = (CAT / "cat-chat.py").read_text(encoding="utf-8")
         self.assertIn('os.environ.get("TANGTANG_V4_PIPELINE") or "1"', src)
-        self.assertIn('v4_flag not in ("0", "false", "no", "off")', src)
+        self.assertIn('legacy_requested = v4_flag in ("0", "false", "no", "off")', src)
+        self.assertIn('legacy_allowed = (os.environ.get("TANGTANG_ALLOW_LEGACY_V3") or "").strip() == "1"', src)
         self.assertIn("def chat(", src)
         self.assertIn("def build_persona(", src)
 
