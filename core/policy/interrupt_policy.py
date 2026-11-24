@@ -122,7 +122,7 @@ class InterruptPolicy:
         if (
             obs.get("perception_evidence_required")
             and not obs.get("interactive")
-            and not evidence_is_usable(obs, "scene")
+            and not evidence_is_usable(obs, "scene", now=when)
         ):
             return "SILENT"
         if obs.get("sleeping") or obs.get("asleep"):
