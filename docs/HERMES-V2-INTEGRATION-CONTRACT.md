@@ -96,12 +96,14 @@ Agent 只能提出请求。Core 负责重新解析意图、验证权限、幂等
 - 失败默认拒绝（fail closed）。
 
 ## 7. Hermes 适配器待验证项
+当前优先方向：TangTang Core 作为 MCP Server，Hermes 作为 MCP Client。Hermes 官方文档明确支持连接本地 stdio 和远程 HTTP MCP Server，并支持工具发现和按服务器过滤。Hermes 自身作为 MCP Server 的能力已迁移到独立 mcp-serve 插件，不能把两个方向混为一谈。
+
 正式编码前核实所选 Hermes 版本：
 - 官方支持的 MCP/工具接入方式及配置 schema。
-- Gateway/CLI 的生命周期和认证方式。
+- CLI 单轮调用、Hermes backend/API 与消息 Gateway 的职责差异、生命周期和认证方式。
 - 工具调用参数/返回格式。
-- Skills 的加载路径、权限和更新机制。
-- Agent Memory 的自动写入行为、禁用/allowlist 能力。
+- Skills 的加载路径、权限和更新机制；初期建议 skills.write_approval=true。
+- Agent Memory 的自动写入行为、禁用/allowlist 能力。官方当前配置可同时设置 memory.memory_enabled=false 和 memory.user_profile_enabled=false，关闭 Hermes 内置记忆工具；若不关闭，则 memory.write_approval=true 也只能审批 memory 工具写入，不能替代文件/终端权限隔离。
 - Cron/定时任务的时区、重启补偿和重复执行语义。
 - 超时、取消、并发限制和日志脱敏。
 - macOS Apple Silicon 支持和版本最低要求。
