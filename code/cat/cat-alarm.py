@@ -96,6 +96,9 @@ def resolve_owner(candidate):
     raw = (candidate or "").strip()
     if not raw:
         return None
+    root = os.path.abspath(os.path.join(CAT_DIR, "..", ".."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
     try:
         from core.adapters.family_loader import load_members
         from core.identity.resolver import IdentityResolver
