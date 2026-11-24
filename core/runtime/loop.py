@@ -524,6 +524,8 @@ class TangTangRuntime:
         if audience:
             obs["audience_id"] = str(audience)[:80]
         obs["actor_kind"] = "system"
+        obs["listener_id"] = None
+        obs["listener_identity_status"] = "unverified"
         event = isolate(
             lambda: self.living_room.to_event(
                 kind,
