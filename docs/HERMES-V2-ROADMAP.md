@@ -10,9 +10,9 @@ Mac mini M6 + Hermes-Agent + TangTang Core。保留糖糖家庭大脑，以 Herm
 
 | 阶段 | 主题 | 预估节奏 | 状态 | 退出条件 |
 |---|---|---:|---|---|
-| 0 | 架构审计与基线冻结 | 1 周 | 进行中（文档基线已建立） | 资产清单、风险清单、接口决策通过 |
+| 0 | 架构审计与基线冻结 | 1 周 | 基本完成（静态审计完成） | 静态资产审计、风险清单、接口决策完成；实机项转入阶段1 |
 | 1 | Mac mini 与 Hermes 最小运行验证 | 1 周 | 未开始 | M6 对话、服务生命周期和资源监控通过 |
-| 2 | Agent Adapter 最小集成 | 1–2 周 | 未开始 | Hermes 调用 Core 受控工具，安全回归通过 |
+| 2 | Agent Adapter 最小集成 | 1–2 周 | 进行中（客户端骨架已合并） | 真实 Hermes API Server 联通、最小权限和安全回归通过 |
 | 3 | 语音链路恢复 | 1–2 周 | 未开始 | STT→Core→Hermes→Core→TTS 端到端通过 |
 | 4 | 投影与动作表现 | 1 周 | 未开始 | 语音、动作、视频同步，故障隔离通过 |
 | 5 | 主动陪伴与记忆协作 | 1–2 周 | 未开始 | 去重、静默、冷却、隐私和调度验收 |
@@ -110,19 +110,18 @@ Mac mini M6 + Hermes-Agent + TangTang Core。保留糖糖家庭大脑，以 Herm
 - [x] PR #75：合并 Hermes V2 架构规划、接口契约、Mac mini 部署和验收文档。
 - [x] PR #77：合并当前代码资产与迁移风险审计。
 - [x] PR #76：停止把语音原话写入旧互动日志；新日志仅保留互动元数据。**旧本机日志中的历史原话仍需在迁移前单独清理，代码合并不会自动删除本地数据。**
-- [ ] PR #78：加入 Hermes API Adapter，并在 V4 对话入口增加 `TANGTANG_LLM_BACKEND=hermes` 显式开关；默认仍走原模型直连。Hermes 模式默认零工具、loopback、逐轮临时会话清理；尚未在真实 Hermes/M6 上验证。
+- [x] PR #78：已合并 Hermes API Adapter，并在 V4 对话入口增加 `TANGTANG_LLM_BACKEND=hermes` 显式开关；默认仍走原模型直连。Hermes 模式默认零工具、loopback、逐轮临时会话清理；尚未在真实 Hermes/M6 上验证。
 - [ ] Mac mini 实机 Hermes 安装、API Server 工具集白名单和资源验证尚未开展。
 
-阶段 0 已完成代码主链路和关键风险的静态盘点；已确认 Planner V5 是模块版本名称，不等于 Core API V5。由于旧 PR 重基线和 Mac mini 实机核验尚未完成，阶段 0 暂不宣布完全验收。
+阶段 0 的仓库静态审计已完成；已确认 Planner V5 是模块版本名称，不等于 Core API V5。旧 PR #67/#69/#70 已形成审查意见，按各自功能阶段重基线处理，不阻塞 Hermes 最小运行验证。Mac mini 实机项转入阶段 1。
 
 ## 下一里程碑
 
-1. 完成 PR #78 的 Python 3.10/3.11 CI 和代码审查。
-2. 在 Mac mini M6 上安装锁定版本 Hermes；不导入真实家庭数据。
-3. 启动本地 API Server，配置 loopback 和强随机 API key。
-4. 查询 `/v1/toolsets`，证明默认工具集已被收缩为零工具；若返回 terminal/file/memory 等工具，立即停止，不连接糖糖数据。
-5. 完成一次单轮对话、超时、重启、会话删除和资源占用测试。
-6. 通过后再把 HermesAdapter 接入 `ChatAdapter`，先以 feature flag 小范围启用。
+1. 在 Mac mini M6 上安装锁定版本 Hermes；不导入真实家庭数据。
+2. 启动本地 API Server，配置 loopback 和强随机 API key。
+3. 查询 `/v1/toolsets`，证明实际启用工具集为空；若返回 terminal/file/memory 等工具，立即停止，不连接糖糖数据。
+4. 用已合并的 HermesAdapter 执行一次单轮对话，验证超时、重启、会话删除和资源占用。
+5. 通过后再考虑加入一个只读 TangTang MCP 工具，并重新做安全评审。
 
 ## 当前下一步
 阶段 0：补齐现有代码资产审计、当前 CI/PR 证据和 Hermes 官方接口验证；确认后才开始 Mac mini 安装与 Agent Adapter 开发。
