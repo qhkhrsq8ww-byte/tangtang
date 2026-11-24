@@ -14,7 +14,8 @@ case "$PROFILE" in play|friend) ;; *) PROFILE="play" ;; esac
 export TANGTANG_PROFILE="$PROFILE"
 export TANGTANG_V4_PIPELINE=1
 
-GATE="$("$CAT_DIR/tangtang-speak-gate.py" --channel voice --member "${TANGTANG_SPEAKER:-unknown}" 2>/dev/null || true)"
+# Before voice identification, do not let caller-supplied environment labels affect policy.
+GATE="$(env -u TANGTANG_MEMBER_ID -u TANGTANG_SPEAKER "$CAT_DIR/tangtang-speak-gate.py" --channel voice 2>/dev/null || true)"
 if [ "$GATE" != "speak" ]; then
   exit 0
 fi
