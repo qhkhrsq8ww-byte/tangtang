@@ -60,8 +60,10 @@ Hermes-Agent 负责理解、推理和任务规划；TangTang Core 负责身份�
 - [目标架构](docs/HERMES-V2-TARGET-ARCHITECTURE.md)
 - [代码资产与迁移风险审计](docs/HERMES-V2-ASSET-AUDIT.md)
 - [Hermes 官方能力与安全配置核验](docs/HERMES-V2-HERMES-REFERENCE.md)
+- [V3/V4 调用路径与退役计划](docs/V3-V4-CALL-PATH-AND-DEPRECATION-PLAN.md)
+- [记忆链路与入口安全审计](docs/MEMORY-PIPELINE-SECURITY-AUDIT-2026-11-24.md)
 
-当前处于 Hermes API Adapter 的初步接入阶段。Hermes 仍为显式 opt-in，默认对话路径保持不变；Mac mini M6 实机验收完成前，不宣布迁移完成。
+当前处于 Hermes API Adapter 的初步接入阶段。Hermes 仍为显式 opt-in。V4 是默认对话路径；V3 兼容回退必须同时显式设置 `TANGTANG_V4_PIPELINE=0` 和 `TANGTANG_ALLOW_LEGACY_V3=1`，避免单个旧开关意外绕过 V4 隐私链路。Mac mini M6 实机验收完成前，不宣布迁移完成。
 
 ## 项目结构
 
