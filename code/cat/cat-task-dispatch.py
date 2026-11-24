@@ -138,7 +138,7 @@ def main() -> int:
         write_health(home, mode="preview", outcome="ok", stats={"family_due": len(due), "private_due_hidden": private_due})
         return 0
 
-    def deliver(task):
+    def deliver(task, audience):
         if sys.platform != "darwin":
             print("当前不是 macOS；未执行真实语音播放，提醒保留失败状态。", file=sys.stderr)
             return False
@@ -158,7 +158,7 @@ def main() -> int:
         if result.returncode != 0:
             print(f"语音命令失败：{task.task_id}", file=sys.stderr)
             return False
-        print(f"[播放命令成功，未验证实际听见] {task.task_id}")
+        print(f"[播放命令成功，audience={audience.member_id}，listener=unverified] {task.task_id}")
         return True
 
     try:
