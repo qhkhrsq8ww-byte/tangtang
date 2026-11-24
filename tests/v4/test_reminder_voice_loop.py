@@ -12,10 +12,12 @@ if str(ROOT) not in sys.path:
 from core.adapters.chat_adapter import ChatAdapter
 from core.adapters.family_loader import load_members
 from core.ingest import PrivacyPipeline
+from core.security.contexts import ViewerContext
 from core.tasks.reminders import parse_reminder_intent
 from core.tasks.service import TaskService
 
 MEMBERS = load_members()
+HANGHANG_VIEWER = ViewerContext("hanghang", "verified")
 
 
 class TestReminderIntent(unittest.TestCase):
@@ -72,32 +74,33 @@ class TestReminderIntent(unittest.TestCase):
 
 class TestReminderChatLoop(unittest.TestCase):
     def make_chat(self):
-        members = MEMBERS
-        tasks = TaskService(members=members)
+        tasks = TaskService(members=MEMBERS)
         chat = ChatAdapter(
-            pipeline=PrivacyPipeline(members=members),
-            members=members,
+            pipeline=PrivacyPipeline(members=MEMBERS),
+            members=MEMBERS,
             tasks=tasks,
             llm=lambda _payload: self.fail("reminder commands must stay local"),
         )
         return tasks, chat
 
+    def obs(self):
+        return {
+            "label": "hanghang",
+            "interactive": True,
+            "now": datetime(2026, 10, 15, 7, 0, tzinfo=timezone.utc),
+            "timezone": "UTC",
+        }
+
     def test_reminder_without_time_then_time_followup_schedules(self):
         tasks, chat = self.make_chat()
-        draft = chat.turn(
-            "提醒我带水杯",
-            {"label": "hanghang", "interactive": True, "now": datetime(2026, 10, 15, 7, 0, tzinfo=timezone.utc), "timezone": "UTC"},
-        )
+        draft = chat.turn("提醒我带水杯", self.obs(), viewer_context=HANGHANG_VIEWER)
         self.assertEqual(draft.action.action, "reminder_needs_time")
         self.assertIn("还没设置成功", draft.action.text)
         pending = tasks.list_tasks(viewer_id="hanghang", statuses={"needs_confirmation"}, include_family=False)
         self.assertEqual(len(pending), 1)
         self.assertIsNone(pending[0].due_at)
 
-        scheduled = chat.turn(
-            "明天晚上八点",
-            {"label": "hanghang", "interactive": True, "now": datetime(2026, 10, 15, 7, 0, tzinfo=timezone.utc), "timezone": "UTC"},
-        )
+        scheduled = chat.turn("明天晚上八点", self.obs(), viewer_context=HANGHANG_VIEWER)
         self.assertEqual(scheduled.action.action, "reminder_schedule")
         self.assertIn("已经设置提醒", scheduled.action.text)
         rows = tasks.list_tasks(viewer_id="hanghang", statuses={"scheduled"}, include_family=False)
@@ -108,8 +111,7 @@ class TestReminderChatLoop(unittest.TestCase):
     def test_clear_time_is_scheduled_without_cloud_llm(self):
         tasks, chat = self.make_chat()
         result = chat.turn(
-            "明天晚上八点提醒我带水杯",
-            {"label": "hanghang", "interactive": True, "now": datetime(2026, 10, 15, 7, 0, tzinfo=timezone.utc), "timezone": "UTC"},
+            "明天晚上八点提醒我带水杯", self.obs(), viewer_context=HANGHANG_VIEWER
         )
         self.assertEqual(result.action.action, "reminder_schedule")
         rows = tasks.list_tasks(viewer_id="hanghang", statuses={"scheduled"}, include_family=False)
@@ -118,16 +120,25 @@ class TestReminderChatLoop(unittest.TestCase):
 
     def test_reminder_can_be_queried_rescheduled_and_cancelled(self):
         tasks, chat = self.make_chat()
-        obs = {"label": "hanghang", "interactive": True, "now": datetime(2026, 10, 15, 7, 0, tzinfo=timezone.utc), "timezone": "UTC"}
-        chat.turn("明天晚上八点提醒我带水杯", obs)
-        self.assertEqual(chat.turn("查看提醒", obs).action.action, "reminder_list")
-        changed = chat.turn("把带水杯提醒改到后天晚上九点", obs)
+        chat.turn("明天晚上八点提醒我带水杯", self.obs(), viewer_context=HANGHANG_VIEWER)
+        self.assertEqual(
+            chat.turn("查看提醒", self.obs(), viewer_context=HANGHANG_VIEWER).action.action,
+            "reminder_list",
+        )
+        changed = chat.turn(
+            "把带水杯提醒改到后天晚上九点", self.obs(), viewer_context=HANGHANG_VIEWER
+        )
         self.assertEqual(changed.action.action, "reminder_reschedule")
         row = tasks.list_tasks(viewer_id="hanghang", statuses={"scheduled"}, include_family=False)[0]
         self.assertEqual(row.due_at, "2026-10-17T21:00:00+00:00")
-        cancelled = chat.turn("取消提醒：带水杯", obs)
+        cancelled = chat.turn(
+            "取消提醒：带水杯", self.obs(), viewer_context=HANGHANG_VIEWER
+        )
         self.assertEqual(cancelled.action.action, "reminder_cancel")
-        self.assertEqual(tasks.list_tasks(viewer_id="hanghang", statuses={"cancelled"}, include_family=False)[0].title, "带水杯")
+        self.assertEqual(
+            tasks.list_tasks(viewer_id="hanghang", statuses={"cancelled"}, include_family=False)[0].title,
+            "带水杯",
+        )
 
 
 if __name__ == "__main__":
