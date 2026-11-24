@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pytest
+import unittest
 
 from core.security.contexts import (
     ActorContext,
@@ -11,7 +11,8 @@ from core.security.contexts import (
 )
 
 
-def test_audience_is_not_actor_or_viewer():
+class TestActorAudienceViewerContexts(unittest.TestCase):
+    def test_audience_is_not_actor_or_viewer(self):
     audience = AudienceContext(member_id="hanghang", purpose="reminder")
     system = ActorContext(None, "system", "system")
     assert audience.member_id == "hanghang"
@@ -23,7 +24,7 @@ def test_audience_is_not_actor_or_viewer():
     )
 
 
-def test_system_actor_requires_capability():
+    def test_system_actor_requires_capability(self):
     actor = ActorContext(
         None, "system", "system", frozenset({"reminder:deliver"})
     )
@@ -34,14 +35,14 @@ def test_system_actor_requires_capability():
     assert not authorize_actor_action(actor, "memory:read")
 
 
-def test_member_actor_must_be_verified():
-    with pytest.raises(ValueError):
+    def test_member_actor_must_be_verified(self):
+        with self.assertRaises(ValueError):
         ActorContext("hanghang", "member", "unverified")
     actor = ActorContext("parent", "member", "verified")
     assert authorize_actor_action(actor, "reminder:create")
 
 
-def test_private_view_is_owner_only_or_explicit_grant():
+    def test_private_view_is_owner_only_or_explicit_grant(self):
     assert authorize_viewer(
         ViewerContext("hanghang", "verified"),
         owner_member_id="hanghang",
@@ -59,7 +60,7 @@ def test_private_view_is_owner_only_or_explicit_grant():
     )
 
 
-def test_family_view_requires_explicit_grant():
+    def test_family_view_requires_explicit_grant(self):
     assert not authorize_viewer(
         ViewerContext("parent", "verified"),
         owner_member_id="hanghang",
@@ -72,7 +73,7 @@ def test_family_view_requires_explicit_grant():
     )
 
 
-def test_missing_viewer_fails_closed_for_non_public_data():
+    def test_missing_viewer_fails_closed_for_non_public_data(self):
     assert not authorize_viewer(
         None, owner_member_id="parent", visibility="PRIVATE"
     )
