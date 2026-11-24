@@ -79,18 +79,31 @@ def enroll(name, files):
     print(f"✅ 已建档「{name}」({len(feats)} 段样本)")
     return 0
 
-def identify(pcm):
+def identify_candidate(pcm):
+    """Return a heuristic candidate and raw cosine score for diagnostics only.
+
+    The current eight coarse acoustic features are not a calibrated biometric
+    verifier. A high cosine score is NOT proof of identity and must never grant
+    member-scoped memory, alarms, private context, or child-specific behavior.
+    """
     db=load_vp()
     feat=extract_features(pcm)
     if not db or not feat:
-        return "unknown"
-    best_name,best_score="unknown",-1
+        return {"candidate_member_id": None, "similarity_score": None}
+    best_name,best_score=None,-1.0
     for name,data in db.items():
         avg=data.get("avg",{})
         score=cosine_sim(feat,avg)
         if score>best_score:
             best_name,best_score=name,score
-    return best_name if best_score>=THRESHOLD else "unknown"
+    if best_score < THRESHOLD:
+        return {"candidate_member_id": None, "similarity_score": round(best_score, 6)}
+    return {"candidate_member_id": best_name, "similarity_score": round(best_score, 6)}
+
+
+def identify(pcm):
+    """Fail closed: coarse similarity is a hint, not verified family identity."""
+    return "unknown"
 
 def load_habits():
     return load_json(HABIT_FILE, {"members":{},"logs":[]})
@@ -132,7 +145,15 @@ if __name__ == "__main__":
         if not name or not files: print("用法: cat-vp.py enroll <名字> <pcm文件...>"); sys.exit(1)
         sys.exit(enroll(name,files))
     elif cmd=="identify":
+        # Backward-compatible identity output is deliberately fail-closed until
+        # the biometric pipeline is calibrated and emits independently verified evidence.
         pcm=sys.argv[2] if len(sys.argv)>2 else None; print(identify(pcm) if pcm else "unknown")
+    elif cmd=="candidate":
+        pcm=sys.argv[2] if len(sys.argv)>2 else None
+        result=identify_candidate(pcm) if pcm else {"candidate_member_id": None, "similarity_score": None}
+        result["verification_status"]="unverified"
+        result["source"]="local_coarse_voice_similarity"
+        print(json.dumps(result, ensure_ascii=False))
     elif cmd=="log":
         name=sys.argv[2] if len(sys.argv)>2 else "unknown"; text=sys.argv[3] if len(sys.argv)>3 else ""
         e=log(name,text); print(f"✅ 已记录: {e['time']} {name}")
