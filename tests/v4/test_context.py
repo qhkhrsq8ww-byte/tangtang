@@ -50,6 +50,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=ev,
             privacy_scope="FAMILY",
+            viewer_id="child_9",
             family={"summary": "ok", "private": "must-drop"},
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
@@ -65,6 +66,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=Event.create(id="evt_p", type="home"),
             privacy_scope="PUBLIC",
+            viewer_id="child_9",
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
         self.assertEqual(ids, {"u9"})
