@@ -419,19 +419,11 @@ def main():
             print("用法: cat-family.py who <pcm文件>", file=sys.stderr)
             sys.exit(1)
         print_who_line(who_from_pcm(pcm))
-    elif cmd == "observe":
-        who = sys.argv[2] if len(sys.argv) > 2 else "unknown"
-        text = sys.argv[3] if len(sys.argv) > 3 else ""
-        e = observe(who, text, source="voice")
-        print(f"✅ {e['timestamp']} {_member_label(e['member_id'])} {TYPE_LABEL.get(e['type'], e['type'])}")
-    elif cmd == "log":
-        who = sys.argv[2] if len(sys.argv) > 2 else "unknown"
-        event_type = sys.argv[3] if len(sys.argv) > 3 else "conversation"
-        source = sys.argv[4] if len(sys.argv) > 4 else "manual"
-        if source not in ("manual", "wifi", "voice", "presence"):
-            source = "manual"
-        e = observe(who, "", source=source, event_type=event_type)
-        print(f"✅ {e['timestamp']} {_member_label(e['member_id'])} {TYPE_LABEL.get(e['type'], e['type'])}")
+    elif cmd in ("observe", "log"):
+        # Direct CLI writes bypass Core identity/evidence and privacy authorization.
+        # Voice and proactive adapters must write through TangTang Core only.
+        print("直接家庭记忆写入已关闭，请通过 TangTang Core 的统一入口记录。", file=sys.stderr)
+        sys.exit(2)
     elif cmd == "today":
         today()
     elif cmd == "summary":
