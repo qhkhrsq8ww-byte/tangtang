@@ -7,7 +7,7 @@
   场景: 手机|久坐|rest|吃饭|meal|运动|exercise|play|睡觉|sleep|回家|home|离家|away
 
 走 InterruptPolicy：SPEAK 才打印话术；SILENT/LOG_ONLY/DELAY 输出空行并 exit 0。
-不调用 LLM；不写儿童原话。成功后记 habit tag（m2）。
+不调用 LLM；不写儿童原话。主动场景不会被记作目标成员的个人习惯。
 """
 from __future__ import annotations
 
@@ -40,33 +40,11 @@ EVENT_TO_KIND = {
     "water": "久坐",  # soft nudge via sitting policy bucket when used as remind
 }
 
-KIND_TO_TAG = {
-    "手机": "screen",
-    "phone": "screen",
-    "久坐": "rest",
-    "sitting": "rest",
-    "吃饭": "meal",
-    "meal": "meal",
-    "运动": "exercise",
-    "exercise": "exercise",
-    "play": "exercise",
-    "睡觉": "sleep",
-    "sleep": "sleep",
-    "回家": "home",
-    "home": "home",
-    "离家": "away",
-    "away": "away",
-}
-
 
 def _normalize(kind: str) -> str:
     raw = (kind or "").strip()
     return EVENT_TO_KIND.get(raw.lower(), raw) or "久坐"
 
-
-def _habit_tag(kind: str) -> str:
-    k = _normalize(kind)
-    return KIND_TO_TAG.get(k) or KIND_TO_TAG.get(k.lower()) or "conversation"
 
 
 def main(argv=None) -> int:
@@ -93,16 +71,7 @@ def main(argv=None) -> int:
         obs["member_id"] = member
     result = rt.handle_living_room(kind, member_id=member or None, observation=obs)
 
-    # m2: tag-only habit trends (no utterance)
-    try:
-        from core.memory.habit_trends import HabitTrendStore
-
-        mid = result.member_id or member or "unknown"
-        HabitTrendStore(home=home, persist=True).record(
-            member_id=mid, tag=_habit_tag(kind)
-        )
-    except Exception:
-        pass
+    # This is a system-initiated scene for an audience, not member-authored activity.
 
     dump = (os.environ.get("TANGTANG_LIVING_DUMP") or "").strip() == "1"
     if dump:
