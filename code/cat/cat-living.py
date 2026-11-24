@@ -75,34 +75,43 @@ def main(argv=None) -> int:
         print(__doc__.strip())
         return 0
     kind = _normalize(args[0])
-    member = (args[1] if len(args) > 1 else "").strip()
-    member = member or (
+    candidate = (args[1] if len(args) > 1 else "").strip()
+    candidate = candidate or (
         os.environ.get("TANGTANG_MEMBER_ID")
         or os.environ.get("TANGTANG_SPEAKER")
         or ""
     ).strip()
 
+    from core.adapters.family_loader import load_members
+    from core.identity.resolver import IdentityResolver
     from tangtang_runtime import TangTangRuntime
+
+    # CLI arguments and environment variables are hints, never canonical IDs.
+    try:
+        member = IdentityResolver(load_members()).resolve({"label": candidate})
+    except Exception:
+        member = None
+    if not member:
+        # Do not let downstream legacy adapters re-read the same untrusted env values.
+        os.environ.pop("TANGTANG_MEMBER_ID", None)
+        os.environ.pop("TANGTANG_SPEAKER", None)
 
     home = data_dir()
     os.environ.setdefault("TANGTANG_DATA_DIR", home)
     rt = TangTangRuntime()
-    obs = {}
-    if member:
-        obs["label"] = member
-        obs["member_id"] = member
-    result = rt.handle_living_room(kind, member_id=member or None, observation=obs)
+    obs = {"label": member} if member else {}
+    result = rt.handle_living_room(kind, member_id=member, observation=obs)
 
-    # m2: tag-only habit trends (no utterance)
-    try:
-        from core.memory.habit_trends import HabitTrendStore
+    # Record a derived habit signal only for the exact canonical member returned by Core.
+    if member and result.member_id == member:
+        try:
+            from core.memory.habit_trends import HabitTrendStore
 
-        mid = result.member_id or member or "unknown"
-        HabitTrendStore(home=home, persist=True).record(
-            member_id=mid, tag=_habit_tag(kind)
-        )
-    except Exception:
-        pass
+            HabitTrendStore(home=home, persist=True).record(
+                member_id=member, tag=_habit_tag(kind)
+            )
+        except Exception:
+            pass
 
     dump = (os.environ.get("TANGTANG_LIVING_DUMP") or "").strip() == "1"
     if dump:
