@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-糖糖 · 云端大脑对话脚本（OpenAI 兼容，走本机 LLM 网关）
+糖糖 · V4 对话入口（OpenAI 兼容模型接口）
 ========================================================
-复用 OpenClaw 自带模型池（QCLAW_LLM_API_KEY + QCLAW_LLM_BASE_URL）。
+默认保留历史直连模型；可通过 TANGTANG_LLM_BACKEND=hermes 选择本机 Hermes API Server。
 
 用法:
   python3 cat-chat.py "小朋友说的话"
@@ -81,7 +81,19 @@ def _local_safety_reply(text):
 
 
 def _runtime_llm(model=DEFAULT_MODEL):
-    """Privacy-gated bridge; only a caller-supplied filtered prompt may leave local code."""
+    """Privacy-gated model bridge; Hermes is opt-in and never falls back silently."""
+    backend = (os.environ.get("TANGTANG_LLM_BACKEND") or "direct").strip().lower()
+    hermes_client = None
+    if backend == "hermes":
+        try:
+            from core.adapters.hermes_agent import HermesAgentClient
+            hermes_client = HermesAgentClient(
+                model=os.environ.get("TANGTANG_HERMES_MODEL", "hermes-agent")
+            )
+        except Exception:
+            # Fail closed: a broken Hermes configuration must not silently use another provider.
+            hermes_client = None
+
     def call(context):
         ctx = context if isinstance(context, dict) else {}
         scope = str(ctx.get("privacy_scope") or "PRIVATE").upper()
@@ -93,6 +105,15 @@ def _runtime_llm(model=DEFAULT_MODEL):
             return FALLBACK_REPLY
         prompt = str(ctx.get("_filtered_prompt") or "")
         if not prompt:
+            return FALLBACK_REPLY
+        if backend == "hermes":
+            if hermes_client is None:
+                return FALLBACK_REPLY
+            try:
+                return hermes_client(ctx)
+            except Exception:
+                return FALLBACK_REPLY
+        if backend not in {"direct", "legacy", "bigmodel"}:
             return FALLBACK_REPLY
         try:
             return chat(prompt, model=model, history=None)
