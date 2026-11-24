@@ -155,8 +155,9 @@ if __name__ == "__main__":
         result["source"]="local_coarse_voice_similarity"
         print(json.dumps(result, ensure_ascii=False))
     elif cmd=="log":
-        name=sys.argv[2] if len(sys.argv)>2 else "unknown"; text=sys.argv[3] if len(sys.argv)>3 else ""
-        e=log(name,text); print(f"✅ 已记录: {e['time']} {name}")
+        # Direct member-scoped writes bypass Core identity and privacy authorization.
+        print("直接声纹习惯写入已关闭，请通过 TangTang Core 的授权入口记录。", file=sys.stderr)
+        sys.exit(2)
     elif cmd=="summary": summary(int(sys.argv[2]) if len(sys.argv)>2 else 7)
     elif cmd=="list":
         db=load_vp()
