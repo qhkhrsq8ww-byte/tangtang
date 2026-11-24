@@ -33,7 +33,8 @@ class TestContextHappy(unittest.TestCase):
 
     def test_private_scope_loads_via_port(self):
         ev = Event.create(id="evt_c", type="greet", privacy="PRIVATE", member_id="child_9")
-        ctx = self.builder.build(
+        builder = ContextBuilder(self.store, self.policy)
+        ctx = builder.build(
             who={"member_id": "child_9"},
             event=ev,
             privacy_scope="PRIVATE",
@@ -100,7 +101,9 @@ class TestContextEmptyUnknown(unittest.TestCase):
         self.assertEqual(ctx["memory"], [])
 
     def test_observation_member_id_cannot_select_private_memory_owner(self):
-        ctx = self.builder.build(
+        builder = ContextBuilder(MemoryStore(), InterruptPolicy())
+        builder._memory.put(Memory(memory_id="p9", member_id="child_9", type="note", privacy="PRIVATE", data={"speech": "secret"}))
+        ctx = builder.build(
             who={},
             event=Event.create(id="evt_untrusted", type="greet", privacy="PUBLIC"),
             observation={"member_id": "child_9"},
