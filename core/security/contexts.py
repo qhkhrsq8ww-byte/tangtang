@@ -66,7 +66,7 @@ def authorize_actor_action(
 ) -> bool:
     """Authorize an operation without promoting its audience to its actor."""
     if actor.kind == "member":
-        return actor.identity_status == "verified"
+        return actor.identity_status == "verified" and capability in actor.capabilities
     if actor.kind == "system":
         return capability in actor.capabilities
     return False
