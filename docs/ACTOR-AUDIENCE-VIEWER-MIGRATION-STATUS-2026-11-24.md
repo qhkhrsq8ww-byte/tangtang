@@ -21,8 +21,8 @@ The current context objects are an in-process Core contract. A trusted issuer / 
 | `cat-living.py` / runtime | Target is not sent through IdentityResolver, not used as `who/viewer`, and not used to load member-private context. Event payload stores audience; listener remains unverified. | Add trusted listener detection only if supported by reliable evidence; otherwise retain unknown. |
 | `cat-remind.sh` | Proactive target is named and passed as Audience. Successful speech command is not proof of who heard it. | Keep actual listener unknown unless a trusted sensor/authentication path can prove otherwise. |
 | `cat-task-dispatch.py` | Scheduler runs as system Actor, never loops through family member IDs as viewers. Core returns FAMILY tasks only; PRIVATE tasks are deferred internally without exposing titles to the adapter. Delivery callback receives Audience separately. | Implement a private delivery channel with a verified owner Viewer before PRIVATE reminders can be spoken. |
-| `ContextBuilder` / `ChatAdapter` | Non-public memory reads now require a ViewerContext; speaker/member ID and legacy `viewer_id` strings no longer authorize reads. Family snapshots and recent conversation history are gated by the authorized Viewer. | Wire a trusted ViewerContext issuer into the actual voice/device authentication path. |
-| `cat-memory.py` | Separate PR #98 blocks unscoped member and family CLI reads by default; legacy bypass is explicitly named and documented as migration-only. | Route CLI reads through the same trusted Core Viewer issuer, then remove the migration bypass. |
+| `ContextBuilder` / `ChatAdapter` | Non-public memory reads and recent conversation history require a ViewerContext; speaker/member ID and legacy `viewer_id` strings do not authorize reads. Structured recall honors `family:read` for FAMILY records while PRIVATE records remain owner-only. | Wire a trusted ViewerContext issuer into the actual voice/device authentication path; define narrower, resource-scoped grants before enabling broad family access. |
+| `cat-memory.py` | `today/recent/stable/state/emotion`, family `next`, and member-targeted `trends/next` fail closed without a Viewer-aware Core API. Separate legacy switches are migration-only and do not authenticate a caller. | Replace CLI compatibility switches with a trusted Viewer handoff, then remove both switches. |
 
 ## Preserved privacy invariants
 
@@ -35,9 +35,9 @@ The current context objects are an in-process Core contract. A trusted issuer / 
 
 ## Validation and rollout
 
-- PR #99: Core Actor/Audience/Viewer contract; CI previously passed before the member-capability tightening, which is included in the integration PR.
+- PR #99: Core Actor/Audience/Viewer contract; member actors now also require an explicit action capability. Its follow-up test update is in progress.
 - PR #98: member and family memory CLI read restrictions; latest CI passed.
 - PR #100 / #101: proactive and short-turn migrations, stacked on the Core contract.
-- PR #102: aggregate integration candidate for the Core, proactive, short-turn, task-dispatch, and ContextBuilder/ChatAdapter Viewer enforcement changes; full Python 3.10/3.11 V4 workflow is the merge gate.
+- PR #102: aggregate integration candidate for the Core, proactive, short-turn, task-dispatch, ContextBuilder/ChatAdapter recall enforcement, and memory CLI read restrictions. Latest full Python 3.10/3.11 V4 tests pass on commit `dcaee521304d72837673229e0576962bf697141f`; keep checking the newest head after each additional commit.
 
 No PR has been merged or deployed as part of this work. No Mac mini runtime or microphone validation has been performed.
