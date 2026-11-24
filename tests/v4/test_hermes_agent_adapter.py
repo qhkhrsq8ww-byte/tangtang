@@ -89,6 +89,15 @@ class TestHermesAgentClient(unittest.TestCase):
             client({"_filtered_prompt": "safe", "privacy_scope": "PUBLIC", "who": {}})
         self.assertEqual(len(calls), 1)
 
+    def test_redirect_is_rejected_without_following_target(self):
+        redirect = urllib.error.HTTPError(
+            "http://127.0.0.1:8642/v1/toolsets", 302, "redirect", {"Location": "http://127.0.0.1:8643/steal"}, None
+        )
+        client, calls = self.make_client([redirect])
+        with self.assertRaises(HermesAgentError):
+            client({"_filtered_prompt": "safe", "privacy_scope": "PUBLIC", "who": {}})
+        self.assertEqual(len(calls), 1)
+
     def test_rejects_non_loopback_endpoint(self):
         with self.assertRaises(HermesConfigurationError):
             HermesAgentClient(base_url="https://hermes.example.com", api_key="secret")

@@ -21,6 +21,13 @@ from uuid import uuid4
 from core.persona.agent_prompt import build_agent_system_prompt
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Never forward a bearer-authenticated request to a redirect target."""
+
+    def redirect_request(self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> None:
+        return None
+
+
 class HermesAgentError(RuntimeError):
     """Base error for a Hermes request that must fail closed."""
 
@@ -59,7 +66,7 @@ class HermesAgentClient:
             raw_timeout = 15.0
         self.timeout = max(1.0, min(raw_timeout, 30.0))
         self.allowed_toolsets = {str(k): frozenset(v) for k, v in (allowed_toolsets or {}).items()}
-        self._open = opener or urllib.request.urlopen
+        self._open = opener or urllib.request.build_opener(_NoRedirectHandler()).open
         self._validate_endpoint()
         if not self.api_key:
             raise HermesConfigurationError("TANGTANG_HERMES_API_KEY is required")
