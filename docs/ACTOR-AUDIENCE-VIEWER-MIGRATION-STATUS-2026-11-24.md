@@ -16,7 +16,7 @@ The current context objects are an in-process Core contract. A trusted issuer / 
 
 | Entry point | Current implementation | Remaining work |
 |---|---|---|
-| `cat-turn.py` | System actor and intended audience are recorded separately. Speaker identity is explicitly unverified; no member habit learning occurs from these rows. | Connect only a trusted Core-verified speaker identity when a real verification chain exists. |
+| `cat-turn.py` | System actor and intended audience are recorded separately. Speaker identity is explicitly unverified; no member habit learning occurs from these rows. Member-specific `today-report` CLI reads are also blocked unless the explicit migration switch is set. | Connect only a trusted Core-verified speaker identity and Viewer issuer when a real verification chain exists. |
 | `cat-proactive-gate.py` | Cooldown writes require a system Actor capability and store Audience separately. | Move the system capability issuance behind a narrower Core-owned service boundary rather than constructing it in the CLI. |
 | `cat-living.py` / runtime | Target is not sent through IdentityResolver, not used as `who/viewer`, and not used to load member-private context. Event payload stores audience; listener remains unverified. | Add trusted listener detection only if supported by reliable evidence; otherwise retain unknown. |
 | `cat-remind.sh` | Proactive target is named and passed as Audience. Successful speech command is not proof of who heard it. | Keep actual listener unknown unless a trusted sensor/authentication path can prove otherwise. |
@@ -26,7 +26,7 @@ The current context objects are an in-process Core contract. A trusted issuer / 
 
 ## Preserved privacy invariants
 
-1. PRIVATE task/reminder content is never sent to the shared-room speech adapter.
+1. PRIVATE task/reminder content is never sent to the shared-room speech adapter or surfaced through a generic shared-device notification.
 2. FAMILY reminders remain subject to existing family visibility and quiet-hours policy.
 3. A system-generated prompt is not stored as evidence of a child's personal behavior.
 4. A scheduled audience is not treated as a verified speaker.
