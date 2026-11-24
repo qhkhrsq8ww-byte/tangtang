@@ -32,6 +32,7 @@ def test_voice_shell_does_not_write_legacy_family_memory_before_core():
     source = (ROOT / "code" / "cat" / "cat-voice.sh").read_text(encoding="utf-8")
     assert 'cat-family.py" observe' not in source
     assert 'cat-presence.py" suggest' not in source
+    assert "env -u TANGTANG_MEMBER_ID -u TANGTANG_SPEAKER" in source
 
 
 def test_living_room_does_not_persist_raw_member_fallback():
