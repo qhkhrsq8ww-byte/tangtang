@@ -14,29 +14,35 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from tangtang_paths import data_dir
 from core.companion.proactive import ProactiveGate
+from core.security.contexts import ActorContext, AudienceContext
 from core.adapters.family_loader import load_members
 
 
 def main() -> int:
     action = sys.argv[1] if len(sys.argv) > 1 else "check"
     event = (sys.argv[2] if len(sys.argv) > 2 else "scene").strip()[:80]
-    member = (sys.argv[3] if len(sys.argv) > 3 else os.environ.get("TANGTANG_MEMBER_ID", "room")).strip()[:80]
+    audience_id = (sys.argv[3] if len(sys.argv) > 3 else "room").strip()[:80]
     home = Path(data_dir())
     members = load_members()
     # The second CLI argument is sometimes a scene subtype (e.g. lunch/dinner),
     # not a child ID. Only registered member IDs may key per-person habits/cooldowns.
-    candidate_member = member
+    candidate_member = audience_id
     if candidate_member not in members:
-        member = "room"
+        audience_id = "room"
     habit_member = candidate_member if candidate_member in members else ""
     gate = ProactiveGate(home=home, cooldown_minutes=int(os.environ.get("TANGTANG_SCENE_COOLDOWN_MINUTES", "45")))
     now = datetime.now().astimezone()
     if action == "record":
-        gate.record(event=event, member_id=member, now=now)
+        actor = ActorContext(
+            actor_id=None, kind="system", identity_status="system",
+            capabilities=frozenset({"proactive:record"}),
+        )
+        audience = AudienceContext(member_id=audience_id, purpose="proactive_scene")
+        gate.record(event=event, audience=audience, actor=actor, now=now)
         print("recorded")
         return 0
     if action != "check":
-        print("usage: cat-proactive-gate.py check|record EVENT [MEMBER]", file=sys.stderr)
+        print("usage: cat-proactive-gate.py check|record EVENT [AUDIENCE_MEMBER]", file=sys.stderr)
         return 2
 
     start = os.environ.get("TANGTANG_QUIET_START", "22:30")
@@ -54,7 +60,7 @@ def main() -> int:
         except (OSError, subprocess.TimeoutExpired):
             # If the habit subsystem is unavailable, retain quiet-hours/cooldown safeguards.
             pass
-    allowed, reason = gate.check(event=event, member_id=member, now=now,
+    allowed, reason = gate.check(event=event, audience_id=audience_id, now=now,
                                  habit_allows=habit_allows, quiet_start=start, quiet_end=end)
     print(("speak|" if allowed else "skip|") + reason)
     return 0 if allowed else 3

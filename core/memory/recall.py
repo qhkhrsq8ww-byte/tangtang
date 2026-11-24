@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from core.memory.family import FamilyMemory
+from core.security.contexts import ViewerContext, authorize_viewer
 from core.memory.private import PrivateMemory
 
 RECALLABLE_TYPES = frozenset({
@@ -52,19 +53,30 @@ def _safe_projection(row: Mapping[str, Any]) -> dict[str, Any] | None:
 def retrieve_structured_memories(
     *,
     member_id: str | None,
-    viewer_id: str | None,
+    viewer_id: str | None = None,
+    viewer_context: ViewerContext | None = None,
     privacy_scope: str,
     private_store: PrivateMemory,
     family_store: FamilyMemory,
     limit: int = 5,
 ) -> list[dict[str, Any]]:
     """Read only the current owner's structured memories allowed in this scope."""
-    if not member_id or not viewer_id or member_id != viewer_id or limit <= 0:
+    if not member_id or limit <= 0:
         return []
+    # The legacy viewer_id string is not proof of authority. PUBLIC is readable
+    # without authentication; FAMILY requires an explicit grant (or owner);
+    # PRIVATE remains owner-only because the private store is owner-scoped.
+    if not authorize_viewer(
+        viewer_context, owner_member_id=member_id, visibility=privacy_scope
+    ) and privacy_scope != "PUBLIC":
+        return []
+    authorized_viewer_id = viewer_context.viewer_id if viewer_context and viewer_context.authenticated else None
     if privacy_scope == "PRIVATE":
-        rows = private_store.query(member_id=member_id, viewer_id=viewer_id)
+        if authorized_viewer_id != member_id:
+            return []
+        rows = private_store.query(member_id=member_id, viewer_id=authorized_viewer_id)
     elif privacy_scope in {"FAMILY", "PUBLIC"}:
-        rows = family_store.query(member_id=member_id, viewer_id=viewer_id)
+        rows = family_store.query(member_id=member_id, viewer_id=authorized_viewer_id)
     else:
         return []
     projected = []

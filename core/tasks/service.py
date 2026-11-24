@@ -15,6 +15,7 @@ from typing import Any
 from uuid import uuid4
 
 from core.memory.paths import resolve_under, tangtang_home
+from core.security.contexts import ActorContext, authorize_actor_action
 
 STATUSES = frozenset({
     "proposed", "needs_confirmation", "scheduled", "running",
@@ -277,13 +278,77 @@ class TaskService:
                 due.append(task)
         return due
 
-    def claim_due(self, task_id: str, *, owner_member_id: str, now: datetime | None = None) -> Task | None:
+    @staticmethod
+    def _require_dispatch_actor(actor: ActorContext) -> None:
+        if actor.kind != "system" or not authorize_actor_action(actor, "tasks:dispatch"):
+            raise PermissionError("task dispatch requires a system actor with tasks:dispatch capability")
+
+    def due_tasks_for_dispatch(
+        self, *, actor: ActorContext, now: datetime | None = None
+    ) -> list[Task]:
+        """Return only FAMILY tasks for the system scheduler; never impersonate a viewer."""
+        self._require_dispatch_actor(actor)
+        when = now or self._clock()
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        due = []
+        for task in self._tasks.values():
+            if task.status != "scheduled" or task.visibility != "FAMILY":
+                continue
+            parsed = _parse_aware(task.due_at)
+            if parsed is not None and parsed <= when:
+                due.append(task)
+        due.sort(key=lambda task: (task.due_at or "9999", task.created_at))
+        return due
+
+    def count_private_due_for_dispatch(
+        self, *, actor: ActorContext, now: datetime | None = None
+    ) -> int:
+        """Count due PRIVATE tasks without returning their titles or task payloads."""
+        self._require_dispatch_actor(actor)
+        when = now or self._clock()
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        count = 0
+        for task in self._tasks.values():
+            if task.status != "scheduled" or task.visibility != "PRIVATE":
+                continue
+            parsed = _parse_aware(task.due_at)
+            if parsed is not None and parsed <= when:
+                count += 1
+        return count
+
+    def defer_private_due_for_dispatch(
+        self, *, actor: ActorContext, now: datetime | None = None
+    ) -> int:
+        """Defer due PRIVATE tasks inside Core without exposing their titles to adapters."""
+        self._require_dispatch_actor(actor)
+        when = now or self._clock()
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        changed = 0
+        for task in self._tasks.values():
+            if task.status != "scheduled" or task.visibility != "PRIVATE":
+                continue
+            parsed = _parse_aware(task.due_at)
+            if parsed is None or parsed > when:
+                continue
+            task.status = "needs_confirmation"
+            task.updated_at = _iso_now(self._clock)
+            task.result = "private_reminder_requires_private_channel"
+            changed += 1
+        if changed:
+            self._save()
+        return changed
+
+    def claim_due(self, task_id: str, *, owner_member_id: str, actor: ActorContext, now: datetime | None = None) -> Task | None:
         """Atomically claim a due reminder within this service instance.
 
         A claimed task becomes running before delivery, so subsequent scans do not
         replay it. Deploy one scheduler process per data home; the JSON repository
         is not a cross-process locking database.
         """
+        self._require_dispatch_actor(actor)
         task = self._tasks.get(str(task_id))
         if task is None or task.owner_member_id != str(owner_member_id or "").strip():
             return None
@@ -303,9 +368,10 @@ class TaskService:
         return task
 
     def defer_delivery(
-        self, task_id: str, *, owner_member_id: str, reason: str
+        self, task_id: str, *, owner_member_id: str, reason: str, actor: ActorContext
     ) -> Task:
         """Move a due reminder to confirmation instead of speaking in an unsafe context."""
+        self._require_dispatch_actor(actor)
         task = self._require_owner(task_id, owner_member_id)
         if task.status != "scheduled":
             raise ValueError("only a scheduled task can be deferred")
@@ -316,10 +382,11 @@ class TaskService:
         return task
 
     def defer_private_delivery(
-        self, task_id: str, *, owner_member_id: str, reason: str = "private_reminder_requires_private_channel"
+        self, task_id: str, *, owner_member_id: str, actor: ActorContext,
+        reason: str = "private_reminder_requires_private_channel"
     ) -> Task:
         """Compatibility alias for callers deferring private reminders."""
-        return self.defer_delivery(task_id, owner_member_id=owner_member_id, reason=reason)
+        return self.defer_delivery(task_id, owner_member_id=owner_member_id, reason=reason, actor=actor)
 
     def recover_stale_running(
         self, *, older_than: timedelta = timedelta(minutes=10), now: datetime | None = None
@@ -347,10 +414,12 @@ class TaskService:
         task_id: str,
         *,
         owner_member_id: str,
+        actor: ActorContext,
         success: bool,
         result: str | None = None,
     ) -> Task:
         """Record delivery adapter outcome; success means adapter returned success."""
+        self._require_dispatch_actor(actor)
         task = self._require_owner(task_id, owner_member_id)
         if task.status != "running":
             raise ValueError("only a running task can finish delivery")

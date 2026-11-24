@@ -18,6 +18,7 @@ CAT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CAT_DIR not in sys.path:
     sys.path.insert(0, CAT_DIR)
 from tangtang_paths import data_dir  # noqa: E402
+from core.security.contexts import ActorContext, AudienceContext  # noqa: E402
 
 LEDGER_NAME = "cat-turn-ledger.json"
 MAX_TURNS = 400
@@ -524,6 +525,11 @@ def gate_allows(event, who, root=None, day=None):
 
 
 def _notify_habits(row, root=None):
+    # A scheduled short-turn target is an Audience, not an authenticated speaker.
+    # Never turn its response label into member-owned habit evidence without a
+    # separately verified speaker identity supplied by Core.
+    if row.get("speaker_identity_status") != "verified" or not row.get("speaker_member_id"):
+        return
     try:
         import importlib.util
         path = os.path.join(CAT_DIR, "cat-habits.py")
@@ -556,6 +562,15 @@ def append_turn(event, who, result, stt, presence, seconds, rms,
         "reply": "",
     }
     row, _dec = react.append_decision(decision, root=root, spoke_again=bool(speak))
+    audience_id = normalize_who(who) or (who or "hanghang")
+    actor = ActorContext(None, "system", "system")
+    audience = AudienceContext(audience_id, "short_turn")
+    row["actor_kind"] = actor.kind
+    row["actor_id"] = actor.actor_id
+    row["audience_id"] = audience.member_id
+    row["audience_purpose"] = audience.purpose
+    row["speaker_identity_status"] = "unverified"
+    row["speaker_member_id"] = None
     row["stt"] = bool(stt)
     row["presence"] = presence if presence in ("home", "away", "unknown") else "unknown"
     row["seconds"] = int(seconds or 0)
@@ -575,6 +590,12 @@ def append_turn(event, who, result, stt, presence, seconds, rms,
             "presence": row["presence"],
             "seconds": row["seconds"],
             "rms": row["rms"],
+            "actor_kind": row["actor_kind"],
+            "actor_id": row["actor_id"],
+            "audience_id": row["audience_id"],
+            "audience_purpose": row["audience_purpose"],
+            "speaker_identity_status": row["speaker_identity_status"],
+            "speaker_member_id": row["speaker_member_id"],
         }
         if speak is not None:
             extra["speak"] = bool(speak)
@@ -777,6 +798,9 @@ def main():
         who = sys.argv[3] if len(sys.argv) > 3 else "hanghang"
         sys.stdout.write(preview_scenes(event, who))
         return
+    if cmd in ("today-report", "report") and os.environ.get("TANGTANG_ALLOW_LEGACY_MEMBER_MEMORY_CLI") != "1":
+        print("成员行为报告已关闭：当前 CLI 尚未接入经过 Core 验证的 viewer。", file=sys.stderr)
+        sys.exit(2)
     if cmd in ("today-report", "report"):
         who = sys.argv[2] if len(sys.argv) > 2 else "hanghang"
         day = sys.argv[3] if len(sys.argv) > 3 else None
@@ -804,7 +828,7 @@ def main():
         return
     print(
         "用法: energy | pcm | sentence | canned | classify | decide | "
-        "reply | gate | preview | today-report | ledger | selftest",
+        "reply | gate | preview | today-report AUDIENCE (legacy viewer switch required) | ledger EVENT AUDIENCE ... | selftest",
         file=sys.stderr,
     )
     sys.exit(1)

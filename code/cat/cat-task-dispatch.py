@@ -21,6 +21,7 @@ from core.adapters.family_loader import load_members
 from tangtang_paths import data_dir
 from core.tasks.dispatcher import run_due
 from core.tasks.service import TaskService
+from core.security.contexts import ActorContext
 
 SAY = CAT_DIR / "cat-say.sh"
 
@@ -35,6 +36,8 @@ def write_health(home: Path, *, mode: str, outcome: str, stats=None, note: str =
         "outcome": outcome,
         "stats": stats if isinstance(stats, dict) else {},
         "note": str(note or "")[:160],
+        "actor_kind": "system",
+        "listener_identity_status": "unverified",
     }
     try:
         with path.open("a", encoding="utf-8") as handle:
@@ -76,20 +79,6 @@ def defer_reason_for_context(task):
     return None
 
 
-def notify_deferred(task, reason):
-    """A generic local notification avoids reading private task text aloud."""
-    if sys.platform != "darwin" or reason != "private_reminder_requires_private_channel":
-        return
-    try:
-        subprocess.run(
-            ["/usr/bin/osascript", "-e",
-             'display notification "你有一项私人提醒到期，请打开糖糖查看。" with title "糖糖"'],
-            check=False, timeout=5, capture_output=True, text=True,
-        )
-    except Exception:
-        pass
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="糖糖本地到期提醒派发器")
     parser.add_argument("--deliver", action="store_true", help="实际调用本机语音播放；默认仅预览")
@@ -103,22 +92,22 @@ def main() -> int:
         print("未读取到家庭成员配置；未执行提醒。", file=sys.stderr)
         return 2
     service = TaskService(home=home, persist=True, members=members)
+    dispatch_actor = ActorContext(
+        actor_id=None, kind="system", identity_status="system",
+        capabilities=frozenset({"tasks:dispatch"}),
+    )
 
     if not args.deliver:
-        due = []
-        seen = set()
-        for viewer_id in members:
-            for task in service.due_tasks(viewer_id=viewer_id):
-                if task.owner_member_id == viewer_id and task.task_id not in seen:
-                    seen.add(task.task_id)
-                    due.append(task)
+        # Preview only FAMILY reminders. PRIVATE titles are never read by the
+        # system scheduler or printed into a shared terminal/room.
+        due = service.due_tasks_for_dispatch(actor=dispatch_actor)
         for task in due:
-            print(f"[预览] {task.owner_member_id}: {task.title} ({task.task_id})")
-        print(f"到期任务 {len(due)} 项；预览模式未更改任务状态。实际播放请加 --deliver。")
-        write_health(home, mode="preview", outcome="ok", stats={"due": len(due)})
+            print(f"[预览·家庭提醒] audience={task.owner_member_id}: {task.title} ({task.task_id})")
+        print(f"可在家庭渠道处理的到期提醒 {len(due)} 项；预览模式未更改任务状态。实际播放请加 --deliver。")
+        write_health(home, mode="preview", outcome="ok", stats={"family_due": len(due)})
         return 0
 
-    def deliver(task):
+    def deliver(task, audience):
         if sys.platform != "darwin":
             print("当前不是 macOS；未执行真实语音播放，提醒保留失败状态。", file=sys.stderr)
             return False
@@ -138,7 +127,7 @@ def main() -> int:
         if result.returncode != 0:
             print(f"语音命令失败：{task.task_id}", file=sys.stderr)
             return False
-        print(f"[播放命令成功，未验证实际听见] {task.task_id}")
+        print(f"[播放命令成功，audience={audience.member_id}，listener=unverified] {task.task_id}")
         return True
 
     try:
@@ -146,7 +135,7 @@ def main() -> int:
             recovered = service.recover_stale_running()
             if recovered:
                 print(f"有 {recovered} 项中断提醒结果不确定，已标记待人工核查；不会自动重播。")
-            stats = run_due(service, member_ids=members.keys(), deliver=deliver, defer_reason=defer_reason_for_context, on_defer=notify_deferred)
+            stats = run_due(service, actor=dispatch_actor, deliver=deliver, defer_reason=defer_reason_for_context)
     except RuntimeError as exc:
         write_health(home, mode="deliver", outcome="skipped", note="dispatcher_lock_busy")
         print(str(exc), file=sys.stderr)

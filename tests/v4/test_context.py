@@ -14,6 +14,7 @@ from core.events.event import Event
 from core.interfaces import ContextPort
 from core.memory.store import Memory, MemoryStore
 from core.policy.interrupt_policy import InterruptPolicy
+from core.security.contexts import ViewerContext
 
 
 class TestContextHappy(unittest.TestCase):
@@ -37,6 +38,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=ev,
             privacy_scope="PRIVATE",
+            viewer_context=ViewerContext("child_9", "verified"),
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
         self.assertEqual(ids, {"p9"})
@@ -49,6 +51,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=ev,
             privacy_scope="FAMILY",
+            viewer_context=ViewerContext("child_9", "verified"),
             family={"summary": "ok", "private": "must-drop"},
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
@@ -64,6 +67,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=Event.create(id="evt_p", type="home"),
             privacy_scope="PUBLIC",
+            viewer_context=ViewerContext("child_9", "verified"),
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
         self.assertEqual(ids, {"u9"})
@@ -76,6 +80,65 @@ class TestContextHappy(unittest.TestCase):
             privacy_scope="PUBLIC",
         )
         self.assertEqual(ctx["recent"], [3, 4])
+
+
+class TestContextViewerAuthorization(unittest.TestCase):
+    def setUp(self):
+        self.store = MemoryStore()
+        self.store.put(Memory(
+            memory_id="private-child", member_id="child_9", type="note",
+            privacy="PRIVATE", data={"tag": "private"},
+        ))
+        self.store.put(Memory(
+            memory_id="family-child", member_id="child_9", type="note",
+            privacy="FAMILY", data={"tag": "family"},
+        ))
+        self.builder = ContextBuilder(self.store, InterruptPolicy())
+
+    def test_subject_and_legacy_viewer_id_do_not_authorize_reads(self):
+        ctx = self.builder.build(
+            who={"member_id": "child_9"},
+            event=Event.create(id="evt_no_viewer", type="x", member_id="child_9"),
+            privacy_scope="PRIVATE",
+            viewer_id="child_9",
+        )
+        self.assertEqual(ctx["memory"], [])
+        self.assertEqual(ctx["family"], {})
+
+    def test_recent_context_is_hidden_without_authorized_viewer(self):
+        ctx = self.builder.build(
+            who={"member_id": "child_9"},
+            event=Event.create(id="evt_recent_private", type="x"),
+            privacy_scope="PRIVATE",
+            recent=["private recent conversation"],
+        )
+        self.assertEqual(ctx["recent"], [])
+
+    def test_family_grant_does_not_grant_private_memory(self):
+        viewer = ViewerContext("dad", "verified", frozenset({"family:read"}))
+        family_ctx = self.builder.build(
+            who={"member_id": "child_9"},
+            event=Event.create(id="evt_family_grant", type="x"),
+            privacy_scope="FAMILY",
+            viewer_context=viewer,
+        )
+        self.assertEqual({row["memory_id"] for row in family_ctx["memory"]}, {"family-child"})
+        private_ctx = self.builder.build(
+            who={"member_id": "child_9"},
+            event=Event.create(id="evt_private_denied", type="x"),
+            privacy_scope="PRIVATE",
+            viewer_context=viewer,
+        )
+        self.assertEqual(private_ctx["memory"], [])
+
+    def test_private_owner_viewer_can_read_private_memory(self):
+        ctx = self.builder.build(
+            who={"member_id": "child_9"},
+            event=Event.create(id="evt_private_owner", type="x"),
+            privacy_scope="PRIVATE",
+            viewer_context=ViewerContext("child_9", "verified"),
+        )
+        self.assertEqual({row["memory_id"] for row in ctx["memory"]}, {"private-child"})
 
 
 class TestContextEmptyUnknown(unittest.TestCase):

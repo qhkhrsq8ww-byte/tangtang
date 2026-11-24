@@ -15,9 +15,12 @@ from core.adapters.family_loader import load_members
 from core.ingest import PrivacyPipeline
 from core.tasks.intents import parse_task_intent
 from core.tasks.service import TaskService
+from core.security.contexts import ViewerContext
 from tangtang_runtime import TangTangRuntime
 
 MEMBERS = load_members()
+HANGHANG_VIEWER = ViewerContext("hanghang", "verified")
+DAD_VIEWER = ViewerContext("dad", "verified")
 
 
 class TestTodoIntentParser(unittest.TestCase):
@@ -59,7 +62,7 @@ class TestTodoChatFlow(unittest.TestCase):
 
     def test_create_list_complete_and_cancel_are_local(self):
         pipe, tasks, chat = self.make_chat()
-        created = chat.turn("糖糖，记个待办：给糖糖买狗粮。", {"label": "hanghang"})
+        created = chat.turn("糖糖，记个待办：给糖糖买狗粮。", {"label": "hanghang"}, viewer_context=HANGHANG_VIEWER)
         self.assertEqual(created.action.action, "task_create")
         self.assertIn("给糖糖买狗粮", created.action.text)
         self.assertIn("没有设置提醒时间", created.action.text)
@@ -71,17 +74,17 @@ class TestTodoChatFlow(unittest.TestCase):
         rows = tasks.list_tasks(viewer_id="hanghang", statuses={"proposed"}, include_family=False)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].title, "给糖糖买狗粮")
-        listing = chat.turn("我的待办有哪些", {"label": "hanghang"})
+        listing = chat.turn("我的待办有哪些", {"label": "hanghang"}, viewer_context=HANGHANG_VIEWER)
         self.assertEqual(listing.action.action, "task_list")
         self.assertIn("买狗粮", listing.action.text)
 
-        completed = chat.turn("完成待办：给糖糖买狗粮", {"label": "hanghang"})
+        completed = chat.turn("完成待办：给糖糖买狗粮", {"label": "hanghang"}, viewer_context=HANGHANG_VIEWER)
         self.assertEqual(completed.action.action, "task_complete")
         self.assertIn("标记完成", completed.action.text)
         self.assertEqual(tasks.list_tasks(viewer_id="hanghang", statuses={"done"}, include_family=False)[0].title, "给糖糖买狗粮")
 
-        chat.turn("记个待办：给爷爷打电话", {"label": "hanghang"})
-        cancelled = chat.turn("取消待办：给爷爷打电话", {"label": "hanghang"})
+        chat.turn("记个待办：给爷爷打电话", {"label": "hanghang"}, viewer_context=HANGHANG_VIEWER)
+        cancelled = chat.turn("取消待办：给爷爷打电话", {"label": "hanghang"}, viewer_context=HANGHANG_VIEWER)
         self.assertEqual(cancelled.action.action, "task_cancel")
         self.assertEqual(tasks.list_tasks(viewer_id="hanghang", statuses={"cancelled"}, include_family=False)[0].title, "给爷爷打电话")
 
@@ -111,6 +114,7 @@ class TestTodoChatFlow(unittest.TestCase):
             result = first_runtime.handle_utterance(
                 "记个待办：明天整理文件",
                 {"label": "dad", "interactive": True},
+                viewer_context=DAD_VIEWER,
             )
             self.assertEqual(result.action.action, "task_create")
             self.assertEqual(result.ingest.event.payload, {"redacted": True})

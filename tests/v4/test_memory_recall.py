@@ -13,6 +13,7 @@ from core.adapters.chat_adapter import ChatAdapter
 from core.adapters.family_loader import load_members
 from core.memory.store import Memory
 from core.ingest import PrivacyPipeline
+from core.security.contexts import ViewerContext
 
 MEMBERS = load_members()
 
@@ -41,13 +42,60 @@ class TestMemoryRecall(unittest.TestCase):
             members=MEMBERS,
             llm=lambda payload: received.append(dict(payload)) or "好，我尽量说得简短。",
         )
-        turn = chat.turn("糖糖，帮我安排一下", {"label": "dad"})
+        turn = chat.turn("糖糖，帮我安排一下", {"label": "dad"}, viewer_context=ViewerContext("dad", "verified"))
         self.assertEqual(turn.action.text, "好，我尽量说得简短。")
         prompt = received[0]["_filtered_prompt"]
         self.assertIn("authorized_memory", prompt)
         self.assertIn("prefer short replies", prompt)
         self.assertNotIn("PRIVATE_RAW_SHOULD_NOT_REACH_PROMPT", prompt)
         self.assertNotIn("raw-utterance-row", prompt)
+
+    def test_speaker_label_and_legacy_viewer_id_do_not_authorize_memory(self):
+        pipe = PrivacyPipeline(members=MEMBERS)
+        pipe.stores.family.put(Memory(
+            memory_id="dad-private-pref",
+            member_id="dad",
+            type="preference",
+            privacy="FAMILY",
+            data={"tag": "preference", "value": "must not leak without viewer context"},
+        ))
+        received = []
+        chat = ChatAdapter(
+            pipeline=pipe,
+            members=MEMBERS,
+            llm=lambda payload: received.append(dict(payload)) or "你好。",
+        )
+        turn = chat.turn("你好", {"label": "dad"}, viewer_id="dad")
+        self.assertEqual(turn.context.get("recall"), [])
+        self.assertNotIn("must not leak without viewer context", received[0]["_filtered_prompt"])
+
+    def test_family_grant_allows_only_family_scope_recall(self):
+        received = []
+        pipe = PrivacyPipeline(members=MEMBERS)
+        pipe.stores.family.put(Memory(
+            memory_id="dad-family-fact",
+            member_id="dad",
+            type="preference",
+            privacy="FAMILY",
+            data={"tag": "communication", "value": "family-visible preference"},
+        ))
+        pipe.stores.private.remember_preference(
+            member_id="dad", category="likes", value="private-only preference"
+        )
+        chat = ChatAdapter(
+            pipeline=pipe,
+            members=MEMBERS,
+            llm=lambda payload: received.append(dict(payload)) or "收到。",
+        )
+        viewer = ViewerContext("dad", "verified", frozenset({"family:read"}))
+        turn = chat.turn(
+            "你好", {"label": "dad", "privacy_scope": "FAMILY"},
+            viewer_context=viewer,
+        )
+        prompt = received[0]["_filtered_prompt"]
+        self.assertIn("family-visible preference", prompt)
+        self.assertNotIn("private-only preference", prompt)
+        self.assertEqual(turn.context["recall"][0]["memory_id"], "dad-family-fact")
 
     def test_raw_utterance_is_never_recalled_even_for_owner(self):
         pipe = PrivacyPipeline(members=MEMBERS)
@@ -59,7 +107,7 @@ class TestMemoryRecall(unittest.TestCase):
             data={"speech": "do not repeat the transcript"},
         ))
         chat = ChatAdapter(pipeline=pipe, members=MEMBERS, llm=lambda _p: "记下了。")
-        turn = chat.turn("现在开始", {"label": "dad"})
+        turn = chat.turn("现在开始", {"label": "dad"}, viewer_context=ViewerContext("dad", "verified"))
         self.assertEqual(turn.context.get("recall"), [])
         self.assertNotIn("do not repeat the transcript", str(turn.context.get("recall")))
 
@@ -78,7 +126,7 @@ class TestMemoryRecall(unittest.TestCase):
             members=MEMBERS,
             llm=lambda payload: received.append(dict(payload)) or "糖糖在呢。",
         )
-        turn = chat.turn("你好", {"label": "dad"}, viewer_id="mom")
+        turn = chat.turn("你好", {"label": "dad"}, viewer_context=ViewerContext("mom", "verified"))
         self.assertEqual(turn.context.get("recall"), [])
         self.assertNotIn("dad-only test fact", received[0]["_filtered_prompt"])
 
@@ -86,7 +134,7 @@ class TestMemoryRecall(unittest.TestCase):
         pipe = PrivacyPipeline(members=MEMBERS)
         pipe.stores.private.put(member_id="hanghang", utterance="my private words")
         chat = ChatAdapter(pipeline=pipe, members=MEMBERS)
-        turn = chat.turn("我喜欢恐龙", {"label": "hanghang"})
+        turn = chat.turn("我喜欢恐龙", {"label": "hanghang"}, viewer_context=ViewerContext("hanghang", "verified"))
         self.assertEqual(turn.ingest.decision.privacy, "PRIVATE")
         self.assertNotIn("my private words", str(turn.context.get("recall")))
         self.assertTrue(all(row.get("type") != "utterance" for row in turn.context.get("recall", [])))
