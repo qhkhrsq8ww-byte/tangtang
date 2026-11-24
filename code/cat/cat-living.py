@@ -78,6 +78,10 @@ def main(argv=None) -> int:
     home = data_dir()
     os.environ.setdefault("TANGTANG_DATA_DIR", home)
     rt = TangTangRuntime()
+    # Only registered members may be named as an intended audience; an arbitrary
+    # CLI string must not create a pseudo-member in the event ledger.
+    if member and member not in rt.members:
+        member = ""
     obs = {}
     if member:
         obs["audience_id"] = member
