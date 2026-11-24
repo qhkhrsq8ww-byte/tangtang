@@ -10,6 +10,8 @@ from collections.abc import Callable, Mapping
 from datetime import datetime, time, timedelta, timezone
 from typing import Any
 
+from core.perception.evidence import evidence_is_usable
+
 DECISIONS = frozenset({"SPEAK", "SILENT", "DELAY", "LOG_ONLY"})
 PROACTIVE_SCENES = frozenset({
     "phone", "sitting", "no_meal", "late_sleep", "home", "away", "exercise",
@@ -114,6 +116,15 @@ class InterruptPolicy:
 
         if obs.get("emergency"):
             return "SPEAK"
+        # Passive sensor-triggered scenes must carry fresh verified evidence
+        # when the adapter opts into the evidence contract. Interactive user
+        # turns remain answerable even when ambient perception is unavailable.
+        if (
+            obs.get("perception_evidence_required")
+            and not obs.get("interactive")
+            and not evidence_is_usable(obs, "scene", now=when)
+        ):
+            return "SILENT"
         if obs.get("sleeping") or obs.get("asleep"):
             return "SILENT"
         if obs.get("active_conversation"):

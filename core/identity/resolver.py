@@ -9,6 +9,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from core.perception.evidence import evidence_is_usable
+
 # Product living-room names. Do not rewrite data/family.json this round.
 # 12岁姐姐 → qiaqia, 9岁弟弟 → hanghang, 妈妈 → mom.
 PRODUCT_GROUPS: dict[str, frozenset[str]] = {
@@ -115,6 +117,11 @@ class IdentityResolver:
             observation = {"label": observation}
         if not isinstance(observation, Mapping) or not observation:
             return None
+        # New sensor adapters must attach verified, fresh evidence. Legacy
+        # observations remain temporarily compatible until each adapter is migrated.
+        if "identity_evidence_required" in observation and observation.get("identity_evidence_required"):
+            if not evidence_is_usable(observation, "identity"):
+                return None
 
         voiceprint = _norm(
             observation.get("voiceprint_id") or observation.get("voiceprint")
