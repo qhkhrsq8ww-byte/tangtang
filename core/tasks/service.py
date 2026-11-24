@@ -280,7 +280,7 @@ class TaskService:
 
     @staticmethod
     def _require_dispatch_actor(actor: ActorContext) -> None:
-        if not authorize_actor_action(actor, "tasks:dispatch"):
+        if actor.kind != "system" or not authorize_actor_action(actor, "tasks:dispatch"):
             raise PermissionError("task dispatch requires a system actor with tasks:dispatch capability")
 
     def due_tasks_for_dispatch(
