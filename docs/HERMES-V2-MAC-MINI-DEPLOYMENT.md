@@ -57,7 +57,7 @@ TangTang Core 可独立由 LaunchAgent 管理，建议：
 - 远程维护权限与孩子日常对话权限分离。
 - 生产环境不开放任意 shell 工具给 Agent。
 - 初始 Hermes 配置建议关闭内置持久记忆（memory.memory_enabled=false、memory.user_profile_enabled=false），并启用 skills.write_approval=true、approvals.mode=manual、cron_mode=deny、single_query_mode=deny、unattended_mode=deny；具体键名以锁定版本官方配置校验为准。
-- 若采用 Hermes API Server，必须显式将 `platform_toolsets.api_server` 收缩到 `mcp-tangtang`，并通过 `/v1/toolsets` 验证；API Server 默认包含 terminal/file 等工具，未完成最小权限验证前不得接入真实家庭数据。
+- 若采用 Hermes API Server，必须通过 `agent.disabled_toolsets` 关闭不需要的内置工具；`platform_toolsets.api_server` 仅用于筛选 MCP 服务器，不能替代内置工具禁用。启动后通过 `/v1/toolsets` 验证实际启用清单；未完成最小权限验证前不得接入真实家庭数据。
 - API Server 必须绑定 127.0.0.1、设置强随机 API_SERVER_KEY、关闭不需要的 CORS；不暴露公网。
 - Hermes memory/skill 写入审批不等于文件系统隔离，必须同时限制 Terminal、File Operations 和 MCP 工具集。
 
