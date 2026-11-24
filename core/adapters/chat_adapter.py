@@ -29,6 +29,7 @@ from core.tasks.service import TaskService
 from core.policy.injection import InjectionGuard
 from core.policy.speak_gate import decide as speak_decide, may_call_llm
 from core.response.orchestrator import PresentationAction
+from core.security.contexts import ViewerContext, authorize_viewer
 from core.runtime.isolate import isolate
 
 _CAT_CHAT = Path(__file__).resolve().parents[2] / "code" / "cat" / "cat-chat.py"
@@ -156,6 +157,7 @@ class ChatAdapter:
         utterance: str,
         observation: Mapping[str, Any] | None = None,
         *,
+        viewer_context: ViewerContext | None = None,
         viewer_id: str | None = None,
     ) -> ChatTurn:
         """New path. PrivacyPolicy runs inside ingest before Event / Memory / LLM."""
@@ -181,7 +183,16 @@ class ChatAdapter:
             store_private_memory=not risk_detected and memory_intent is None and reminder_intent is None and task_intent is None,
         )
         speaker_id = ingested.decision.member_id
-        effective_viewer_id = viewer_id or speaker_id
+        scope = ingested.decision.privacy
+        # viewer_id is retained for source compatibility but is never trusted.
+        effective_viewer_id = (
+            viewer_context.viewer_id
+            if viewer_context and authorize_viewer(
+                viewer_context, owner_member_id=speaker_id, visibility=scope
+            )
+            else None
+        )
+        authorized_viewer = viewer_context if effective_viewer_id else None
         who = {"member_id": speaker_id}
         if risk_detected and speaker_id:
             self._recent_turns.pop(speaker_id, None)
@@ -273,7 +284,9 @@ class ChatAdapter:
             )
         scope = ingested.decision.privacy
         family_snapshot: dict[str, Any] = {}
-        if ingested.decision.allow_family_summary:
+        if effective_viewer_id and authorize_viewer(
+            authorized_viewer, owner_member_id=speaker_id, visibility="FAMILY"
+        ):
             snap = isolate(lambda: self.pipeline.stores.summary.snapshot())
             if snap.ok and isinstance(snap.value, list):
                 family_snapshot = {"members": snap.value}
@@ -283,7 +296,7 @@ class ChatAdapter:
             observation={**obs, "utterance": text},
             family=family_snapshot,
             privacy_scope=scope,
-            viewer_id=effective_viewer_id,
+            viewer_context=authorized_viewer,
         )
         ctx["utterance"] = text
         ctx["scene"] = obs.get("scene")
@@ -312,7 +325,7 @@ class ChatAdapter:
         ):
             # Unknown speakers never get a reusable context buffer. History is only sent
             # after the existing identity/privacy opt-ins have passed.
-            if speaker_id:
+            if speaker_id and effective_viewer_id:
                 ctx["conversation_history"] = [
                     dict(turn) for turn in self._recent_turns.get(speaker_id, [])
                 ]
@@ -331,7 +344,7 @@ class ChatAdapter:
                 if cleaned.ok and isinstance(cleaned.value, str) and cleaned.value.strip():
                     text_out = cleaned.value
             ctx["llm_text"] = text_out
-            if speaker_id:
+            if speaker_id and effective_viewer_id:
                 recent = self._recent_turns.setdefault(speaker_id, [])
                 recent.extend([
                     {"role": "user", "text": text[:240]},
@@ -689,6 +702,9 @@ class ChatAdapter:
         utterance: str,
         observation: Mapping[str, Any] | None = None,
         *,
+        viewer_context: ViewerContext | None = None,
         viewer_id: str | None = None,
     ) -> PresentationAction:
-        return self.turn(utterance, observation, viewer_id=viewer_id).action
+        return self.turn(
+            utterance, observation, viewer_context=viewer_context, viewer_id=viewer_id
+        ).action
