@@ -91,6 +91,20 @@ def store_path():
     return os.path.join(data_dir(), STORE_NAME)
 
 
+def resolve_owner(candidate):
+    """Resolve a caller label to a registered canonical member; never trust raw IDs."""
+    raw = (candidate or "").strip()
+    if not raw:
+        return None
+    try:
+        from core.adapters.family_loader import load_members
+        from core.identity.resolver import IdentityResolver
+
+        return IdentityResolver(load_members()).resolve({"label": raw})
+    except Exception:
+        return None
+
+
 def load_alarms():
     path = store_path()
     if not os.path.isfile(path):
@@ -345,8 +359,10 @@ def cancel_all(member=None):
     return cancel(None, member=member)
 
 
-def list_alarms(enabled_only=True):
+def list_alarms(enabled_only=True, member=None):
     rows = load_alarms()
+    if member:
+        rows = [r for r in rows if (r.get("member") or None) == member]
     if enabled_only:
         rows = [r for r in rows if r.get("enabled")]
     return rows
@@ -682,30 +698,37 @@ def confirm_list(rows):
     return "汪汪～ 有" + "、".join(bits) + "的闹铃。"
 
 
-def handle_utterance(text, now=None, speak=False, speak_fn=None):
-    """If text is alarm intent, apply store and return fixed 糖糖 copy. Else None."""
+def handle_utterance(
+    text, now=None, speak=False, speak_fn=None, *, owner_member_id=None
+):
+    """Handle an alarm command only inside the caller's canonical owner scope."""
     intent = parse(text, now=now)
     action = intent.get("action")
     if action == "none":
         return None
+    owner = (str(owner_member_id).strip() if owner_member_id else "")
+    if not owner:
+        return "我还没确认你的家庭身份，暂时不能读取或修改闹铃。"
+    # Natural-language aliases such as “爸爸/弟弟” are descriptive text, not
+    # authorization to operate another member's alarms.
     if action == "set":
         alarm = set_alarm(
             intent["time"],
             days=intent.get("days") or "once",
             date=intent.get("date"),
             label=intent.get("label") or "",
-            member=intent.get("member"),
+            member=owner,
             now=now,
         )
         line = confirm_set(alarm)
     elif action == "cancel":
-        n = cancel(intent.get("time"), member=intent.get("member"))
+        n = cancel(intent.get("time"), member=owner)
         line = confirm_cancel(n)
     elif action == "cancel_all":
-        n = cancel_all(member=intent.get("member"))
+        n = cancel_all(member=owner)
         line = confirm_cancel(n)
     elif action == "list":
-        line = confirm_list(list_alarms())
+        line = confirm_list(list_alarms(member=owner))
     else:
         return None
     if speak:
@@ -729,6 +752,7 @@ def main(argv=None):
     p_handle = sub.add_parser("handle")
     p_handle.add_argument("text", nargs="+")
     p_handle.add_argument("--speak", action="store_true")
+    p_handle.add_argument("--member", default="", help="registered caller label; resolved to canonical owner")
 
     p_set = sub.add_parser("set")
     p_set.add_argument("time")
@@ -736,13 +760,16 @@ def main(argv=None):
     p_set.add_argument("--once", action="store_true")
     p_set.add_argument("--date", default="")
     p_set.add_argument("--label", default="")
-    p_set.add_argument("--member", default="")
+    p_set.add_argument("--member", default="", help="registered caller label; resolved to canonical owner")
 
     p_cancel = sub.add_parser("cancel")
     p_cancel.add_argument("time", nargs="?", default="all")
+    p_cancel.add_argument("--member", default="", help="registered caller label; resolved to canonical owner")
 
-    sub.add_parser("list")
-    sub.add_parser("cancel_all")
+    p_list = sub.add_parser("list")
+    p_list.add_argument("--member", default="", help="registered caller label; resolved to canonical owner")
+    p_cancel_all = sub.add_parser("cancel_all")
+    p_cancel_all.add_argument("--member", default="", help="registered caller label; resolved to canonical owner")
 
     p_due = sub.add_parser("due")
     p_due.add_argument("--ring", action="store_true")
@@ -761,8 +788,18 @@ def main(argv=None):
     if cmd == "parse":
         print(json.dumps(parse("".join(args.text)), ensure_ascii=False))
         return 0
+    if cmd in ("handle", "set", "cancel", "cancel_all", "list"):
+        candidate = getattr(args, "member", "")
+        owner = resolve_owner(candidate)
+        if not owner:
+            message = "我还没确认你的家庭身份，暂时不能读取或修改闹铃。"
+            if cmd in ("handle", "set", "cancel", "cancel_all", "list"):
+                print(message)
+                return 2
     if cmd == "handle":
-        line = handle_utterance("".join(args.text), speak=args.speak)
+        line = handle_utterance(
+            "".join(args.text), speak=args.speak, owner_member_id=owner
+        )
         if line:
             print(line)
             return 0
@@ -774,20 +811,23 @@ def main(argv=None):
             days=days,
             date=args.date or None,
             label=args.label,
-            member=args.member or None,
+            member=owner,
         )
         print(confirm_set(row))
         return 0
     if cmd == "cancel":
-        n = cancel(None if args.time in ("all", "", "*") else args.time)
+        n = cancel(
+            None if args.time in ("all", "", "*") else args.time,
+            member=owner,
+        )
         print(confirm_cancel(n))
         return 0
     if cmd == "cancel_all":
-        print(confirm_cancel(cancel_all()))
+        print(confirm_cancel(cancel_all(member=owner)))
         return 0
     if cmd == "list":
-        print(confirm_list(list_alarms(enabled_only=False)))
-        for row in list_alarms(enabled_only=False):
+        print(confirm_list(list_alarms(enabled_only=False, member=owner)))
+        for row in list_alarms(enabled_only=False, member=owner):
             flag = "开" if row.get("enabled") else "关"
             extra = row.get("days") or "once"
             print(f"{row.get('time')}\t{extra}\t{flag}\t{row.get('id')}")
