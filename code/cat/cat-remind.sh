@@ -41,7 +41,7 @@ case "$EVENT" in
         echo "糖糖语音输出失败或正在播放其它语音，本次提醒跳过" >&2
         exit "$say_status"
       fi
-      /usr/bin/python3 "$CAT_DIR/cat-proactive-gate.py" record "$EVENT" "$gate_member" >/dev/null 2>&1 || true
+      /usr/bin/python3 "$CAT_DIR/cat-proactive-gate.py" record "$EVENT" "$audience_id" >/dev/null 2>&1 || true
       exit 0
     fi
     ;;
