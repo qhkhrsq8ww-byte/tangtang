@@ -541,7 +541,7 @@ class TangTangRuntime:
                 privacy="PUBLIC",
                 decision="LOG_ONLY",
                 action=PresentationAction(
-                    decision="LOG_ONLY", text="", action="idle", member_id=mid, sink="none"
+                    decision="LOG_ONLY", text="", action="idle", member_id=None, sink="none"
                 ),
                 delivery=DeliveryResult(event_id=fallback.id, event_kept=True),
                 observation=obs,
