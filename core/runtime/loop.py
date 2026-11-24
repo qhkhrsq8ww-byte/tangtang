@@ -34,6 +34,7 @@ from core.memory.private import PrivateMemory
 from core.policy.speak_gate import decide as speak_decide, may_call_llm
 from core.policy.privacy_policy import PrivacyPolicy
 from core.response.orchestrator import PresentationAction
+from core.security.contexts import ViewerContext
 from core.runtime.isolate import isolate
 from core.runtime.presentation import DeliveryResult, PresentationRuntime
 from core.tasks.service import TaskService
@@ -361,6 +362,7 @@ class TangTangRuntime:
         *,
         audio: Any = None,
         extra_errors: list[str] | None = None,
+        viewer_context: ViewerContext | None = None,
         viewer_id: str | None = None,
     ) -> RuntimeResult:
         """STT/text → Identity → Event → PrivacyPolicy → Memory → Context → LLM → TTS."""
@@ -415,7 +417,9 @@ class TangTangRuntime:
                 errors=errors,
             )
         turned = isolate(
-            lambda: self.chat.turn(utterance, obs, viewer_id=viewer_id)
+            lambda: self.chat.turn(
+                utterance, obs, viewer_context=viewer_context, viewer_id=viewer_id
+            )
         )
         if not turned.ok or not isinstance(turned.value, ChatTurn):
             errors.append(f"chat:{turned.error_type}")
