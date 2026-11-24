@@ -125,6 +125,7 @@ class TestContextEmptyUnknown(unittest.TestCase):
             viewer_id="dad",
         )
         self.assertEqual(ctx["memory"], [])
+        self.assertEqual(ctx["current_event"]["payload"], {"redacted": True})
 
 
 class TestContextNoDirectIO(unittest.TestCase):
