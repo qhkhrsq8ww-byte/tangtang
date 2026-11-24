@@ -22,6 +22,14 @@ speak_with_fallback() {
   local baidu_spd="$3"
   local say_rate="$4"
   local say_pitch="${5:-118}"
+  # Optional VoiceStudio first; existing Edge -> Baidu -> macOS fallback stays intact.
+  if [ "${TANGTANG_VOICESTUDIO_ENABLED:-0}" = "1" ]; then
+    if /usr/bin/python3 "$CAT_DIR/cat-tts-voicestudio.py" "$TEXT" "$rate" 2>/dev/null && [ -s "$TTS_MP3" ]; then
+      play_generated
+      return $?
+    fi
+    rm -f "$TTS_MP3"
+  fi
   if /usr/bin/python3 "$CAT_DIR/cat-tts-edge.py" "$TEXT" "$rate" "$pitch" 2>/dev/null && [ -s "$TTS_MP3" ]; then
     play_generated
     return $?

@@ -19,6 +19,16 @@ export TANGTANG_AIRPLAY_PORT="61949"
 # V4 runtime is the default conversation path.
 export TANGTANG_V4_PIPELINE=1
 
+# Optional VoiceStudio TTS (disabled by default; existing fallback chain remains active).
+# Use a private/TLS-protected endpoint for remote servers; do not expose an unauthenticated API.
+# export TANGTANG_VOICESTUDIO_ENABLED="1"
+# export TANGTANG_VOICESTUDIO_URL="https://your-private-host.example/v1/audio/speech"
+# export TANGTANG_VOICESTUDIO_API_KEY=""  # matches OMNIVOICE_API_KEY on the backend
+# export TANGTANG_VOICESTUDIO_MODEL="tts-1"  # aliases VoiceStudio's active engine
+# export TANGTANG_VOICESTUDIO_VOICE="default"
+# export TANGTANG_VOICESTUDIO_TIMEOUT="18"
+# export TANGTANG_VOICESTUDIO_INSTRUCTIONS="温柔、自然、亲切，像陪伴孩子的生活伙伴；语速适中，不要刻意装幼稚。"
+
 # Optional alarm music override; defaults to bundled local audio.
 # export TANGTANG_ALARM_MUSIC="/path/to/local/alarm-music.mp3"
 # Bundled fallback includes assets/alarm_light.wav.
