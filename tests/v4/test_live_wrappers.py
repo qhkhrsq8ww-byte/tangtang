@@ -31,10 +31,10 @@ class TestLiveWrappersSetV4(unittest.TestCase):
         src = (CAT / "cat-voice.sh").read_text(encoding="utf-8")
         self.assertIn("TANGTANG_V4_PIPELINE=1", src)
         self.assertIn("cat-chat.py", src)
-        self.assertIn("cat-presence.py", src)
-        self.assertIn("suggest", src)
-        self.assertIn("EXPLICIT_MEMBER", src)
-        self.assertIn("cat-family.py", src)
+        self.assertNotIn('cat-presence.py" suggest', src)
+        self.assertNotIn("EXPLICIT_MEMBER", src)
+        self.assertNotIn('cat-family.py" observe', src)
+        self.assertIn("cat-vp.py", src)
 
     def test_cat_sh_chat_exports_v4(self):
         src = (CAT / "cat.sh").read_text(encoding="utf-8")

@@ -107,7 +107,7 @@ class TestAlarmSetDueRingCancel(unittest.TestCase):
         os.environ.pop("TANGTANG_FAKE_TIME", None)
 
     def test_set_then_due_rings_once(self):
-        line = self.mod.handle_utterance("明早七点叫我")
+        line = self.mod.handle_utterance("明早七点叫我", owner_member_id="hanghang")
         self.assertTrue(line.startswith("汪汪～"))
         self.assertIn("七点", line)
         store = Path(self.tmp.name) / "cat-alarms.json"
@@ -146,12 +146,12 @@ class TestAlarmSetDueRingCancel(unittest.TestCase):
         self.assertEqual(self.mod.due(now), [])
 
     def test_cancel_removes(self):
-        self.mod.handle_utterance("设个7:30的闹铃")
+        self.mod.handle_utterance("设个7:30的闹铃", owner_member_id="hanghang")
         self.assertEqual(len(self.mod.list_alarms()), 1)
-        line = self.mod.handle_utterance("取消闹铃")
+        line = self.mod.handle_utterance("取消闹铃", owner_member_id="hanghang")
         self.assertEqual(line, "汪汪～ 闹铃取消了。")
         self.assertEqual(self.mod.list_alarms(), [])
-        again = self.mod.handle_utterance("不要叫我了")
+        again = self.mod.handle_utterance("不要叫我了", owner_member_id="hanghang")
         self.assertEqual(again, "汪汪～ 现在没有闹铃。")
 
     def test_quiet_hours_do_not_block_ring(self):
@@ -171,7 +171,7 @@ class TestAlarmSetDueRingCancel(unittest.TestCase):
 
     def test_child_raw_text_not_in_habits(self):
         raw = "明早七点叫我，别告诉同学。"
-        self.mod.handle_utterance(raw)
+        self.mod.handle_utterance(raw, owner_member_id="hanghang")
         habits = Path(self.tmp.name) / "cat-habits.json"
         growth = Path(self.tmp.name) / "cat-habit-growth.json"
         self.assertFalse(habits.exists())
@@ -189,10 +189,13 @@ class TestAlarmWires(unittest.TestCase):
         talk = (CAT / "cat-talk.sh").read_text(encoding="utf-8")
         sh = (CAT / "cat.sh").read_text(encoding="utf-8")
         self.assertIn("cat-alarm.py", voice)
+        self.assertIn('--member "$WHO"', voice)
         self.assertLess(voice.find("cat-alarm.py"), voice.find("cat-chat.py"))
         main = chat.split("def main(")[1]
         self.assertIn("_alarm_reply", main)
-        self.assertIn("handle_utterance", chat)
+        self.assertIn("--member", chat)
+        alarm_src = (CAT / "cat-alarm.py").read_text(encoding="utf-8")
+        self.assertIn("owner_member_id", alarm_src)
         self.assertLess(main.find("_alarm_reply"), main.find("TANGTANG_V4_PIPELINE"))
         self.assertIn("cat-alarm.py", talk)
         self.assertLess(talk.find("cat-alarm.py"), talk.find("tangtang-quiet-hours.py"))
@@ -216,6 +219,7 @@ class TestAlarmWires(unittest.TestCase):
             env["TANGTANG_DATA_DIR"] = tmp
             env["TANGTANG_TTS"] = "0"
             env["TANGTANG_V4_PIPELINE"] = "1"
+            env["TANGTANG_SPEAKER"] = "dad"
             env["TANGTANG_FAKE_TODAY"] = "2026-08-30"
             env["TANGTANG_FAKE_TIME"] = "21:00"
             r = subprocess.run(
@@ -233,6 +237,7 @@ class TestAlarmWires(unittest.TestCase):
             env = os.environ.copy()
             env["TANGTANG_DATA_DIR"] = tmp
             env["TANGTANG_TTS"] = "0"
+            env["TANGTANG_SPEAKER"] = "dad"
             env["TANGTANG_FAKE_TODAY"] = "2026-08-30"
             env["TANGTANG_FAKE_TIME"] = "21:00"
             r = subprocess.run(
