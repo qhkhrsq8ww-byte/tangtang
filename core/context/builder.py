@@ -74,7 +74,11 @@ class ContextBuilder:
             event_out = dict(event)
         else:
             event_out = {}
-        event_out = self._scrub_event(event_out, scope=str(scope), viewer_id=member_id)
+        event_out = self._scrub_event(
+            event_out,
+            scope=str(scope),
+            viewer_id=viewer_id if viewer_id and viewer_id == member_id else None,
+        )
         recent_out = list(recent or [])[-self.max_recent :]
         utterance = str(obs.get("utterance") or obs.get("speech") or "")
         payload = event_out.get("payload") if isinstance(event_out.get("payload"), Mapping) else {}
