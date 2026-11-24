@@ -79,20 +79,6 @@ def defer_reason_for_context(task):
     return None
 
 
-def notify_deferred(task, reason):
-    """A generic local notification avoids reading private task text aloud."""
-    if sys.platform != "darwin" or reason != "private_reminder_requires_private_channel":
-        return
-    try:
-        subprocess.run(
-            ["/usr/bin/osascript", "-e",
-             'display notification "你有一项私人提醒到期，请打开糖糖查看。" with title "糖糖"'],
-            check=False, timeout=5, capture_output=True, text=True,
-        )
-    except Exception:
-        pass
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="糖糖本地到期提醒派发器")
     parser.add_argument("--deliver", action="store_true", help="实际调用本机语音播放；默认仅预览")
@@ -149,7 +135,7 @@ def main() -> int:
             recovered = service.recover_stale_running()
             if recovered:
                 print(f"有 {recovered} 项中断提醒结果不确定，已标记待人工核查；不会自动重播。")
-            stats = run_due(service, actor=dispatch_actor, deliver=deliver, defer_reason=defer_reason_for_context, on_defer=notify_deferred)
+            stats = run_due(service, actor=dispatch_actor, deliver=deliver, defer_reason=defer_reason_for_context)
     except RuntimeError as exc:
         write_health(home, mode="deliver", outcome="skipped", note="dispatcher_lock_busy")
         print(str(exc), file=sys.stderr)
