@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -38,6 +40,18 @@ class TestShortTurnIdentityBoundary(unittest.TestCase):
             saved = data["turns"][-1]
             self.assertEqual(saved["audience_id"], "hanghang")
             self.assertEqual(saved["speaker_identity_status"], "unverified")
+
+    def test_member_report_cli_requires_viewer_migration_switch(self):
+        env = os.environ.copy()
+        env.pop("TANGTANG_ALLOW_LEGACY_MEMBER_MEMORY_CLI", None)
+        with tempfile.TemporaryDirectory() as td:
+            env["TANGTANG_DATA_DIR"] = td
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), "today-report", "hanghang"],
+                capture_output=True, text=True, env=env, timeout=10,
+            )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("经过 Core 验证的 viewer", result.stderr)
 
     def test_unverified_short_turn_does_not_update_member_habits(self):
         row = {
