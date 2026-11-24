@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Read-only Mac mini preflight for TangTang V2 / Hermes-Agent.
-# Does not install software, change settings, read secrets, or contact the network.
+# Does not install software, change settings, read secrets, or contact external hosts; only probes the local loopback API port.
 
 set -u
 
