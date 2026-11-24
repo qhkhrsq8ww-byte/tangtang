@@ -73,19 +73,15 @@ class TestMemoryRecall(unittest.TestCase):
         received = []
         pipe = PrivacyPipeline(members=MEMBERS)
         pipe.stores.family.put(Memory(
-            memory_id="child-family-fact",
-            member_id="hanghang",
+            memory_id="dad-family-fact",
+            member_id="dad",
             type="preference",
             privacy="FAMILY",
             data={"tag": "communication", "value": "family-visible preference"},
         ))
-        pipe.stores.private.put(Memory(
-            memory_id="child-private-fact",
-            member_id="hanghang",
-            type="preference",
-            privacy="PRIVATE",
-            data={"tag": "communication", "value": "private-only preference"},
-        ))
+        pipe.stores.private.remember_preference(
+            member_id="dad", category="communication", value="private-only preference"
+        )
         chat = ChatAdapter(
             pipeline=pipe,
             members=MEMBERS,
@@ -93,13 +89,13 @@ class TestMemoryRecall(unittest.TestCase):
         )
         viewer = ViewerContext("dad", "verified", frozenset({"family:read"}))
         turn = chat.turn(
-            "你好", {"label": "hanghang", "privacy_scope": "FAMILY"},
+            "你好", {"label": "dad", "privacy_scope": "FAMILY"},
             viewer_context=viewer,
         )
         prompt = received[0]["_filtered_prompt"]
         self.assertIn("family-visible preference", prompt)
         self.assertNotIn("private-only preference", prompt)
-        self.assertEqual(turn.context["recall"][0]["memory_id"], "child-family-fact")
+        self.assertEqual(turn.context["recall"][0]["memory_id"], "dad-family-fact")
 
     def test_raw_utterance_is_never_recalled_even_for_owner(self):
         pipe = PrivacyPipeline(members=MEMBERS)
