@@ -8,14 +8,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DUR="${1:-5}"
 PCM="$SCRIPT_DIR/voice_tmp.pcm"
 trap 'rm -f "$PCM"' EXIT
-MEMBER_ID="unknown"
 PROFILE="${TANGTANG_PROFILE:-play}"
 case "$PROFILE" in play|friend) ;; *) PROFILE="play" ;; esac
 export TANGTANG_PROFILE="$PROFILE"
 export TANGTANG_V4_PIPELINE=1
-EXPLICIT_MEMBER="${TANGTANG_MEMBER_ID:-}"
 
-GATE="$("$CAT_DIR/tangtang-speak-gate.py" --channel voice --member "${TANGTANG_SPEAKER:-unknown}" 2>/dev/null || true)"
+GATE="$(env -u TANGTANG_MEMBER_ID -u TANGTANG_SPEAKER "$CAT_DIR/tangtang-speak-gate.py" --channel voice 2>/dev/null || true)"
 if [ "$GATE" != "speak" ]; then
   exit 0
 fi
@@ -28,7 +26,6 @@ fi
 
 WHO="$("$CAT_DIR/cat-vp.py" identify "$PCM" 2>/dev/null | tail -1)"
 [ -n "$WHO" ] || WHO="unknown"
-MEMBER_ID="$WHO"
 # Coarse acoustic similarity is not verified identity; unknown remains unknown.
 echo "👤 识别状态: $WHO"
 
@@ -48,11 +45,10 @@ fi
 
 echo "   你说: $TEXT"
 # Member-scoped habit writes are performed only by Core after turn authorization.
-# Family memory CLI records only policy-approved, derived signals; child raw speech is excluded there.
-"$CAT_DIR/cat-family.py" observe "$WHO" "$TEXT" >/dev/null 2>&1 || true
+# Family memory writes are Core-owned; the shell never writes identity-scoped events.
 
 # 闹铃意图由本地确定性解析处理，不进入普通 LLM。
-ALARM_LINE="$(/usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$TEXT" 2>/dev/null || true)"
+ALARM_LINE="$(/usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$TEXT" --member "$WHO" 2>/dev/null || true)"
 if [ -n "$ALARM_LINE" ]; then
   echo "   糖糖: $ALARM_LINE"
   set +e
