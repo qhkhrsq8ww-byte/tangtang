@@ -186,7 +186,9 @@ class PrivacyPolicy:
                 reason="child-fail-closed" if not self._looks_child_private(text) else "child-private-marker",
             )
 
-        if canonical is None and (not raw_id or unknown_label):
+        if canonical is None:
+            # An unrecognized label is not proof of family membership.
+            # Keep the utterance transient, with no family-store or raw-log access.
             return PrivacyDecision(
                 privacy="PUBLIC",
                 member_id=None,
@@ -196,8 +198,8 @@ class PrivacyPolicy:
                 allow_family_summary=False,
                 allow_parent_context=False,
                 allow_habit_store=False,
-                allow_log_raw=True,
-                reason="unknown-public",
+                allow_log_raw=False,
+                reason="unknown-public" if not raw_id or unknown_label else "unresolved-public",
             )
 
         mid = canonical or raw_id
