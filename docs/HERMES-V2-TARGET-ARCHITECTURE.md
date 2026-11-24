@@ -19,7 +19,7 @@
   | Task Service | Device Authorization          |
   +-----------------------------------------------+
                      |
-          Versioned Agent Port / MCP
+          Versioned Agent Port / MCP Client
                      |
                      v
                 Hermes-Agent
@@ -118,14 +118,16 @@ Agent 返回结构化结果，不直接执行动作：
 Core 对返回内容进行 schema 校验、成员/隐私校验、安全检查、动作白名单校验，再决定是否交给 TTS/投影。字段无效、超时或身份不匹配时 fail closed，使用现有安全 fallback。
 
 ## 6. 运行与网络边界
-- Hermes Gateway 默认仅监听 loopback 或受控私网地址。
+- 按实际采用的 Hermes 运行形态配置服务边界：本地 CLI/Backend、消息 Gateway 是不同运行组件，不预设全部启用。
+- 如启用 Hermes 消息 Gateway 或 Backend，默认仅监听 loopback 或受控私网地址。
 - 管理界面不得直接暴露公网。
 - 远程维护使用 VPN/零信任通道；不开放未经认证的管理端口。
 - Hermes 和 TangTang Core 使用独立配置、日志和运行环境。
 - Core 的数据目录不得整体挂载给 Agent；只通过最小化工具返回所需数据。
 - Agent 不获得生产家庭数据目录的通用写权限。
 - 密钥存储于本机安全配置/Keychain 或受保护环境变量，不入仓库。
-- 不部署第二个 Agent Gateway，除非后续架构决策记录明确批准。
+- 不因集成而默认启用消息 Gateway；如需启用，明确唯一实例、端口、认证和生命周期，避免与 Desktop/Backend 进程冲突。
+- 不把 Hermes 的 MCP Client 与 MCP Server mode 混淆；当前优先由 TangTang Core 暴露 MCP Server，Hermes 连接它。
 
 ## 7. 失败隔离
 - Hermes 不可用：保留 Core 确定性规则、静默/基础提醒和简短 fallback。
