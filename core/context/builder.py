@@ -50,15 +50,20 @@ class ContextBuilder:
         scope = privacy_scope or obs.get("privacy_scope") or "PRIVATE"
         if scope not in _PRIVACY:
             scope = "PRIVATE"
-        q = isolate(
-            lambda: self._memory.query(
-                member_id=str(member_id or ""),
-                scope=str(scope),
-                viewer_id=str(viewer_id) if (viewer_id and viewer_id == member_id) else None,
-            ),
-            fallback=[],
-        )
-        memories = q.value if isinstance(q.value, list) else []
+        # MemoryStore treats viewer_id=None as owner access for backwards
+        # compatibility. Do not call it at all unless the owner/viewer match is explicit.
+        if member_id and viewer_id and viewer_id == member_id:
+            q = isolate(
+                lambda: self._memory.query(
+                    member_id=str(member_id),
+                    scope=str(scope),
+                    viewer_id=str(viewer_id),
+                ),
+                fallback=[],
+            )
+            memories = q.value if isinstance(q.value, list) else []
+        else:
+            memories = []
         d = isolate(lambda: self._policy.decide(obs), fallback="SILENT")
         decision = d.value if isinstance(d.value, str) and d.value else "SILENT"
         family_out = dict(family or {})
