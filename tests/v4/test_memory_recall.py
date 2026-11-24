@@ -99,7 +99,7 @@ class TestMemoryRecall(unittest.TestCase):
         prompt = received[0]["_filtered_prompt"]
         self.assertIn("family-visible preference", prompt)
         self.assertNotIn("private-only preference", prompt)
-        self.assertEqual(turn.context["recall"][0]["member_id"], "hanghang")
+        self.assertEqual(turn.context["recall"][0]["memory_id"], "child-family-fact")
 
     def test_raw_utterance_is_never_recalled_even_for_owner(self):
         pipe = PrivacyPipeline(members=MEMBERS)
