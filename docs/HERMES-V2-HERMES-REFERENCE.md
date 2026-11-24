@@ -47,38 +47,49 @@ approvals:
 
 Hermes 官方 API Server 提供 OpenAI 兼容接口，默认绑定 127.0.0.1:8642，并要求 API_SERVER_KEY；但官方文档明确说明 API Server 默认平台工具集仍包含终端、文件、网页、记忆、技能等完整工具能力。因此不能只因为 API 监听 loopback 就认为权限足够安全。
 
-推荐在 PoC 中将 TangTang MCP Server 作为唯一业务工具来源，并将 API Server 平台工具集收缩为动态 MCP 工具集。配置形式需用锁定版本的 `hermes tools` 和 `/v1/toolsets` 实际核验：
+第一阶段先不配置任何 MCP Server，并通过 `agent.disabled_toolsets` 禁用 API Server 默认平台工具集中所有不需要的工具集。第二阶段才配置 TangTang MCP Server，并用 `platform_toolsets.api_server` 限制 API Server 可见的 MCP 服务器。注意：`platform_toolsets.api_server` 只控制动态 MCP 服务器选择，不会自动关闭内置 file/terminal 等工具。
 
 ```yaml
-mcp_servers:
-  tangtang:
-    command: /absolute/path/to/tangtang-mcp-server
-    args: []
-
-platform_toolsets:
-  api_server:
-    - mcp-tangtang
-
+# 第一阶段：不配置 mcp_servers，先关闭 API Server 的内置工具
 agent:
   disabled_toolsets:
-    - memory
-    - file
-    - terminal
     - browser
-    - web
     - code_execution
-    - delegation
+    - connections
     - cronjob
-    - computer_use
+    - delegation
+    - file
+    - image_gen
+    - memory
+    - search
+    - session_search
+    - skills
+    - terminal
+    - todo
+    - vision
+    - web
+    - x_search
+    - video
+    - video_gen
+
+# 第二阶段通过安全评审后才增加：
+# mcp_servers:
+#   tangtang:
+#     command: /absolute/path/to/tangtang-mcp-server
+#     args: []
+# platform_toolsets:
+#   api_server:
+#     - tangtang  # 只选择该 MCP server；不替代上面的内置工具禁用清单
 ```
 
 说明：
-- `mcp-tangtang` 是动态工具集名称，前提是 MCP server 成功发现工具；启动后必须通过 `/v1/toolsets` 检查实际启用列表。
-- 上述是目标最小权限配置草案，不可未经 `hermes config check`、`hermes tools` 和 API 实测直接当作可运行配置。
+- 上述禁用清单是基于官方 `hermes-api-server` 平台工具集的初始草案，必须按锁定版本 `hermes tools list` 和 `/v1/toolsets` 核对；任何额外启用工具都会被 TangTang Adapter 拒绝。
+- `mcp-tangtang` 是动态工具集的展示名；配置 `platform_toolsets.api_server` 时使用服务器名 `tangtang`。启动后必须通过 `/v1/toolsets` 检查实际启用列表和具体工具名。
+- 上述配置不可未经 `hermes config check`、`hermes tools` 和 API 实测直接当作可运行配置。
 - `API_SERVER_ENABLED=true`、`API_SERVER_HOST=127.0.0.1`、强随机 `API_SERVER_KEY`；不配置 CORS，不暴露公网。
-- Hermes API Server 默认工具集有 terminal/file 能力，必须验证最终工具列表只包含预期的 TangTang MCP 工具；若不能做到，禁止接入家庭数据。
+- Hermes API Server 默认 `hermes-api-server` 会保留大部分内置工具。必须通过 `agent.disabled_toolsets` 逐项关闭，并验证最终工具列表；若不能做到，禁止接入家庭数据。
 - 初期不启用 Hermes Cron；调度仍由 TangTang Core/现有任务机制负责，防止双重调度。
-- Skills 仅在确认无写权限或写入审批和目录边界有效后逐步开放。
+- Skills 工具集初期禁用；即使打开 write_approval，审批也不覆盖通用文件工具或终端。
 
 ## 4. 运行形态选择
 
