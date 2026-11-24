@@ -185,7 +185,10 @@ class PrivacyPipeline:
     ) -> PresentationAction:
         obs = dict(observation or {})
         ingested = self.ingest(utterance, obs)
-        who_id = viewer_id or ingested.decision.member_id
+        # A requested viewer is not proof of speaker identity. The resolved speaker
+        # remains canonical; a mismatched viewer receives no owner-scoped memory.
+        who_id = ingested.decision.member_id
+        authorized_viewer_id = who_id if viewer_id is None else (viewer_id if viewer_id == who_id else None)
         who = {"member_id": who_id}
         if self.injection.is_injection(utterance):
             ctx = {
@@ -204,6 +207,7 @@ class PrivacyPipeline:
             event=ingested.event,
             observation={**obs, "utterance": utterance},
             privacy_scope=scope,
+            viewer_id=authorized_viewer_id,
         )
         ctx["utterance"] = utterance
         ctx["scene"] = obs.get("scene")

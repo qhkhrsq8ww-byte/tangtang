@@ -37,6 +37,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=ev,
             privacy_scope="PRIVATE",
+            viewer_id="child_9",
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
         self.assertEqual(ids, {"p9"})
@@ -49,6 +50,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=ev,
             privacy_scope="FAMILY",
+            viewer_id="child_9",
             family={"summary": "ok", "private": "must-drop"},
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
@@ -64,6 +66,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=Event.create(id="evt_p", type="home"),
             privacy_scope="PUBLIC",
+            viewer_id="child_9",
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
         self.assertEqual(ids, {"u9"})
@@ -79,6 +82,12 @@ class TestContextHappy(unittest.TestCase):
 
 
 class TestContextEmptyUnknown(unittest.TestCase):
+    def setUp(self):
+        self.store = MemoryStore()
+        self.store.put(Memory(memory_id="p9", member_id="child_9", type="note", privacy="PRIVATE", data={"speech": "secret"}))
+        self.policy = InterruptPolicy()
+        self.builder = ContextBuilder(self.store, self.policy)
+
     def test_empty_who_and_event(self):
         builder = ContextBuilder(MemoryStore(), InterruptPolicy())
         ctx = builder.build(who={}, event=None)
@@ -97,6 +106,26 @@ class TestContextEmptyUnknown(unittest.TestCase):
             privacy_scope="PRIVATE",
         )
         self.assertEqual(ctx["memory"], [])
+
+    def test_observation_member_id_cannot_select_private_memory_owner(self):
+        ctx = self.builder.build(
+            who={},
+            event=Event.create(id="evt_untrusted", type="greet", privacy="PUBLIC"),
+            observation={"member_id": "child_9"},
+            privacy_scope="PRIVATE",
+            viewer_id="child_9",
+        )
+        self.assertEqual(ctx["memory"], [])
+
+    def test_mismatched_viewer_cannot_read_canonical_members_private_memory(self):
+        ctx = self.builder.build(
+            who={"member_id": "child_9"},
+            event=Event.create(id="evt_mismatch", type="greet", privacy="PRIVATE", member_id="child_9"),
+            privacy_scope="PRIVATE",
+            viewer_id="dad",
+        )
+        self.assertEqual(ctx["memory"], [])
+        self.assertEqual(ctx["current_event"]["payload"], {"redacted": True})
 
 
 class TestContextNoDirectIO(unittest.TestCase):

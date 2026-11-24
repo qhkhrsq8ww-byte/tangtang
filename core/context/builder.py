@@ -44,19 +44,26 @@ class ContextBuilder:
     ) -> dict[str, Any]:
         who_map = dict(who or {})
         obs = dict(observation or {})
-        member_id = who_map.get("member_id") or obs.get("member_id")
+        # Only the canonical identity produced by TangTang Core may select a memory owner.
+        # Observation fields are untrusted perception input and must never become an owner ID.
+        member_id = who_map.get("member_id")
         scope = privacy_scope or obs.get("privacy_scope") or "PRIVATE"
         if scope not in _PRIVACY:
             scope = "PRIVATE"
-        q = isolate(
-            lambda: self._memory.query(
-                member_id=str(member_id or ""),
-                scope=str(scope),
-                viewer_id=str(viewer_id or member_id) if (viewer_id or member_id) else None,
-            ),
-            fallback=[],
-        )
-        memories = q.value if isinstance(q.value, list) else []
+        # MemoryStore treats viewer_id=None as owner access for backwards
+        # compatibility. Do not call it at all unless the owner/viewer match is explicit.
+        if member_id and viewer_id and viewer_id == member_id:
+            q = isolate(
+                lambda: self._memory.query(
+                    member_id=str(member_id),
+                    scope=str(scope),
+                    viewer_id=str(viewer_id),
+                ),
+                fallback=[],
+            )
+            memories = q.value if isinstance(q.value, list) else []
+        else:
+            memories = []
         d = isolate(lambda: self._policy.decide(obs), fallback="SILENT")
         decision = d.value if isinstance(d.value, str) and d.value else "SILENT"
         family_out = dict(family or {})
@@ -67,7 +74,11 @@ class ContextBuilder:
             event_out = dict(event)
         else:
             event_out = {}
-        event_out = self._scrub_event(event_out, scope=str(scope), viewer_id=member_id)
+        event_out = self._scrub_event(
+            event_out,
+            scope=str(scope),
+            viewer_id=viewer_id if viewer_id and viewer_id == member_id else None,
+        )
         recent_out = list(recent or [])[-self.max_recent :]
         utterance = str(obs.get("utterance") or obs.get("speech") or "")
         payload = event_out.get("payload") if isinstance(event_out.get("payload"), Mapping) else {}
