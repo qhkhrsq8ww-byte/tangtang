@@ -36,7 +36,11 @@ class TestActorAudienceViewerContexts(unittest.TestCase):
         with self.assertRaises(ValueError):
             ActorContext("hanghang", "member", "unverified")
         actor = ActorContext("parent", "member", "verified")
-        self.assertTrue(authorize_actor_action(actor, "reminder:create"))
+        self.assertFalse(authorize_actor_action(actor, "reminder:create"))
+        authorized = ActorContext(
+            "parent", "member", "verified", frozenset({"reminder:create"})
+        )
+        self.assertTrue(authorize_actor_action(authorized, "reminder:create"))
 
     def test_private_view_is_owner_only_or_explicit_grant(self):
         self.assertTrue(authorize_viewer(
