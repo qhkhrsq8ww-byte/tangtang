@@ -67,9 +67,8 @@ def main(argv=None) -> int:
     rt = TangTangRuntime()
     obs = {}
     if member:
-        obs["label"] = member
-        obs["member_id"] = member
-    result = rt.handle_living_room(kind, member_id=member or None, observation=obs)
+        obs["audience_id"] = member
+    result = rt.handle_living_room(kind, audience_id=member or None, observation=obs)
 
     # This is a system-initiated scene for an audience, not member-authored activity.
 
@@ -81,6 +80,7 @@ def main(argv=None) -> int:
                     "kind": kind,
                     "decision": result.decision,
                     "member_id": result.member_id,
+                    "audience_id": result.observation.get("audience_id"),
                     "text": (result.action.text if result.action else ""),
                     "event_type": result.event.type if result.event else None,
                 },
