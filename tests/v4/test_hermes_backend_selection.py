@@ -33,7 +33,8 @@ class TestHermesBackendSelection(unittest.TestCase):
 
     def test_hermes_backend_uses_adapter_and_not_direct_provider(self):
         fake = FakeHermesClient()
-        module = types.SimpleNamespace(HermesAgentClient=mock.Mock(return_value=fake))
+        factory = mock.Mock(return_value=fake)
+        module = types.SimpleNamespace(HermesAgentClient=factory)
         with mock.patch.dict(os.environ, {
             "TANGTANG_LLM_BACKEND": "hermes",
             "TANGTANG_ALLOW_PRIVATE_LLM": "1",
@@ -44,7 +45,7 @@ class TestHermesBackendSelection(unittest.TestCase):
                     call = CAT_CHAT._runtime_llm()
                     result = call(self.context())
         self.assertEqual(result, "Hermes response")
-        self.assertEqual(fake.kwargs["model"], "hermes-agent")
+        factory.assert_called_once_with(model="hermes-agent")
         self.assertEqual(fake.context["_filtered_prompt"], self.context()["_filtered_prompt"])
         direct_chat.assert_not_called()
 
