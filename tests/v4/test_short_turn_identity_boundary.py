@@ -46,11 +46,12 @@ class TestShortTurnIdentityBoundary(unittest.TestCase):
         env.pop("TANGTANG_ALLOW_LEGACY_MEMBER_MEMORY_CLI", None)
         with tempfile.TemporaryDirectory() as td:
             env["TANGTANG_DATA_DIR"] = td
+            env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
             result = subprocess.run(
                 [sys.executable, str(SCRIPT), "today-report", "hanghang"],
                 capture_output=True, text=True, env=env, timeout=10,
             )
-        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.returncode, 2, result.stderr)
         self.assertIn("经过 Core 验证的 viewer", result.stderr)
 
     def test_unverified_short_turn_does_not_update_member_habits(self):
