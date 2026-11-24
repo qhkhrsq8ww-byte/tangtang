@@ -93,20 +93,6 @@ def notify_deferred(task, reason):
         pass
 
 
-def notify_private_deferred() -> None:
-    """Notify generically that a private reminder needs its owner's private channel."""
-    if sys.platform != "darwin":
-        return
-    try:
-        subprocess.run(
-            ["/usr/bin/osascript", "-e",
-             'display notification "你有私人提醒到期，请在自己的设备上打开糖糖查看。" with title "糖糖"'],
-            check=False, timeout=5, capture_output=True, text=True,
-        )
-    except Exception:
-        pass
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="糖糖本地到期提醒派发器")
     parser.add_argument("--deliver", action="store_true", help="实际调用本机语音播放；默认仅预览")
@@ -129,13 +115,10 @@ def main() -> int:
         # Preview only FAMILY reminders. PRIVATE titles are never read by the
         # system scheduler or printed into a shared terminal/room.
         due = service.due_tasks_for_dispatch(actor=dispatch_actor)
-        private_due = service.count_private_due_for_dispatch(actor=dispatch_actor)
         for task in due:
             print(f"[预览·家庭提醒] audience={task.owner_member_id}: {task.title} ({task.task_id})")
-        if private_due:
-            print(f"另有私人提醒 {private_due} 项；预览不读取内容，也不在公共空间播报。")
         print(f"可在家庭渠道处理的到期提醒 {len(due)} 项；预览模式未更改任务状态。实际播放请加 --deliver。")
-        write_health(home, mode="preview", outcome="ok", stats={"family_due": len(due), "private_due_hidden": private_due})
+        write_health(home, mode="preview", outcome="ok", stats={"family_due": len(due)})
         return 0
 
     def deliver(task, audience):
@@ -166,10 +149,7 @@ def main() -> int:
             recovered = service.recover_stale_running()
             if recovered:
                 print(f"有 {recovered} 项中断提醒结果不确定，已标记待人工核查；不会自动重播。")
-            private_due = service.count_private_due_for_dispatch(actor=dispatch_actor)
             stats = run_due(service, actor=dispatch_actor, deliver=deliver, defer_reason=defer_reason_for_context, on_defer=notify_deferred)
-            if private_due:
-                notify_private_deferred()
     except RuntimeError as exc:
         write_health(home, mode="deliver", outcome="skipped", note="dispatcher_lock_busy")
         print(str(exc), file=sys.stderr)
