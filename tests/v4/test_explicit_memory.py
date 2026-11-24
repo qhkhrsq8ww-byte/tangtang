@@ -18,6 +18,7 @@ from core.memory.private import PrivateMemory
 from core.memory.store import Memory
 from core.ingest import PrivacyPipeline
 from core.policy.privacy_policy import PrivacyPolicy
+from core.security.contexts import ViewerContext
 
 MEMBERS = load_members()
 
@@ -60,7 +61,7 @@ class TestExplicitMemoryChat(unittest.TestCase):
             members=MEMBERS,
             llm=lambda payload: calls.append(dict(payload)) or "不应该调用云端",
         )
-        turn = chat.turn("糖糖，记住我喜欢恐龙。", {"label": "hanghang"})
+        turn = chat.turn("糖糖，记住我喜欢恐龙。", {"label": "hanghang"}, viewer_context=ViewerContext("hanghang", "verified"))
         self.assertEqual(turn.action.action, "memory_remember")
         self.assertIn("恐龙", turn.action.text)
         self.assertEqual(turn.ingest.decision.privacy, "PRIVATE")
@@ -78,24 +79,24 @@ class TestExplicitMemoryChat(unittest.TestCase):
     def test_recall_and_forget_use_only_current_members_private_preferences(self):
         pipe = PrivacyPipeline(members=MEMBERS)
         chat = ChatAdapter(pipeline=pipe, members=MEMBERS, llm=lambda _p: self.fail("LLM should not run"))
-        saved = chat.turn("记住我喜欢恐龙", {"label": "hanghang"})
-        recalled = chat.turn("糖糖，你还记得我喜欢什么吗？", {"label": "hanghang"})
+        saved = chat.turn("记住我喜欢恐龙", {"label": "hanghang"}, viewer_context=ViewerContext("hanghang", "verified"))
+        recalled = chat.turn("糖糖，你还记得我喜欢什么吗？", {"label": "hanghang"}, viewer_context=ViewerContext("hanghang", "verified"))
         self.assertEqual(saved.action.action, "memory_remember")
         self.assertEqual(recalled.action.action, "memory_recall")
         self.assertIn("恐龙", recalled.action.text)
         self.assertEqual(recalled.ingest.event.payload, {"redacted": True})
         self.assertFalse(recalled.ingest.stored_private)
 
-        forgotten = chat.turn("忘记我喜欢恐龙", {"label": "hanghang"})
+        forgotten = chat.turn("忘记我喜欢恐龙", {"label": "hanghang"}, viewer_context=ViewerContext("hanghang", "verified"))
         self.assertEqual(forgotten.action.action, "memory_forget")
         self.assertIn("忘", forgotten.action.text)
-        after = chat.turn("我喜欢什么？", {"label": "hanghang"})
+        after = chat.turn("我喜欢什么？", {"label": "hanghang"}, viewer_context=ViewerContext("hanghang", "verified"))
         self.assertNotIn("恐龙", after.action.text)
 
     def test_adult_explicit_preference_is_private_not_family_shared(self):
         pipe = PrivacyPipeline(members=MEMBERS)
         chat = ChatAdapter(pipeline=pipe, members=MEMBERS, llm=lambda _p: self.fail("LLM should not run"))
-        turn = chat.turn("记住我喜欢短一点的回答", {"label": "dad"})
+        turn = chat.turn("记住我喜欢短一点的回答", {"label": "dad"}, viewer_context=ViewerContext("dad", "verified"))
         self.assertEqual(turn.ingest.decision.privacy, "PRIVATE")
         self.assertEqual(turn.ingest.event.payload, {"redacted": True})
         self.assertFalse(turn.ingest.stored_family)
