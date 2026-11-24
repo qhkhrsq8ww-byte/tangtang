@@ -110,7 +110,7 @@ Mac mini M6 + Hermes-Agent + TangTang Core。保留糖糖家庭大脑，以 Herm
 - [x] PR #75：合并 Hermes V2 架构规划、接口契约、Mac mini 部署和验收文档。
 - [x] PR #77：合并当前代码资产与迁移风险审计。
 - [x] PR #76：停止把语音原话写入旧互动日志；新日志仅保留互动元数据。**旧本机日志中的历史原话仍需在迁移前单独清理，代码合并不会自动删除本地数据。**
-- [ ] PR #78：Hermes API Adapter 最小客户端，当前待 CI/审查；默认零工具、loopback、短期会话清理，尚未接入生产对话路径。
+- [ ] PR #78：加入 Hermes API Adapter，并在 V4 对话入口增加 `TANGTANG_LLM_BACKEND=hermes` 显式开关；默认仍走原模型直连。Hermes 模式默认零工具、loopback、逐轮临时会话清理；尚未在真实 Hermes/M6 上验证。
 - [ ] Mac mini 实机 Hermes 安装、API Server 工具集白名单和资源验证尚未开展。
 
 阶段 0 已完成代码主链路和关键风险的静态盘点，但因 V4/V5 命名、旧 PR 重基线和 Mac mini 实机核验尚未全部解决，阶段 0 不宣布完全验收。
