@@ -86,7 +86,13 @@ class ContextBuilder:
         else:
             event_out = {}
         event_out = self._scrub_event(event_out, scope=str(scope), viewer_id=authorized_viewer_id)
-        recent_out = list(recent or [])[-self.max_recent :]
+        recent_allowed = bool(
+            member_id
+            and authorize_viewer(
+                viewer_context, owner_member_id=str(member_id), visibility=str(scope)
+            )
+        )
+        recent_out = list(recent or [])[-self.max_recent :] if recent_allowed else []
         utterance = str(obs.get("utterance") or obs.get("speech") or "")
         payload = event_out.get("payload") if isinstance(event_out.get("payload"), Mapping) else {}
         if isinstance(payload, Mapping) and not utterance:
