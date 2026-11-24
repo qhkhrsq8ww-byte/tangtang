@@ -93,6 +93,20 @@ def notify_deferred(task, reason):
         pass
 
 
+def notify_private_deferred() -> None:
+    """Notify generically that a private reminder needs its owner's private channel."""
+    if sys.platform != "darwin":
+        return
+    try:
+        subprocess.run(
+            ["/usr/bin/osascript", "-e",
+             'display notification "你有私人提醒到期，请在自己的设备上打开糖糖查看。" with title "糖糖"'],
+            check=False, timeout=5, capture_output=True, text=True,
+        )
+    except Exception:
+        pass
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="糖糖本地到期提醒派发器")
     parser.add_argument("--deliver", action="store_true", help="实际调用本机语音播放；默认仅预览")
@@ -152,7 +166,10 @@ def main() -> int:
             recovered = service.recover_stale_running()
             if recovered:
                 print(f"有 {recovered} 项中断提醒结果不确定，已标记待人工核查；不会自动重播。")
+            private_due = service.count_private_due_for_dispatch(actor=dispatch_actor)
             stats = run_due(service, actor=dispatch_actor, deliver=deliver, defer_reason=defer_reason_for_context, on_defer=notify_deferred)
+            if private_due:
+                notify_private_deferred()
     except RuntimeError as exc:
         write_health(home, mode="deliver", outcome="skipped", note="dispatcher_lock_busy")
         print(str(exc), file=sys.stderr)
