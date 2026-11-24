@@ -14,6 +14,7 @@ from core.events.event import Event
 from core.interfaces import ContextPort
 from core.memory.store import Memory, MemoryStore
 from core.policy.interrupt_policy import InterruptPolicy
+from core.security.contexts import ViewerContext
 
 
 class TestContextHappy(unittest.TestCase):
@@ -37,6 +38,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=ev,
             privacy_scope="PRIVATE",
+            viewer_context=ViewerContext("child_9", "verified"),
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
         self.assertEqual(ids, {"p9"})
@@ -49,6 +51,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=ev,
             privacy_scope="FAMILY",
+            viewer_context=ViewerContext("child_9", "verified"),
             family={"summary": "ok", "private": "must-drop"},
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
@@ -64,6 +67,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=Event.create(id="evt_p", type="home"),
             privacy_scope="PUBLIC",
+            viewer_context=ViewerContext("child_9", "verified"),
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
         self.assertEqual(ids, {"u9"})
