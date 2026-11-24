@@ -17,11 +17,13 @@ class TestLivingRoomAudienceContract(unittest.TestCase):
             "meal",
             member_id=None,
             privacy="PUBLIC",
-            extra={"audience_id": "hanghang", "actor_kind": "system"},
+            extra={"audience_id": "hanghang", "actor_kind": "system", "listener_identity_status": "unverified"},
         )
         self.assertIsNone(event.member_id)
         self.assertEqual(event.payload["audience_id"], "hanghang")
         self.assertEqual(event.payload["actor_kind"], "system")
+        self.assertIsNone(event.payload["listener_id"])
+        self.assertEqual(event.payload["listener_identity_status"], "unverified")
 
 
 if __name__ == "__main__":
