@@ -7,6 +7,7 @@ from typing import Any
 from core.interfaces import MemoryPort, PolicyPort
 from core.policy.injection import InjectionGuard
 from core.policy.privacy_policy import PrivacyPolicy
+from core.security.contexts import ViewerContext, authorize_viewer
 from core.runtime.isolate import isolate
 
 _PRIVACY = frozenset({"PRIVATE", "FAMILY", "PUBLIC"})
@@ -41,6 +42,7 @@ class ContextBuilder:
         family: Mapping[str, Any] | None = None,
         privacy_scope: str | None = None,
         viewer_id: str | None = None,
+        viewer_context: ViewerContext | None = None,
     ) -> dict[str, Any]:
         who_map = dict(who or {})
         obs = dict(observation or {})
@@ -48,18 +50,34 @@ class ContextBuilder:
         scope = privacy_scope or obs.get("privacy_scope") or "PRIVATE"
         if scope not in _PRIVACY:
             scope = "PRIVATE"
+        # Legacy viewer_id is intentionally not an authorization credential.
+        # Only a ViewerContext from a trusted Core identity/grant issuer can read
+        # non-public memory. The subject/member_id never becomes its own Viewer.
+        memory_allowed = bool(
+            member_id
+            and authorize_viewer(
+                viewer_context, owner_member_id=str(member_id), visibility=str(scope)
+            )
+        )
+        authorized_viewer_id = viewer_context.viewer_id if memory_allowed and viewer_context else None
         q = isolate(
             lambda: self._memory.query(
                 member_id=str(member_id or ""),
                 scope=str(scope),
-                viewer_id=str(viewer_id or member_id) if (viewer_id or member_id) else None,
-            ),
+                viewer_id=authorized_viewer_id,
+            ) if memory_allowed else [],
             fallback=[],
         )
         memories = q.value if isinstance(q.value, list) else []
         d = isolate(lambda: self._policy.decide(obs), fallback="SILENT")
         decision = d.value if isinstance(d.value, str) and d.value else "SILENT"
-        family_out = dict(family or {})
+        family_allowed = bool(
+            member_id
+            and authorize_viewer(
+                viewer_context, owner_member_id=str(member_id), visibility="FAMILY"
+            )
+        )
+        family_out = dict(family or {}) if family_allowed else {}
         family_out.pop("private", None)
         if hasattr(event, "to_dict"):
             event_out = event.to_dict()
@@ -67,7 +85,7 @@ class ContextBuilder:
             event_out = dict(event)
         else:
             event_out = {}
-        event_out = self._scrub_event(event_out, scope=str(scope), viewer_id=member_id)
+        event_out = self._scrub_event(event_out, scope=str(scope), viewer_id=authorized_viewer_id)
         recent_out = list(recent or [])[-self.max_recent :]
         utterance = str(obs.get("utterance") or obs.get("speech") or "")
         payload = event_out.get("payload") if isinstance(event_out.get("payload"), Mapping) else {}
