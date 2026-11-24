@@ -125,5 +125,20 @@ Mac mini M6 + Hermes-Agent + TangTang Core。保留糖糖家庭大脑，以 Herm
 4. 用已合并的 HermesAdapter 执行一次单轮对话，验证超时、重启、会话删除和资源占用。
 5. 通过后再考虑加入一个只读 TangTang MCP 工具，并重新做安全评审。
 
-## 当前下一步
-阶段 0：补齐现有代码资产审计、当前 CI/PR 证据和 Hermes 官方接口验证；确认后才开始 Mac mini 安装与 Agent Adapter 开发。
+## 当前下一步（2026-11-24 更新）
+
+用户已明确要求暂缓 Mac mini 实机操作，当前转为静态代码审查与 GitHub 优化；不安装软件、不改家庭设备、不导入真实家庭数据。
+
+本轮新增三个独立 PR，均已通过 Python 3.10/3.11 GitHub Actions，但尚未合并：
+- [PR #82：修复 Hermes 系统提示词换行](https://github.com/qhkhrsq8ww-byte/tangtang/pull/82)。
+- [PR #83：未识别身份按访客处理，禁止进入家庭共享存储](https://github.com/qhkhrsq8ww-byte/tangtang/pull/83)。
+- [PR #84：移除 ChatAdapter 对共享 responder 的临时修改，修复并发串话风险](https://github.com/qhkhrsq8ww-byte/tangtang/pull/84)。
+
+下一轮代码审查优先级：
+1. Hermes Adapter 的 HTTP 重定向、响应解析、会话清理和工具集核验边界。
+2. ChatAdapter / TangTangRuntime 的并发状态、短期上下文隔离和多轮生命周期。
+3. 所有语音、CLI、主动陪伴入口是否统一经过 PrivacyPolicy、SpeakGate 和安全升级路径。
+4. 记忆写入、任务提醒、日志和旧 V3 兼容路径的旁路审计。
+5. 复核 #67/#69/#70，暂不自动合并。
+
+实机验证仍保留在阶段 1；只有用户决定恢复实机工作后才启动，不影响当前静态审查推进。

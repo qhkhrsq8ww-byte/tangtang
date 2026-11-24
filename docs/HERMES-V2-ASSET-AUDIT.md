@@ -1,16 +1,16 @@
 # 糖糖 V2 阶段 0：代码资产与迁移风险审计
 
 > 审计日期：2026-11-24
-> 基线：main @ 1475c09（Hermes V2 规划文档已合并）
+> 基线：main @ d3d3e700（截至本轮代码审查开始时的主分支）
 > 性质：基于 GitHub 当前代码和 PR 的静态审计；Mac mini、语音设备、投影和路由器实机状态尚未验证。
 
 ## 1. 核心结论
 
 1. 糖糖已经有独立的 V4 家庭业务核心。不要重写身份、隐私、记忆、陪伴、任务和发声策略。
 2. Hermes 接入点不是“替换一个现有 OpenClaw Gateway”。当前 V4 默认对话路径是 TangTang Core 注入 LLM callable，底层通过 `cat-chat.py` 直接请求 OpenAI 兼容模型接口（默认智谱 BigModel URL，模型 `glm-4-flash`）；环境变量仍沿用 `QCLAW_*` 命名。OpenClaw 的旧部署报告也说明糖糖云脑走智谱直连。此次实际改造是把 V4 的 LLM/Agent 适配层替换为 Hermes API/Agent，而不是拆掉一个当前必需的 OpenClaw 主网关。
-3. Hermes API Server 默认工具权限较宽，官方文档明确包含 terminal、file operations、web、memory、skills 等。必须把 API Server 平台工具集缩减为 TangTang MCP allowlist，并检查 `/v1/toolsets`；否则不能接入家庭数据。
+3. Hermes API Server 默认工具权限较宽，官方文档明确包含 terminal、file operations、web、memory、skills 等。必须先通过 `agent.disabled_toolsets` 禁用不需要的内置工具，再检查 `/v1/toolsets`；`platform_toolsets.api_server` 只筛选动态 MCP Server，不会关闭内置工具。否则不能接入家庭数据。
 4. Hermes 默认内置记忆会跨会话保存并自动整理。糖糖初期必须关闭 Hermes 内置 MEMORY/USER stores，家庭记忆继续只由 TangTang Core 掌管。
-5. 当前语音入口存在一项实际隐私风险：`cat-voice.sh` 将识别出的原话传给 `cat-vp.py log`，后者原先会写入 `cat-habits.json` 并在 summary 中显示。已在 PR #76 提出修复，尚待 CI/审查。
+5. 当前语音入口曾存在一项实际隐私风险：`cat-voice.sh` 将识别出的原话传给 `cat-vp.py log`，后者原先会写入 `cat-habits.json` 并在 summary 中显示。PR #76 已合并，已阻止新原话写入；历史本机文件仍需迁移前单独清理。
 6. 当前 main 的核心接口版本是 4.0.0，但 `core/brain/planner.py` 的文档口径出现 V5。必须在任何适配代码之前厘清，不擅自改变 CORE_API_VERSION。
 
 ## 2. 已确认可保留的代码资产
@@ -79,7 +79,7 @@ code/cat/cat-voice.sh
 - `cat-family.py` 的儿童习惯写入路径有 PrivacyPolicy 过滤，但这不能抵消 `cat-vp.py` 旁路写入。
 
 ### 修复状态
-- PR #76 已合并（main commit `949f6c2`）：停止写入新原话，保留互动计数/时间/时段；summary 不再打印历史原话；新增回归测试，Python 3.10/3.11 CI 通过。
+- PR #76 已合并：停止写入新原话，保留互动计数/时间/时段；summary 不再打印历史原话；新增回归测试，Python 3.10/3.11 CI 通过。
 - PR #76 不会自动清理历史本机 `cat-habits.json`。M6 数据迁移前需在本机备份后，对旧文件做本地清理/脱敏，不将历史原文导入 Hermes。
 
 ## 7. 开放 PR 审查结论
@@ -106,7 +106,7 @@ code/cat/cat-voice.sh
 - [x] 规划基线已在 PR #75 合并。
 - [x] PR #76 隐私修复 CI 通过并合并。
 - [x] 已核对 planner V5 与 Core API 4.0.0：属于模块版本口径，不需要升级 Core API。
-- [ ] 重新审查并更新 #67/#69/#70，明确是否保留/重写/关闭。
+- [ ] 重新审查并更新 #67/#69/#70，明确是否保留/重写/关闭；当前仍未合并。
 - [ ] 完成 Hermes API Server 最小工具集 PoC；PR #78 已合并本地客户端和 V4 feature flag，默认工具 allowlist 为空；需在 M6 验证 `/v1/toolsets` 实际只返回空工具集，再逐步考虑 `mcp-tangtang`。
 - [ ] 在 Mac mini 上记录真实硬件/macOS/磁盘/模型配置。
 
@@ -122,3 +122,19 @@ code/cat/cat-voice.sh
 2. 完成版本口径和 OpenClaw 遗留配置盘点。
 3. 在无真实家庭数据的环境下启动 Hermes API Server，验证本地认证、工具集白名单、超时、会话和资源占用。
 4. 只有 PoC 的 `/v1/toolsets` 证明最小权限生效后，才开始实现 Core 侧 Hermes Adapter/MCP Server。
+
+
+## 12. 后续静态代码审查记录（2026-11-24）
+
+本轮由用户明确要求先暂停 Mac mini 实机工作，继续审查代码并通过独立 PR 优化。以下变更均尚未合并主分支：
+
+| PR | 审查发现 | 修改 | CI |
+|---|---|---|---|
+| [#82](https://github.com/qhkhrsq8ww-byte/tangtang/pull/82) | Hermes system prompt 使用字面量 `\\n` 作为分隔符 | 改为真实换行，并增加提示词结构、年龄人格、未知身份测试 | Python 3.10/3.11 通过（run 391） |
+| [#83](https://github.com/qhkhrsq8ww-byte/tangtang/pull/83) | 未注册的说话人标签可能被当作家庭成年人，进入共享记忆/摘要/日志 | 未能映射到名册的身份改为 PUBLIC/transient，禁止家庭存储和原话日志；增加未知访客测试 | 首轮因集成测试名册不完整失败；补充确定性测试名册后 Python 3.10/3.11 通过（run 394） |
+| [#84](https://github.com/qhkhrsq8ww-byte/tangtang/pull/84) | ChatAdapter 每轮临时修改共享 ResponseOrchestrator.responder，存在并发串话风险 | 改为 run 级 responder 参数，不再修改共享对象；增加回归测试 | Python 3.10/3.11 通过（run 393） |
+
+审查边界：
+- 上述 CI 是 GitHub Linux runner 上的自动化测试，不代表 macOS、Hermes API Server、语音设备或投影实测。
+- PR #82/#83/#84 通过 CI 不等于已合并或已上线。
+- PR #83 对身份的判定以配置名册为准；名册缺失或不完整时，未解析身份保持访客权限，不得靠任意字符串推断家庭成员身份。
