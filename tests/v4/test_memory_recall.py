@@ -80,7 +80,7 @@ class TestMemoryRecall(unittest.TestCase):
             data={"tag": "communication", "value": "family-visible preference"},
         ))
         pipe.stores.private.remember_preference(
-            member_id="dad", category="communication", value="private-only preference"
+            member_id="dad", category="likes", value="private-only preference"
         )
         chat = ChatAdapter(
             pipeline=pipe,
