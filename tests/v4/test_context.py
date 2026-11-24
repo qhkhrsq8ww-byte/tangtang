@@ -105,6 +105,15 @@ class TestContextViewerAuthorization(unittest.TestCase):
         self.assertEqual(ctx["memory"], [])
         self.assertEqual(ctx["family"], {})
 
+    def test_recent_context_is_hidden_without_authorized_viewer(self):
+        ctx = self.builder.build(
+            who={"member_id": "child_9"},
+            event=Event.create(id="evt_recent_private", type="x"),
+            privacy_scope="PRIVATE",
+            recent=["private recent conversation"],
+        )
+        self.assertEqual(ctx["recent"], [])
+
     def test_family_grant_does_not_grant_private_memory(self):
         viewer = ViewerContext("dad", "verified", frozenset({"family:read"}))
         family_ctx = self.builder.build(
