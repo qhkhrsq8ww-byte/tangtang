@@ -7,7 +7,7 @@
 写出派生 family-state.json（标签，不含小朋友原话）。不调用 LLM。
 
 用法:
-  ./cat-memory.py today
+  ./cat-memory.py today  # legacy local operator access requires TANGTANG_ALLOW_LEGACY_FAMILY_MEMORY_READ_CLI=1
   ./cat-memory.py recent
   ./cat-memory.py state
   ./cat-memory.py next
@@ -52,6 +52,25 @@ def main(argv=None):
     if cmd in ("-h", "--help", "help"):
         print(__doc__.strip())
         return 0
+    # These CLI commands accept a member_id as a selector, not as an
+    # authenticated viewer. Do not expose person-scoped memory until a
+    # viewer-aware Core authorization contract is wired into this interface.
+    if cmd == "trends" and os.environ.get("TANGTANG_ALLOW_LEGACY_MEMBER_MEMORY_CLI") != "1":
+        print("成员专属记忆查询已关闭：当前 CLI 没有经过 Core 验证的 viewer 身份。", file=sys.stderr)
+        return 2
+    if cmd == "next" and len(args) > 1 and os.environ.get("TANGTANG_ALLOW_LEGACY_MEMBER_MEMORY_CLI") != "1":
+        print("指定成员的主动陪伴查询已关闭：目标成员不能代替已验证的 viewer 身份。", file=sys.stderr)
+        return 2
+    # Family-level reports are still non-public memory reads. A local CLI caller
+    # is not automatically an authorized Viewer; until a trusted Core viewer
+    # handoff exists, fail closed. This flag is migration-only, not authentication.
+    family_read_commands = {"today", "recent", "stable", "state", "emotion"}
+    if cmd in family_read_commands and os.environ.get("TANGTANG_ALLOW_LEGACY_FAMILY_MEMORY_READ_CLI") != "1":
+        print("家庭记忆查询已关闭：当前 CLI 尚未接入经过 Core 授权的 viewer。", file=sys.stderr)
+        return 2
+    if cmd == "next" and len(args) == 1 and os.environ.get("TANGTANG_ALLOW_LEGACY_FAMILY_MEMORY_READ_CLI") != "1":
+        print("家庭级主动陪伴查询已关闭：当前 CLI 尚未接入经过 Core 授权的 viewer。", file=sys.stderr)
+        return 2
     eng = _engine()
     now = now_dt()
     if cmd == "today":

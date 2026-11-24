@@ -388,6 +388,8 @@ class TestMemoryCli(unittest.TestCase):
             }])
             env = os.environ.copy()
             env["TANGTANG_DATA_DIR"] = tmp
+            # This test covers legacy local-operator behavior behind an explicit migration switch.
+            env["TANGTANG_ALLOW_LEGACY_FAMILY_MEMORY_READ_CLI"] = "1"
             env["TANGTANG_FAKE_TODAY"] = "2026-08-31"
             env["TANGTANG_FAKE_TIME"] = "23:40"
             env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
