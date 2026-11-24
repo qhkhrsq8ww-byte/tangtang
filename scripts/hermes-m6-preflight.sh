@@ -31,11 +31,11 @@ printf "macOS: %s\n" "$(sw_vers -productVersion 2>/dev/null || echo unavailable)
 
 section "Hardware and storage"
 MEM_BYTES="$(sysctl -n hw.memsize 2>/dev/null || echo 0)"
-awk -v bytes="$MEM_BYTES" 'BEGIN { if (bytes > 0) printf "Physical memory: %.1f GB\\n", bytes/1024/1024/1024; else print "Physical memory: unavailable" }'
+awk -v bytes="$MEM_BYTES" 'BEGIN { if (bytes > 0) printf "Physical memory: %.1f GB\n", bytes/1024/1024/1024; else print "Physical memory: unavailable" }'
 if command -v df >/dev/null 2>&1; then
-  AVAIL_KB="$(df -Pk "$HOME" 2>/dev/null | awk "NR==2 {print \\$4}")"
+  AVAIL_KB="$(df -Pk "$HOME" 2>/dev/null | awk 'NR==2 {print $4}')"
   if [ -n "${AVAIL_KB:-}" ]; then
-    awk -v kb="$AVAIL_KB" 'BEGIN { printf "Free space on home volume: %.1f GB\\n", kb/1024/1024 }'
+    awk -v kb="$AVAIL_KB" 'BEGIN { printf "Free space on home volume: %.1f GB\n", kb/1024/1024 }'
   else
     printf "Free space: unavailable\n"
   fi
@@ -58,25 +58,25 @@ if command -v hermes >/dev/null 2>&1; then
 fi
 
 section "Local configuration presence (values are never displayed)"
-if [ -f "$HOME/.hermes/config.yaml" ]; then printf "Hermes config: present\\n"; else printf "Hermes config: absent\\n"; fi
-if [ -d "$HOME/Library/Application Support/Tangtang" ]; then printf "TangTang application data directory: present\\n"; else printf "TangTang application data directory: absent\\n"; fi
+if [ -f "$HOME/.hermes/config.yaml" ]; then printf "Hermes config: present\n"; else printf "Hermes config: absent\n"; fi
+if [ -d "$HOME/Library/Application Support/Tangtang" ]; then printf "TangTang application data directory: present\n"; else printf "TangTang application data directory: absent\n"; fi
 configured "API_SERVER_KEY" "${API_SERVER_KEY:-}"
 configured "TANGTANG_HERMES_API_KEY" "${TANGTANG_HERMES_API_KEY:-}"
-printf "TANGTANG_LLM_BACKEND: %s\\n" "${TANGTANG_LLM_BACKEND:-direct (default)}"
+printf "TANGTANG_LLM_BACKEND: %s\n" "${TANGTANG_LLM_BACKEND:-direct (default)}"
 
 section "Local Hermes API port"
 if command -v nc >/dev/null 2>&1; then
   if nc -z 127.0.0.1 8642 >/dev/null 2>&1; then
-    printf "127.0.0.1:8642: accepting TCP connections\\n"
+    printf "127.0.0.1:8642: accepting TCP connections\n"
   else
-    printf "127.0.0.1:8642: not listening (normal before Hermes API setup)\\n"
+    printf "127.0.0.1:8642: not listening (normal before Hermes API setup)\n"
   fi
 else
-  printf "nc not available; port check skipped\\n"
+  printf "nc not available; port check skipped\n"
 fi
 
 section "Safety"
-printf "This script is read-only. It does not display credentials, serial numbers, usernames, or family data.\\n"
-printf "Node requirement must be checked against the pinned Hermes release (official docs currently recommend Node 26 or Node 24.22.1+).\\n"
-printf "TangTang V4 requires Python 3.10+; Python 3.11 is recommended.\\n"
-printf "Do not enable TANGTANG_LLM_BACKEND=hermes until the API toolset allowlist is verified.\\n"
+printf "This script is read-only. It does not display credentials, serial numbers, usernames, or family data.\n"
+printf "Node requirement must be checked against the pinned Hermes release (official docs currently recommend Node 26 or Node 24.22.1+).\n"
+printf "TangTang V4 requires Python 3.10+; Python 3.11 is recommended.\n"
+printf "Do not enable TANGTANG_LLM_BACKEND=hermes until the API toolset allowlist is verified.\n"
