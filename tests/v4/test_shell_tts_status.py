@@ -126,7 +126,7 @@ class TestShellTtsStatus(unittest.TestCase):
     def test_voice_cli_installs_temp_audio_cleanup_after_successful_capture(self):
         source = (CAT / "cat-voice.sh").read_text(encoding="utf-8")
         self.assertIn('trap \'rm -f "$PCM"\' EXIT', source)
-        self.assertLess(source.index('trap \'rm -f "$PCM"\' EXIT'), source.index('MEMBER_ID="unknown"'))
+        self.assertLess(source.index('trap \'rm -f "$PCM"\' EXIT'), source.index('GATE='))
 
     def test_short_turn_retains_pcm_path_until_exit_cleanup(self):
         source = (CAT / "cat-turn.sh").read_text(encoding="utf-8")

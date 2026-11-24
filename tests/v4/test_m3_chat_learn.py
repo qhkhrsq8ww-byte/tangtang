@@ -41,9 +41,9 @@ class TestChatLearn(unittest.TestCase):
         secret = "我今天被同学欺负了"
         with tempfile.TemporaryDirectory() as td:
             with mock.patch.object(chat, "DATA_DIR", td):
-                with mock.patch.object(chat, "_resolve_speaker_member", return_value=("hanghang", "航航")):
-                    with mock.patch.dict(os.environ, {"TANGTANG_MEMBER_ID": "hanghang"}, clear=False):
-                        out = chat._learn_turn(secret, event_tag="emotion")
+                with mock.patch("core.adapters.family_loader.load_members", return_value={"hanghang": {}}):
+                    # Only an explicit Core-returned canonical ID may authorize this write.
+                    out = chat._learn_turn(secret, event_tag="emotion", member_id="hanghang")
             self.assertIsNotNone(out)
             trends = Path(td) / "habits" / "habit-trends.json"
             self.assertTrue(trends.exists())

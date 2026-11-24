@@ -310,12 +310,14 @@ def _infer_learn_tag(text):
     return "conversation"
 
 
-def _learn_turn(text, event_tag=None, **kwargs):
-    # Keep only a category counter; never place the utterance itself in trend storage.
+def _learn_turn(text, event_tag=None, member_id=None, **kwargs):
+    # Persist only a Core-returned canonical member_id. Never re-resolve an
+    # environment label here: doing so would bypass the authorization decision
+    # made for this exact turn.
     try:
+        from core.adapters.family_loader import load_members
         from core.memory.habit_trends import HabitTrendStore
-        member_id, _display = _resolve_speaker_member()
-        if not member_id:
+        if not member_id or member_id not in load_members():
             return None
         store = HabitTrendStore(home=DATA_DIR, persist=True)
         return store.record(member_id=member_id, tag=event_tag or _infer_learn_tag(text))
@@ -345,7 +347,8 @@ def _private_cli_reply(text, observation=None, model=DEFAULT_MODEL, llm=None):
         turn = adapter.turn(text, obs)
         reply = turn.action.text if turn.action and turn.action.text else FALLBACK_REPLY
         emit_character_state(text, reply)
-        _learn_turn(text, event_tag=_infer_learn_tag(text))
+        core_member_id = getattr(turn.action, "member_id", None) if turn.action else None
+        _learn_turn(text, event_tag=_infer_learn_tag(text), member_id=core_member_id)
         print(reply)
         return reply
     except Exception:
