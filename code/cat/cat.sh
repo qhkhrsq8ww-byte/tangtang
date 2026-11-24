@@ -67,8 +67,8 @@ brain_say(){
 
 if [ "$ALARM_REQ" = "1" ]; then
   case "$ALARM_ACTION" in
-    list) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" list; exit $?;;
-    cancel) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" cancel_all; exit $?;;
+    list) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" list --member "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}"; exit $?;;
+    cancel) /usr/bin/python3 "$CAT_DIR/cat-alarm.py" cancel_all --member "${TANGTANG_MEMBER_ID:-${TANGTANG_SPEAKER:-}}"; exit $?;;
     *) echo "用法: ./cat.sh alarm list | alarm cancel" >&2; exit 2;;
   esac
 fi
