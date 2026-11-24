@@ -55,7 +55,7 @@ fi
 # Family memory writes happen only inside the Core privacy pipeline after identity resolution.
 
 # 闹铃意图由本地确定性解析处理，不进入普通 LLM。
-ALARM_LINE="$(/usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$TEXT" 2>/dev/null || true)"
+ALARM_LINE="$(/usr/bin/python3 "$CAT_DIR/cat-alarm.py" handle "$TEXT" --member "$WHO" 2>/dev/null || true)"
 if [ -n "$ALARM_LINE" ]; then
   echo "   糖糖: $ALARM_LINE"
   set +e
