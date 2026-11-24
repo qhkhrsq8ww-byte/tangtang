@@ -39,7 +39,7 @@
 - 监控磁盘可用空间、内存压力、CPU、进程重启次数和 Agent 调用延迟。
 
 ## 4. 服务管理
-先确认实际采用的 Hermes 运行形态：CLI 单轮调用、Desktop/Backend（hermes serve）和消息平台 Gateway 是不同组件，不能一概称为 Gateway。第一阶段先验证最小对话调用，不预设需要消息平台 Gateway。
+先确认实际采用的 Hermes 运行形态：CLI 单轮调用、Desktop/Backend（`hermes serve`）、消息平台 Gateway 和 API Server 是不同概念。Hermes API Server 由 `hermes gateway` 进程承载（设置 `API_SERVER_ENABLED=true` 或 `gateway.api_server.enabled: true`），不是 `hermes serve` Desktop backend，也不是 MCP Server mode。第一阶段只启用本机 API Server，不配置外部消息渠道。
 
 如确需常驻 Backend 或消息 Gateway，再确认官方支持的 macOS 服务安装方式，并选择一个服务管理者；不得同时启用两个自启动管理器。
 
@@ -57,7 +57,7 @@ TangTang Core 可独立由 LaunchAgent 管理，建议：
 - 远程维护权限与孩子日常对话权限分离。
 - 生产环境不开放任意 shell 工具给 Agent。
 - 初始 Hermes 配置建议关闭内置持久记忆（memory.memory_enabled=false、memory.user_profile_enabled=false），并启用 skills.write_approval=true、approvals.mode=manual、cron_mode=deny、single_query_mode=deny、unattended_mode=deny；具体键名以锁定版本官方配置校验为准。
-- 若采用 Hermes API Server，必须显式将 `platform_toolsets.api_server` 收缩到 `mcp-tangtang`，并通过 `/v1/toolsets` 验证；API Server 默认包含 terminal/file 等工具，未完成最小权限验证前不得接入真实家庭数据。
+- 若采用 Hermes API Server，必须通过 `agent.disabled_toolsets` 关闭不需要的内置工具；`platform_toolsets.api_server` 仅用于筛选 MCP 服务器，不能替代内置工具禁用。启动后通过 `/v1/toolsets` 验证实际启用清单；未完成最小权限验证前不得接入真实家庭数据。
 - API Server 必须绑定 127.0.0.1、设置强随机 API_SERVER_KEY、关闭不需要的 CORS；不暴露公网。
 - Hermes memory/skill 写入审批不等于文件系统隔离，必须同时限制 Terminal、File Operations 和 MCP 工具集。
 

@@ -27,7 +27,7 @@ Mac mini M6 + Hermes-Agent + TangTang Core。保留糖糖家庭大脑，以 Herm
 - 再次读取 main 最新提交、CI 和开放 PR。
 - 对 V4 运行时、身份、记忆、隐私、人格、陪伴、任务、语音、投影和设备模块建立资产清单。
 - 查明 README 的 MacBook Air 运行口径、旧部署路径和 OpenClaw 依赖。
-- 核对 V4/V5 命名冲突及 CORE_API_VERSION。
+- 确认 `core/brain/planner.py` 的 V5 是规划器模块代际名称，不是 Core API V5；保持 CORE_API_VERSION=4.0.0。
 - 对 Hermes 当前版本做官方文档核验和最小 PoC 设计。
 - 明确 #67、#69、#70 的独立审查结论，不自动合并。
 
@@ -103,6 +103,26 @@ Mac mini M6 + Hermes-Agent + TangTang Core。保留糖糖家庭大脑，以 Herm
 5. 未通过的检查明确标记待验证，不伪造验收结果。
 6. 不自动合并 PR，不直接部署到家庭设备。
 7. 每轮结束更新本路线图的状态、提交、PR、测试结果和下一步。
+
+## 当前执行记录（2026-11-24）
+
+- [x] PR #74：修复 wake music 测试对旧文件名的断言；主分支 Python 3.10/3.11 CI 通过。
+- [x] PR #75：合并 Hermes V2 架构规划、接口契约、Mac mini 部署和验收文档。
+- [x] PR #77：合并当前代码资产与迁移风险审计。
+- [x] PR #76：停止把语音原话写入旧互动日志；新日志仅保留互动元数据。**旧本机日志中的历史原话仍需在迁移前单独清理，代码合并不会自动删除本地数据。**
+- [ ] PR #78：加入 Hermes API Adapter，并在 V4 对话入口增加 `TANGTANG_LLM_BACKEND=hermes` 显式开关；默认仍走原模型直连。Hermes 模式默认零工具、loopback、逐轮临时会话清理；尚未在真实 Hermes/M6 上验证。
+- [ ] Mac mini 实机 Hermes 安装、API Server 工具集白名单和资源验证尚未开展。
+
+阶段 0 已完成代码主链路和关键风险的静态盘点；已确认 Planner V5 是模块版本名称，不等于 Core API V5。由于旧 PR 重基线和 Mac mini 实机核验尚未完成，阶段 0 暂不宣布完全验收。
+
+## 下一里程碑
+
+1. 完成 PR #78 的 Python 3.10/3.11 CI 和代码审查。
+2. 在 Mac mini M6 上安装锁定版本 Hermes；不导入真实家庭数据。
+3. 启动本地 API Server，配置 loopback 和强随机 API key。
+4. 查询 `/v1/toolsets`，证明默认工具集已被收缩为零工具；若返回 terminal/file/memory 等工具，立即停止，不连接糖糖数据。
+5. 完成一次单轮对话、超时、重启、会话删除和资源占用测试。
+6. 通过后再把 HermesAdapter 接入 `ChatAdapter`，先以 feature flag 小范围启用。
 
 ## 当前下一步
 阶段 0：补齐现有代码资产审计、当前 CI/PR 证据和 Hermes 官方接口验证；确认后才开始 Mac mini 安装与 Agent Adapter 开发。

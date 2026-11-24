@@ -72,7 +72,7 @@ Mac mini M6：以上服务的家庭常驻运行主机
 ## 3. Agent 接入方式
 优先评估 Hermes 原生支持的受控工具接口/MCP。只有在确认具体版本、认证方式、超时和生命周期后，才选定最终传输方式。
 
-建议在 TangTang Core 新增独立的 Agent Adapter/Port，不让业务模块直接依赖 Hermes SDK 或内部实现。首选验证 Hermes API Server 的本地 HTTP 接口；TangTang Core 通过独立 MCP Server 暴露白名单工具。API Server 默认工具集权限过宽，必须显式配置 `platform_toolsets.api_server` 仅包含 `mcp-tangtang`，并在启动后检查 `/v1/toolsets`。
+建议在 TangTang Core 新增独立的 Agent Adapter/Port，不让业务模块直接依赖 Hermes SDK 或内部实现。首选验证 Hermes API Server 的本地 HTTP 接口；TangTang Core 通过独立 MCP Server 暴露白名单工具。API Server 默认平台工具集保留大部分内置工具，必须用 `agent.disabled_toolsets` 禁用不需要的内置工具；`platform_toolsets.api_server` 只筛选动态 MCP 服务器，不会关闭内置工具。启动后必须检查 `/v1/toolsets`。
 
 第一版工具面尽量小：
 - tangtang.get_interaction_context

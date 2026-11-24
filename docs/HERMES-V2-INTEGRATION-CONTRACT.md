@@ -98,7 +98,7 @@ Agent 只能提出请求。Core 负责重新解析意图、验证权限、幂等
 ## 7. Hermes 适配器待验证项
 当前优先方向：TangTang Core 作为 MCP Server，Hermes 作为 MCP Client。Hermes 官方文档明确支持连接本地 stdio 和远程 HTTP MCP Server，并支持工具发现和按服务器过滤。Hermes 自身作为 MCP Server 的能力已迁移到独立 mcp-serve 插件，不能把两个方向混为一谈。
 
-Agent Adapter 的候选运行形态为 Hermes API Server 本地 HTTP 接口；但官方 API Server 默认工具集包含 terminal/file 等完整能力。必须将 api_server 平台工具集显式收缩到 `mcp-tangtang`，并通过 `/v1/toolsets` 核对最终工具清单。若不能证明没有任意终端、文件和非必要工具权限，则不得接入家庭数据。`API_SERVER_KEY` 即使绑定 loopback 也必须设置。
+Agent Adapter 的候选运行形态为由 `hermes gateway` 承载的 Hermes API Server 本地 HTTP 接口（不是 `hermes serve` Desktop backend）；官方 `hermes-api-server` 默认保留大部分内置工具，包括 terminal/file。必须通过 `agent.disabled_toolsets` 禁用不需要的内置工具；`platform_toolsets.api_server` 只筛选动态 MCP 服务器，不会关闭内置工具。只有在 `/v1/toolsets` 验证实际启用列表精确符合 allowlist 后，才允许接入家庭数据。`API_SERVER_KEY` 即使绑定 loopback 也必须设置。
 
 正式编码前核实所选 Hermes 版本：
 - 官方支持的 MCP/工具接入方式及配置 schema。

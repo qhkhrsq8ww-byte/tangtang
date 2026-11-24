@@ -79,7 +79,7 @@ code/cat/cat-voice.sh
 - `cat-family.py` 的儿童习惯写入路径有 PrivacyPolicy 过滤，但这不能抵消 `cat-vp.py` 旁路写入。
 
 ### 修复状态
-- PR #76：停止写入新原话，保留互动计数/时间/时段；summary 不再打印历史原话；增加回归测试。
+- PR #76 已合并（main commit `949f6c2`）：停止写入新原话，保留互动计数/时间/时段；summary 不再打印历史原话；新增回归测试，Python 3.10/3.11 CI 通过。
 - PR #76 不会自动清理历史本机 `cat-habits.json`。M6 数据迁移前需在本机备份后，对旧文件做本地清理/脱敏，不将历史原文导入 Hermes。
 
 ## 7. 开放 PR 审查结论
@@ -95,8 +95,8 @@ code/cat/cat-voice.sh
 ## 8. 版本口径问题
 
 - `core/interfaces.py`、`core/runtime/loop.py`、`core/ingest.py`、`core/policy/privacy_policy.py`、`core/tasks/service.py` 和多个 adapters 均声明 `core_api_version = 4.0.0`。
-- `core/brain/planner.py` 的文件说明出现 V5 字样，和上述 API 版本不一致。
-- 处理建议：先厘清这是 Planner 内部版本、规划文档口径还是误标；在此之前 Hermes Adapter 使用独立 schema version，不改 Core API major。
+- `core/brain/planner.py` 自身明确称为“Deterministic V5 companion planner”，描述的是陪伴规划器这一模块迭代；它并未声明 Core API V5。当前 Core API 仍为 4.0.0。
+- 处理结论：将“Planner V5”视为模块版本/代际名称，不等同于 Core API major；Hermes Adapter 使用独立 schema version，不改 Core API 4.x。后续文档应避免把 Planner V5 写成系统 API V5。
 
 ## 9. 阶段 0 退出条件
 
@@ -104,10 +104,10 @@ code/cat/cat-voice.sh
 - [x] Hermes 官方 API、MCP、Toolsets、Memory 和安全边界已查阅并记录在 `HERMES-V2-HERMES-REFERENCE.md`。
 - [x] 当前 main CI 基线问题已在 PR #74 修复并合并；主分支 Python 3.10/3.11 CI 通过。
 - [x] 规划基线已在 PR #75 合并。
-- [ ] PR #76 隐私修复 CI 通过并合并。
-- [ ] 核对 planner V5 与 Core API 4.0.0 版本差异。
+- [x] PR #76 隐私修复 CI 通过并合并。
+- [x] 已核对 planner V5 与 Core API 4.0.0：属于模块版本口径，不需要升级 Core API。
 - [ ] 重新审查并更新 #67/#69/#70，明确是否保留/重写/关闭。
-- [ ] 完成 Hermes API Server 最小工具集 PoC，验证实际只开放 `mcp-tangtang`。
+- [ ] 完成 Hermes API Server 最小工具集 PoC；当前客户端默认零工具，先验证 `/v1/toolsets` 实际只返回空工具集，再逐步考虑 `mcp-tangtang`。
 - [ ] 在 Mac mini 上记录真实硬件/macOS/磁盘/模型配置。
 
 ## 10. 下一步
