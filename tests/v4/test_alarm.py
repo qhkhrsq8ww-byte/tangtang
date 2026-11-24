@@ -194,7 +194,8 @@ class TestAlarmWires(unittest.TestCase):
         main = chat.split("def main(")[1]
         self.assertIn("_alarm_reply", main)
         self.assertIn("--member", chat)
-        self.assertIn("owner_member_id", src if "src" in locals() else (CAT / "cat-alarm.py").read_text(encoding="utf-8"))
+        alarm_src = (CAT / "cat-alarm.py").read_text(encoding="utf-8")
+        self.assertIn("owner_member_id", alarm_src)
         self.assertLess(main.find("_alarm_reply"), main.find("TANGTANG_V4_PIPELINE"))
         self.assertIn("cat-alarm.py", talk)
         self.assertLess(talk.find("cat-alarm.py"), talk.find("tangtang-quiet-hours.py"))
