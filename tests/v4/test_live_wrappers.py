@@ -45,6 +45,12 @@ class TestLiveWrappersSetV4(unittest.TestCase):
         src = (CAT / "tangtang-config.example.sh").read_text(encoding="utf-8")
         self.assertIn("export TANGTANG_V4_PIPELINE=1", src)
 
+    def test_legacy_v3_requires_explicit_second_opt_in(self):
+        src = (CAT / "cat-chat.py").read_text(encoding="utf-8")
+        self.assertIn('TANGTANG_ALLOW_LEGACY_V3', src)
+        self.assertIn('legacy_requested and legacy_allowed', src)
+        self.assertIn('if not (legacy_requested and legacy_allowed):', src)
+
     def test_cat_chat_cli_defaults_v4_opt_out(self):
         src = (CAT / "cat-chat.py").read_text(encoding="utf-8")
         self.assertIn('os.environ.get("TANGTANG_V4_PIPELINE") or "1"', src)
