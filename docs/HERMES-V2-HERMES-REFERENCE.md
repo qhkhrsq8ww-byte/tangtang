@@ -43,7 +43,54 @@ approvals:
 - memory/skill 写审批只覆盖对应工具，不是文件系统沙箱。通用文件工具和 Terminal 仍可能修改文件，因此工具集和工作目录也必须最小化。
 - 不允许使用 approvals.mode=off 或 HERMES_YOLO_MODE。
 
-## 3. 需要实测的接入形态
+## 3. API Server 与工具白名单（重要补充）
+
+Hermes 官方 API Server 提供 OpenAI 兼容接口，默认绑定 127.0.0.1:8642，并要求 API_SERVER_KEY；但官方文档明确说明 API Server 默认平台工具集仍包含终端、文件、网页、记忆、技能等完整工具能力。因此不能只因为 API 监听 loopback 就认为权限足够安全。
+
+推荐在 PoC 中将 TangTang MCP Server 作为唯一业务工具来源，并将 API Server 平台工具集收缩为动态 MCP 工具集。配置形式需用锁定版本的 `hermes tools` 和 `/v1/toolsets` 实际核验：
+
+```yaml
+mcp_servers:
+  tangtang:
+    command: /absolute/path/to/tangtang-mcp-server
+    args: []
+
+platform_toolsets:
+  api_server:
+    - mcp-tangtang
+
+agent:
+  disabled_toolsets:
+    - memory
+    - file
+    - terminal
+    - browser
+    - web
+    - code_execution
+    - delegation
+    - cronjob
+    - computer_use
+```
+
+说明：
+- `mcp-tangtang` 是动态工具集名称，前提是 MCP server 成功发现工具；启动后必须通过 `/v1/toolsets` 检查实际启用列表。
+- 上述是目标最小权限配置草案，不可未经 `hermes config check`、`hermes tools` 和 API 实测直接当作可运行配置。
+- `API_SERVER_ENABLED=true`、`API_SERVER_HOST=127.0.0.1`、强随机 `API_SERVER_KEY`；不配置 CORS，不暴露公网。
+- Hermes API Server 默认工具集有 terminal/file 能力，必须验证最终工具列表只包含预期的 TangTang MCP 工具；若不能做到，禁止接入家庭数据。
+- 初期不启用 Hermes Cron；调度仍由 TangTang Core/现有任务机制负责，防止双重调度。
+- Skills 仅在确认无写权限或写入审批和目录边界有效后逐步开放。
+
+## 4. 运行形态选择
+
+优先验证 API Server 的本地 HTTP 接口与会话能力，作为 TangTang Core 的 LLM/Agent Adapter 候选；同时保留 `hermes -z` 单次 CLI 作为最小 PoC/故障诊断入口。不要直接使用默认完整工具集的 API Server。
+
+官方资料：
+- API Server：https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server
+- Toolsets Reference：https://hermes-agent.nousresearch.com/docs/reference/toolsets-reference
+- MCP Integration：https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp
+- CLI Commands：https://hermes-agent.nousresearch.com/docs/reference/cli-commands
+
+## 5. 需要实测的接入形态
 
 1. Hermes CLI 单轮调用：确认是否能满足 Core Adapter 的延迟、取消和结构化输出要求。
 2. Hermes Desktop/backend：确认 JSON-RPC/WebSocket 接口、认证和进程管理是否适合本地 Core 调用。
