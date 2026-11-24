@@ -270,21 +270,25 @@ def _alarm_reply(text):
 
 
 def _live_obs():
-    return {
-        "label": speaker_id(),
-        "member_id": None if speaker_id() in ("unknown", "访客", "") else speaker_id(),
+    # Only a roster-resolved label may enter Core as an identity candidate.
+    # Unknown labels are omitted rather than copied into member_id.
+    member_id, _candidate = _resolve_speaker_member()
+    obs = {
         "interactive": True,
         "school_hours": os.environ.get("TANGTANG_SCHOOL_HOURS") == "1",
-        "audience_child": speaker_id() in ("hanghang", "qiaqia", "child_9", "child_12"),
+        "audience_child": member_id in ("hanghang", "qiaqia", "child_9", "child_12"),
         "presence_home": os.environ.get("TANGTANG_PRESENCE_HOME", "1") == "1",
     }
+    if member_id:
+        obs["label"] = member_id
+    return obs
 
 
 def _may_speak_now(obs):
     try:
         result = subprocess.run(
             ["/usr/bin/python3", os.path.join(CAT_DIR, "tangtang-speak-gate.py"),
-             "--channel", "chat", "--member", str((obs or {}).get("member_id") or speaker_id())],
+             "--channel", "chat", "--member", str((obs or {}).get("label") or "")],
             capture_output=True, text=True, timeout=5, check=False,
         )
         return result.returncode == 0 and (result.stdout or "").strip().lower() == "speak"
@@ -298,7 +302,7 @@ def _resolve_speaker_member():
     try:
         from core.identity.resolver import IdentityResolver
         from core.adapters.family_loader import load_members
-        resolved = IdentityResolver(load_members()).resolve({"label": candidate, "member_id": candidate})
+        resolved = IdentityResolver(load_members()).resolve({"label": candidate})
         if resolved:
             return resolved, candidate
     except Exception:
