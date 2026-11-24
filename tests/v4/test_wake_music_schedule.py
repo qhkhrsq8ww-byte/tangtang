@@ -18,7 +18,8 @@ class WakeMusicScheduleTests(unittest.TestCase):
 
     def test_wakeup_uses_existing_music_and_gentle_voice(self):
         script = (CAT / "wake-music.sh").read_text(encoding="utf-8")
-        self.assertIn('MUSIC="$CAT_DIR/assets/wake_music_3min.mp3"', script)
+        self.assertIn('MUSIC="$CAT_DIR/assets/wake_music.mp3"', script)
+        self.assertTrue((CAT / "assets" / "wake_music.mp3").is_file())
         self.assertIn('VOICE_SCRIPT="$CAT_DIR/cat-say.sh"', script)
         self.assertIn('"$VOICE_SCRIPT" "$GREETING" soft', script)
         self.assertIn("早上好呀，我是糖糖。新的一天开始啦", script)
