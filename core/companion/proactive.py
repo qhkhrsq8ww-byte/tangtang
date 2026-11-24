@@ -6,6 +6,10 @@ import os
 from datetime import datetime, time
 from pathlib import Path
 
+from core.security.contexts import (
+    ActorContext, AudienceContext, authorize_actor_action,
+)
+
 
 def _clock(raw: str, fallback: str) -> time:
     try:
@@ -35,18 +39,20 @@ class ProactiveGate:
         except (OSError, json.JSONDecodeError):
             return {}
 
-    def check(self, *, event: str, member_id: str, now: datetime,
+    def check(self, *, event: str, audience_id: str, now: datetime,
               habit_allows: bool = True, quiet_start: str = "22:30",
               quiet_end: str = "07:00") -> tuple[bool, str]:
         if in_quiet_hours(now, quiet_start, quiet_end):
             return False, "quiet_hours"
         if not habit_allows:
             return False, "habit_cooldown"
-        key = f"{str(member_id or 'room')[:80]}:{str(event or 'scene')[:80]}"
+        key = f"{str(audience_id or 'room')[:80]}:{str(event or 'scene')[:80]}"
         previous = self._load().get(key)
         if previous:
             try:
-                last = datetime.fromisoformat(previous)
+                # Read both the legacy timestamp string and the actor-aware record.
+                stamp = previous.get("timestamp") if isinstance(previous, dict) else previous
+                last = datetime.fromisoformat(stamp)
                 if last.tzinfo is None:
                     last = last.replace(tzinfo=now.tzinfo)
                 if (now - last).total_seconds() < self.cooldown_minutes * 60:
@@ -55,10 +61,23 @@ class ProactiveGate:
                 pass
         return True, "ok"
 
-    def record(self, *, event: str, member_id: str, now: datetime) -> None:
-        key = f"{str(member_id or 'room')[:80]}:{str(event or 'scene')[:80]}"
+    def record(self, *, event: str, audience: AudienceContext,
+               actor: ActorContext, now: datetime) -> None:
+        """Record a system-initiated scene for an audience, never as member activity."""
+        if actor.kind != "system" or not authorize_actor_action(
+            actor, "proactive:record", audience
+        ):
+            raise PermissionError("proactive cooldown records require system capability")
+        audience_id = audience.member_id or "room"
+        key = f"{str(audience_id)[:80]}:{str(event or 'scene')[:80]}"
         data = self._load()
-        data[key] = now.isoformat(timespec="seconds")
+        data[key] = {
+            "timestamp": now.isoformat(timespec="seconds"),
+            "actor_kind": actor.kind,
+            "actor_id": None,
+            "audience_id": audience_id,
+            "purpose": audience.purpose,
+        }
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".tmp")
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
