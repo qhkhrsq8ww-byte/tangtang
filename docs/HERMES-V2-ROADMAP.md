@@ -112,13 +112,15 @@ Mac mini M6 + Hermes-Agent + TangTang Core。保留糖糖家庭大脑，以 Herm
 - [x] PR #76：停止把语音原话写入旧互动日志；新日志仅保留互动元数据。**旧本机日志中的历史原话仍需在迁移前单独清理，代码合并不会自动删除本地数据。**
 - [x] PR #78：已合并 Hermes API Adapter，并在 V4 对话入口增加 `TANGTANG_LLM_BACKEND=hermes` 显式开关；默认仍走原模型直连。Hermes 模式默认零工具、loopback、逐轮临时会话清理；尚未在真实 Hermes/M6 上验证。
 - [ ] Mac mini 实机 Hermes 安装、API Server 工具集白名单和资源验证尚未开展。
+- [x] PR #80：合并只读 Mac mini 预检脚本 `scripts/hermes-m6-preflight.sh`，用于采集系统、芯片、内存、磁盘和运行时状态，不安装、不修改、不输出密钥。
 
 阶段 0 的仓库静态审计已完成；已确认 Planner V5 是模块版本名称，不等于 Core API V5。旧 PR #67/#69/#70 已形成审查意见，按各自功能阶段重基线处理，不阻塞 Hermes 最小运行验证。Mac mini 实机项转入阶段 1。
 
 ## 下一里程碑
 
-1. 在 Mac mini M6 上安装锁定版本 Hermes；不导入真实家庭数据。
-2. 启动本地 API Server，配置 loopback 和强随机 API key。
+1. 在 Mac mini M6 的 TangTang 仓库目录运行 `bash scripts/hermes-m6-preflight.sh`，确认实际 macOS、芯片、内存、磁盘和运行时版本。
+2. 在不导入真实家庭数据的前提下，安装并锁定 Hermes 版本。
+3. 启动本地 API Server，配置 loopback 和强随机 API key。
 3. 查询 `/v1/toolsets`，证明实际启用工具集为空；若返回 terminal/file/memory 等工具，立即停止，不连接糖糖数据。
 4. 用已合并的 HermesAdapter 执行一次单轮对话，验证超时、重启、会话删除和资源占用。
 5. 通过后再考虑加入一个只读 TangTang MCP 工具，并重新做安全评审。
