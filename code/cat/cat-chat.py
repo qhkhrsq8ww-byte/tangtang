@@ -286,10 +286,16 @@ def _live_obs():
 
 def _may_speak_now(obs):
     try:
+        gate_env = os.environ.copy()
+        # The speak gate may use environment variables as a fallback identity.
+        # Remove those untrusted candidates when Core has no roster-resolved label.
+        if not (obs or {}).get("label"):
+            gate_env.pop("TANGTANG_MEMBER_ID", None)
+            gate_env.pop("TANGTANG_SPEAKER", None)
         result = subprocess.run(
             ["/usr/bin/python3", os.path.join(CAT_DIR, "tangtang-speak-gate.py"),
              "--channel", "chat", "--member", str((obs or {}).get("label") or "")],
-            capture_output=True, text=True, timeout=5, check=False,
+            capture_output=True, text=True, timeout=5, check=False, env=gate_env,
         )
         return result.returncode == 0 and (result.stdout or "").strip().lower() == "speak"
     except Exception:
