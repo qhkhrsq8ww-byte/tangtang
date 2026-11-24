@@ -37,6 +37,7 @@ class TestContextHappy(unittest.TestCase):
             who={"member_id": "child_9"},
             event=ev,
             privacy_scope="PRIVATE",
+            viewer_id="child_9",
         )
         ids = {m["memory_id"] for m in ctx["memory"]}
         self.assertEqual(ids, {"p9"})
@@ -95,6 +96,25 @@ class TestContextEmptyUnknown(unittest.TestCase):
             who={"member_id": "stranger"},
             event=Event.create(id="e", type="x"),
             privacy_scope="PRIVATE",
+        )
+        self.assertEqual(ctx["memory"], [])
+
+    def test_observation_member_id_cannot_select_private_memory_owner(self):
+        ctx = self.builder.build(
+            who={},
+            event=Event.create(id="evt_untrusted", type="greet", privacy="PUBLIC"),
+            observation={"member_id": "child_9"},
+            privacy_scope="PRIVATE",
+            viewer_id="child_9",
+        )
+        self.assertEqual(ctx["memory"], [])
+
+    def test_mismatched_viewer_cannot_read_canonical_members_private_memory(self):
+        ctx = self.builder.build(
+            who={"member_id": "child_9"},
+            event=Event.create(id="evt_mismatch", type="greet", privacy="PRIVATE", member_id="child_9"),
+            privacy_scope="PRIVATE",
+            viewer_id="dad",
         )
         self.assertEqual(ctx["memory"], [])
 
