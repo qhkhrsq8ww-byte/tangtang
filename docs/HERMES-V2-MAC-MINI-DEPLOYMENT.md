@@ -62,10 +62,11 @@ TangTang Core 可独立由 LaunchAgent 管理，建议：
 - Hermes memory/skill 写入审批不等于文件系统隔离，必须同时限制 Terminal、File Operations 和 MCP 工具集。
 
 ## 6. 部署步骤
-1. 记录 Mac mini 硬件、macOS、可用磁盘空间。
+1. 在 TangTang 仓库目录运行 `bash scripts/hermes-m6-preflight.sh`，收集系统版本、芯片架构、内存、磁盘和运行时状态；该脚本只读。
+2. 根据预检结果确认 Mac mini 的实际硬件配置、macOS 版本和可用磁盘空间。
 3. 安装系统更新和必要开发工具。
 4. 创建项目目录和独立 Python 环境。
-5. 从 GitHub 克隆规划分支/后续稳定分支。
+5. 从 GitHub 克隆当前稳定分支。
 6. 安装锁定版本的 TangTang 依赖并跑离线测试。
 7. 按 Hermes 官方文档安装并锁定版本。
 8. 配置模型凭证，验证单轮对话。
