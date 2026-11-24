@@ -342,13 +342,13 @@ class TaskService:
         return changed
 
     def claim_due(self, task_id: str, *, owner_member_id: str, actor: ActorContext, now: datetime | None = None) -> Task | None:
-        self._require_dispatch_actor(actor)
         """Atomically claim a due reminder within this service instance.
 
         A claimed task becomes running before delivery, so subsequent scans do not
         replay it. Deploy one scheduler process per data home; the JSON repository
         is not a cross-process locking database.
         """
+        self._require_dispatch_actor(actor)
         task = self._tasks.get(str(task_id))
         if task is None or task.owner_member_id != str(owner_member_id or "").strip():
             return None
