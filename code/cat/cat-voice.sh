@@ -29,12 +29,7 @@ fi
 WHO="$("$CAT_DIR/cat-vp.py" identify "$PCM" 2>/dev/null | tail -1)"
 [ -n "$WHO" ] || WHO="unknown"
 MEMBER_ID="$WHO"
-# Presence may suggest a registered adult only; it never assigns an unknown voice to a child.
-SUGGESTED_MEMBER="$(/usr/bin/python3 "$CAT_DIR/cat-presence.py" suggest --explicit "$EXPLICIT_MEMBER" --clip "$PCM" --no-probe --no-log 2>/dev/null || echo unknown)"
-if [ "$WHO" = "unknown" ] && [ "$SUGGESTED_MEMBER" != "unknown" ]; then
-  WHO="$SUGGESTED_MEMBER"
-  MEMBER_ID="$WHO"
-fi
+# Coarse acoustic similarity is not verified identity; unknown remains unknown.
 echo "👤 识别状态: $WHO"
 
 echo "🧠 识别中..."
@@ -52,11 +47,7 @@ if [ -z "$TEXT" ]; then
 fi
 
 echo "   你说: $TEXT"
-if [ "$WHO" != "unknown" ]; then
-  "$CAT_DIR/cat-vp.py" log "$WHO" "$TEXT" >/dev/null 2>&1 || true
-else
-  "$CAT_DIR/cat-vp.py" log "unknown" "" >/dev/null 2>&1 || true
-fi
+# Member-scoped habit writes are performed only by Core after turn authorization.
 # Family memory CLI records only policy-approved, derived signals; child raw speech is excluded there.
 "$CAT_DIR/cat-family.py" observe "$WHO" "$TEXT" >/dev/null 2>&1 || true
 
