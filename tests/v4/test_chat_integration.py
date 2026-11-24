@@ -11,6 +11,7 @@ if str(ROOT) not in sys.path:
 
 from core.adapters.chat_adapter import ChatAdapter
 from core.adapters.family_loader import load_members
+from core.security.contexts import ViewerContext
 from core.errors import MemoryError
 from core.memory.family import FamilySummary
 from tangtang_runtime import TangTangRuntime
@@ -226,8 +227,8 @@ class TestMemberScopedShortContext(unittest.TestCase):
             return f"回应{len(received)}"
 
         chat = ChatAdapter(members=MEMBERS, llm=llm)
-        chat.turn("我今天踢球进了两个球", {"label": "dad"})
-        chat.turn("后来我们队输了", {"label": "dad"})
+        chat.turn("我今天踢球进了两个球", {"label": "dad"}, viewer_context=ViewerContext("dad", "verified"))
+        chat.turn("后来我们队输了", {"label": "dad"}, viewer_context=ViewerContext("dad", "verified"))
         prompt = received[1]["_filtered_prompt"]
         self.assertIn("recent_dialogue_context", prompt)
         self.assertIn("我今天踢球进了两个球", prompt)
@@ -242,8 +243,8 @@ class TestMemberScopedShortContext(unittest.TestCase):
             return "我听到了。"
 
         chat = ChatAdapter(members=MEMBERS, llm=llm)
-        chat.turn("爸爸的专属上下文标记 DAD_ONLY_481", {"label": "dad"})
-        chat.turn("妈妈的另一段话", {"label": "mom"})
+        chat.turn("爸爸的专属上下文标记 DAD_ONLY_481", {"label": "dad"}, viewer_context=ViewerContext("dad", "verified"))
+        chat.turn("妈妈的另一段话", {"label": "mom"}, viewer_context=ViewerContext("mom", "verified"))
         mom_prompt = received[1]["_filtered_prompt"]
         self.assertNotIn("DAD_ONLY_481", mom_prompt)
         self.assertNotIn("爸爸的专属上下文标记", mom_prompt)
@@ -290,7 +291,7 @@ class TestMemberScopedShortContext(unittest.TestCase):
             allow_private_llm=True,
             looks_risky=lambda text: "RISK_DISCLOSURE_MARKER" in text,
         )
-        chat.turn("之前的普通对话 DAD_BEFORE_RISK_517", {"label": "dad"})
+        chat.turn("之前的普通对话 DAD_BEFORE_RISK_517", {"label": "dad"}, viewer_context=ViewerContext("dad", "verified"))
         risk = chat.turn(
             "RISK_DISCLOSURE_MARKER 我遇到了很难受的事",
             {"label": "dad"},
@@ -298,7 +299,7 @@ class TestMemberScopedShortContext(unittest.TestCase):
         self.assertEqual(risk.action.action, "safety_support")
         self.assertEqual(len(received), 1, "risk disclosure must not call the cloud model")
 
-        chat.turn("我们接着聊", {"label": "dad"})
+        chat.turn("我们接着聊", {"label": "dad"}, viewer_context=ViewerContext("dad", "verified"))
         self.assertEqual(len(received), 2)
         next_prompt = received[1]["_filtered_prompt"]
         self.assertNotIn("DAD_BEFORE_RISK_517", next_prompt)
