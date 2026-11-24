@@ -44,7 +44,9 @@ class ContextBuilder:
     ) -> dict[str, Any]:
         who_map = dict(who or {})
         obs = dict(observation or {})
-        member_id = who_map.get("member_id") or obs.get("member_id")
+        # Only the canonical identity produced by TangTang Core may select a memory owner.
+        # Observation fields are untrusted perception input and must never become an owner ID.
+        member_id = who_map.get("member_id")
         scope = privacy_scope or obs.get("privacy_scope") or "PRIVATE"
         if scope not in _PRIVACY:
             scope = "PRIVATE"
@@ -52,7 +54,7 @@ class ContextBuilder:
             lambda: self._memory.query(
                 member_id=str(member_id or ""),
                 scope=str(scope),
-                viewer_id=str(viewer_id or member_id) if (viewer_id or member_id) else None,
+                viewer_id=str(viewer_id) if (viewer_id and viewer_id == member_id) else None,
             ),
             fallback=[],
         )
