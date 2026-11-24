@@ -305,6 +305,7 @@ class ChatAdapter:
             lambda: retrieve_structured_memories(
                 member_id=speaker_id,
                 viewer_id=effective_viewer_id,
+                viewer_context=authorized_viewer,
                 privacy_scope=scope,
                 private_store=self.pipeline.stores.private,
                 family_store=self.pipeline.stores.family,
