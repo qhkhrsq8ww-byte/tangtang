@@ -410,7 +410,11 @@ def main():
         return
 
     v4_flag = (os.environ.get("TANGTANG_V4_PIPELINE") or "1").strip().lower()
-    if v4_flag not in ("0", "false", "no", "off"):
+    legacy_requested = v4_flag in ("0", "false", "no", "off")
+    legacy_allowed = (os.environ.get("TANGTANG_ALLOW_LEGACY_V3") or "").strip() == "1"
+    # V3 keeps a manual emergency rollback path, but a stale/accidental flag
+    # must not silently bypass the V4 privacy pipeline.
+    if not (legacy_requested and legacy_allowed):
         _private_cli_reply(
             args.text,
             obs,
