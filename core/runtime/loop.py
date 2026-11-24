@@ -366,12 +366,15 @@ class TangTangRuntime:
         """STT/text → Identity → Event → PrivacyPolicy → Memory → Context → LLM → TTS."""
         errors = list(extra_errors or [])
         obs = dict(observation or {})
-        member_id = self._identify(obs) or obs.get("member_id")
+        # The Core resolver is the sole authority. Never fall back to caller-supplied
+        # member_id after resolution fails; that would turn an untrusted field into identity.
+        member_id = self._identify(obs)
         if member_id:
             obs["member_id"] = member_id
-            obs.setdefault("label", member_id)
+            obs["label"] = member_id
         else:
             obs.pop("member_id", None)
+            obs.pop("label", None)
         obs.setdefault("interactive", True)
         # Record explicit opt-out language locally so proactive scenes can respect it.
         # This plan never suppresses a user-initiated turn.
