@@ -122,8 +122,23 @@ class TestPrivacyPolicyEmptyUnknown(unittest.TestCase):
         p = PrivacyPolicy(V4_MEMBERS)
         self.assertFalse(p.is_child("邻居"))
         decision = p.classify(member_id="邻居小孩", utterance="你好")
-        self.assertEqual(decision.privacy, "FAMILY")
+        self.assertEqual(decision.privacy, "PUBLIC")
+        self.assertIsNone(decision.member_id)
+        self.assertFalse(decision.allow_family_memory)
+        self.assertFalse(decision.allow_log_raw)
+        self.assertEqual(decision.reason, "unresolved-public")
         self.assertIsNone(p.canonical_member_id("邻居小孩"))
+
+    def test_unresolved_speaker_private_content_stays_transient(self):
+        p = PrivacyPolicy(V4_MEMBERS)
+        decision = p.classify(member_id="临时访客", utterance="这是我的密码，请不要告诉任何人")
+        self.assertEqual(decision.privacy, "PUBLIC")
+        self.assertIsNone(decision.member_id)
+        self.assertFalse(decision.allow_family_memory)
+        self.assertFalse(decision.allow_family_summary)
+        self.assertFalse(decision.allow_parent_context)
+        self.assertFalse(decision.allow_habit_store)
+        self.assertFalse(decision.allow_log_raw)
 
 
 if __name__ == "__main__":

@@ -15,7 +15,14 @@ from core.errors import MemoryError
 from core.memory.family import FamilySummary
 from tangtang_runtime import TangTangRuntime
 
-MEMBERS = load_members()
+# Keep integration tests deterministic even when private family.json is absent in CI.
+MEMBERS = {
+    "dad": {"display_name": "爸爸", "relation": "adult", "aliases": ["爸爸"]},
+    "mom": {"display_name": "妈妈", "relation": "adult", "aliases": ["妈妈"]},
+    "hanghang": {"display_name": "弟弟", "relation": "child", "age": 9, "aliases": ["弟弟", "航航"]},
+    "qiaqia": {"display_name": "姐姐", "relation": "child", "age": 12, "aliases": ["姐姐", "洽洽"]},
+}
+MEMBERS.update(load_members())
 BULLY = "我今天被同学欺负了。"
 CHAT_SRC = (ROOT / "core" / "adapters" / "chat_adapter.py").read_text(encoding="utf-8")
 
