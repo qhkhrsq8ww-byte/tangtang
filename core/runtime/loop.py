@@ -552,7 +552,7 @@ class TangTangRuntime:
         if pub.duplicate:
             return RuntimeResult(
                 event=ev,
-                member_id=mid,
+                member_id=None,
                 privacy=ev.privacy,
                 decision="LOG_ONLY",
                 action=PresentationAction(
