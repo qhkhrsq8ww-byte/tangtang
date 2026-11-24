@@ -244,10 +244,10 @@ class TestMemberScopedShortContext(unittest.TestCase):
 
         chat = ChatAdapter(members=MEMBERS, llm=llm)
         chat.turn("爸爸的专属上下文标记 DAD_ONLY_481", {"label": "dad"}, viewer_context=ViewerContext("dad", "verified"))
-        chat.turn("姐姐的另一段话", {"label": "qiaqia"}, viewer_context=ViewerContext("qiaqia", "verified"))
-        mom_prompt = received[1]["_filtered_prompt"]
-        self.assertNotIn("DAD_ONLY_481", mom_prompt)
-        self.assertNotIn("爸爸的专属上下文标记", mom_prompt)
+        chat.turn("爷爷的另一段话", {"label": "grandpa"}, viewer_context=ViewerContext("grandpa", "verified"))
+        other_prompt = received[1]["_filtered_prompt"]
+        self.assertNotIn("DAD_ONLY_481", other_prompt)
+        self.assertNotIn("爸爸的专属上下文标记", other_prompt)
 
     def test_unknown_speaker_does_not_accumulate_context(self):
         received = []
