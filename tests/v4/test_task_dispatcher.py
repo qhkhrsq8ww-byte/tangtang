@@ -92,6 +92,15 @@ class TestReminderDispatcher(unittest.TestCase):
         )
         self.assertEqual(delivered, [{"task_id": self.task.task_id, "audience_id": "child"}])
 
+    def test_private_due_reminders_do_not_emit_shared_device_notification(self):
+        source = (
+            Path(__file__).resolve().parents[2]
+            / "code" / "cat" / "cat-task-dispatch.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("notify_private_deferred", source)
+        self.assertNotIn("display notification", source)
+        self.assertNotIn("private_due", source)
+
     def test_member_or_unprivileged_actor_cannot_dispatch(self):
         member_actor = ActorContext("dad", "member", "verified")
         with self.assertRaises(PermissionError):
