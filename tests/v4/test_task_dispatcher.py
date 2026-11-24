@@ -43,15 +43,15 @@ class TestReminderDispatcher(unittest.TestCase):
 
     def test_success_is_recorded_and_not_replayed(self):
         delivered = []
-        result = self.dispatch(deliver=lambda task: delivered.append(task.task_id) or True)
+        result = self.dispatch(deliver=lambda task, audience: delivered.append(task.task_id) or True)
         self.assertEqual(result, {"claimed": 1, "succeeded": 1, "failed": 0, "deferred": 0})
         self.assertEqual(delivered, [self.task.task_id])
         self.assertEqual(self.service.get_task(self.task.task_id, viewer_id="child").status, "delivered")
-        second = self.dispatch(deliver=lambda task: self.fail("completed reminder replayed"))
+        second = self.dispatch(deliver=lambda task, audience: self.fail("completed reminder replayed"))
         self.assertEqual(second["claimed"], 0)
 
     def test_failure_is_not_reported_as_success(self):
-        result = self.dispatch(deliver=lambda task: False)
+        result = self.dispatch(deliver=lambda task, audience: False)
         self.assertEqual(result["failed"], 1)
         failed = self.service.get_task(self.task.task_id, viewer_id="child")
         self.assertEqual(failed.status, "failed")
@@ -66,7 +66,7 @@ class TestReminderDispatcher(unittest.TestCase):
             visibility="PRIVATE",
         )
         delivered = []
-        result = self.dispatch(deliver=lambda task: delivered.append(task.title) or True)
+        result = self.dispatch(deliver=lambda task, audience: delivered.append(task.title) or True)
         self.assertEqual(delivered, ["带水杯"])
         self.assertEqual(result["deferred"], 1)
         stored = self.service.get_task(private.task_id, viewer_id="child")
@@ -75,8 +75,8 @@ class TestReminderDispatcher(unittest.TestCase):
 
     def test_family_reminder_can_be_deferred_by_quiet_hours_policy(self):
         result = self.dispatch(
-            deliver=lambda task: self.fail("quiet-hours task must not be spoken"),
-            defer_reason=lambda task: "quiet_hours",
+            deliver=lambda task, audience: self.fail("quiet-hours task must not be spoken"),
+            defer_reason=lambda task, audience: "quiet_hours",
         )
         self.assertEqual(result["deferred"], 1)
         stored = self.service.get_task(self.task.task_id, viewer_id="child")
@@ -86,7 +86,7 @@ class TestReminderDispatcher(unittest.TestCase):
     def test_dispatcher_uses_system_actor_and_keeps_owner_as_audience(self):
         delivered = []
         self.dispatch(
-            deliver=lambda task: delivered.append(
+            deliver=lambda task, audience: delivered.append(
                 {"task_id": task.task_id, "audience_id": task.owner_member_id}
             ) or True
         )
@@ -95,7 +95,7 @@ class TestReminderDispatcher(unittest.TestCase):
     def test_member_or_unprivileged_actor_cannot_dispatch(self):
         member_actor = ActorContext("dad", "member", "verified")
         with self.assertRaises(PermissionError):
-            run_due(self.service, actor=member_actor, deliver=lambda task: True, now=self.now)
+            run_due(self.service, actor=member_actor, deliver=lambda task, audience: True, now=self.now)
         unprivileged_system = ActorContext(None, "system", "system")
         with self.assertRaises(PermissionError):
             self.service.due_tasks_for_dispatch(actor=unprivileged_system, now=self.now)
