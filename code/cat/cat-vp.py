@@ -6,7 +6,7 @@
 用法：
   建档: ./cat-vp.py enroll <名字> <pcm文件...>
   识别: ./cat-vp.py identify <pcm文件>
-  记录: ./cat-vp.py log <名字> <文本>
+  记录: ./cat-vp.py log <名字>  （只记录互动标签，不保存原话）
   总结: ./cat-vp.py summary [天数]
   列出: ./cat-vp.py list
 
@@ -100,7 +100,9 @@ def save_habits(h):
 
 def log(name,text=""):
     h=load_habits(); now=datetime.now()
-    entry={"name":name,"text":text,"time":now.strftime("%Y-%m-%d %H:%M:%S"),"hour":now.hour,"weekday":now.strftime("%A")}
+    # Privacy invariant: voice interaction logs must never persist raw speech.
+    # Keep the legacy text parameter for CLI compatibility, but intentionally ignore it.
+    entry={"name":name,"time":now.strftime("%Y-%m-%d %H:%M:%S"),"hour":now.hour,"weekday":now.strftime("%A")}
     h.setdefault("logs",[]).append(entry)
     m=h.setdefault("members",{}).setdefault(name,{"total":0,"by_hour":{},"days":[],"last":None})
     m["total"]+=1
@@ -121,8 +123,6 @@ def summary(days=7):
         print(f"👤 {name}: {len(entries)} 次互动")
         active=sorted(set(e.get("hour",0) for e in entries))
         if active: print("   活跃时段: "+", ".join(f"{h}点" for h in active))
-        texts=[e.get("text") for e in entries if e.get("text")]
-        if texts: print(f"   最近说的: {texts[-3:]}")
         print()
 
 if __name__ == "__main__":
