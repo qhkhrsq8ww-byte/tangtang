@@ -21,6 +21,7 @@ from core.adapters.family_loader import load_members
 from tangtang_paths import data_dir
 from core.tasks.dispatcher import run_due
 from core.tasks.service import TaskService
+from core.security.contexts import ActorContext
 
 SAY = CAT_DIR / "cat-say.sh"
 
@@ -35,6 +36,8 @@ def write_health(home: Path, *, mode: str, outcome: str, stats=None, note: str =
         "outcome": outcome,
         "stats": stats if isinstance(stats, dict) else {},
         "note": str(note or "")[:160],
+        "actor_kind": "system",
+        "listener_identity_status": "unverified",
     }
     try:
         with path.open("a", encoding="utf-8") as handle:
@@ -103,19 +106,22 @@ def main() -> int:
         print("未读取到家庭成员配置；未执行提醒。", file=sys.stderr)
         return 2
     service = TaskService(home=home, persist=True, members=members)
+    dispatch_actor = ActorContext(
+        actor_id=None, kind="system", identity_status="system",
+        capabilities=frozenset({"tasks:dispatch"}),
+    )
 
     if not args.deliver:
-        due = []
-        seen = set()
-        for viewer_id in members:
-            for task in service.due_tasks(viewer_id=viewer_id):
-                if task.owner_member_id == viewer_id and task.task_id not in seen:
-                    seen.add(task.task_id)
-                    due.append(task)
+        # Preview only FAMILY reminders. PRIVATE titles are never read by the
+        # system scheduler or printed into a shared terminal/room.
+        due = service.due_tasks_for_dispatch(actor=dispatch_actor)
+        private_due = service.count_private_due_for_dispatch(actor=dispatch_actor)
         for task in due:
-            print(f"[预览] {task.owner_member_id}: {task.title} ({task.task_id})")
-        print(f"到期任务 {len(due)} 项；预览模式未更改任务状态。实际播放请加 --deliver。")
-        write_health(home, mode="preview", outcome="ok", stats={"due": len(due)})
+            print(f"[预览·家庭提醒] audience={task.owner_member_id}: {task.title} ({task.task_id})")
+        if private_due:
+            print(f"另有私人提醒 {private_due} 项；预览不读取内容，也不在公共空间播报。")
+        print(f"可在家庭渠道处理的到期提醒 {len(due)} 项；预览模式未更改任务状态。实际播放请加 --deliver。")
+        write_health(home, mode="preview", outcome="ok", stats={"family_due": len(due), "private_due_hidden": private_due})
         return 0
 
     def deliver(task):
@@ -146,7 +152,7 @@ def main() -> int:
             recovered = service.recover_stale_running()
             if recovered:
                 print(f"有 {recovered} 项中断提醒结果不确定，已标记待人工核查；不会自动重播。")
-            stats = run_due(service, member_ids=members.keys(), deliver=deliver, defer_reason=defer_reason_for_context, on_defer=notify_deferred)
+            stats = run_due(service, actor=dispatch_actor, deliver=deliver, defer_reason=defer_reason_for_context, on_defer=notify_deferred)
     except RuntimeError as exc:
         write_health(home, mode="deliver", outcome="skipped", note="dispatcher_lock_busy")
         print(str(exc), file=sys.stderr)
