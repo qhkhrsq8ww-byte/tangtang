@@ -105,6 +105,14 @@ class TestReminderDispatcher(unittest.TestCase):
         member_actor = ActorContext("dad", "member", "verified")
         with self.assertRaises(PermissionError):
             run_due(self.service, actor=member_actor, deliver=lambda task, audience: True, now=self.now)
+        member_with_dispatch_capability = ActorContext(
+            "dad", "member", "verified", frozenset({"tasks:dispatch"})
+        )
+        with self.assertRaises(PermissionError):
+            run_due(
+                self.service, actor=member_with_dispatch_capability,
+                deliver=lambda task, audience: True, now=self.now,
+            )
         unprivileged_system = ActorContext(None, "system", "system")
         with self.assertRaises(PermissionError):
             self.service.due_tasks_for_dispatch(actor=unprivileged_system, now=self.now)
