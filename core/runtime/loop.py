@@ -520,13 +520,18 @@ class TangTangRuntime:
         """Proactive scene → Event → InterruptPolicy → Response. Never speaks to a child by skipping policy."""
         extra = dict(observation or {})
         obs = self.living_room.observation_for(kind, extra)
-        mid = member_id or extra.get("member_id") or extra.get("label")
-        if mid:
-            resolved = self._identify({"label": mid, "member_id": mid, **obs})
-            mid = resolved or (None if str(mid).lower() in {"unknown", "访客"} else str(mid))
+        candidate = member_id or extra.get("label") or extra.get("member_id")
+        # Remove caller-provided identity fields before the scene policy/context sees them.
+        obs.pop("member_id", None)
+        obs.pop("label", None)
+        mid = None
+        if candidate:
+            identity_observation = dict(obs)
+            identity_observation["label"] = str(candidate)
+            mid = self._identify(identity_observation)
         if mid:
             obs["member_id"] = mid
-            obs.setdefault("label", mid)
+            obs["label"] = mid
         event = isolate(
             lambda: self.living_room.to_event(
                 kind,
