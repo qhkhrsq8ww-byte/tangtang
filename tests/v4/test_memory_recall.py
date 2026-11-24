@@ -69,6 +69,38 @@ class TestMemoryRecall(unittest.TestCase):
         self.assertEqual(turn.context.get("recall"), [])
         self.assertNotIn("must not leak without viewer context", received[0]["_filtered_prompt"])
 
+    def test_family_grant_allows_only_family_scope_recall(self):
+        received = []
+        pipe = PrivacyPipeline(members=MEMBERS)
+        pipe.stores.family.put(Memory(
+            memory_id="child-family-fact",
+            member_id="hanghang",
+            type="preference",
+            privacy="FAMILY",
+            data={"tag": "communication", "value": "family-visible preference"},
+        ))
+        pipe.stores.private.put(Memory(
+            memory_id="child-private-fact",
+            member_id="hanghang",
+            type="preference",
+            privacy="PRIVATE",
+            data={"tag": "communication", "value": "private-only preference"},
+        ))
+        chat = ChatAdapter(
+            pipeline=pipe,
+            members=MEMBERS,
+            llm=lambda payload: received.append(dict(payload)) or "收到。",
+        )
+        viewer = ViewerContext("dad", "verified", frozenset({"family:read"}))
+        turn = chat.turn(
+            "你好", {"label": "hanghang", "privacy_scope": "FAMILY"},
+            viewer_context=viewer,
+        )
+        prompt = received[0]["_filtered_prompt"]
+        self.assertIn("family-visible preference", prompt)
+        self.assertNotIn("private-only preference", prompt)
+        self.assertEqual(turn.context["recall"][0]["member_id"], "hanghang")
+
     def test_raw_utterance_is_never_recalled_even_for_owner(self):
         pipe = PrivacyPipeline(members=MEMBERS)
         pipe.stores.family.put(Memory(
