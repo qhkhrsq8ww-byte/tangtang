@@ -242,11 +242,16 @@ class TestMemberScopedShortContext(unittest.TestCase):
             return "我听到了。"
 
         chat = ChatAdapter(members=MEMBERS, llm=llm)
+        from core.policy.privacy_policy import PrivacyPolicy
+        other_adult = next((mid for mid in MEMBERS if mid != "dad" and not PrivacyPolicy(MEMBERS).is_child(mid)), None)
+        if other_adult is None:
+            self.skipTest("fixture has no second registered adult")
         chat.turn("爸爸的专属上下文标记 DAD_ONLY_481", {"label": "dad"})
-        chat.turn("妈妈的另一段话", {"label": "mom"})
-        mom_prompt = received[1]["_filtered_prompt"]
-        self.assertNotIn("DAD_ONLY_481", mom_prompt)
-        self.assertNotIn("爸爸的专属上下文标记", mom_prompt)
+        chat.turn("另一位家庭成员的独立对话", {"label": other_adult})
+        self.assertGreaterEqual(len(received), 2)
+        other_prompt = received[-1]["_filtered_prompt"]
+        self.assertNotIn("DAD_ONLY_481", other_prompt)
+        self.assertNotIn("爸爸的专属上下文标记", other_prompt)
 
     def test_unknown_speaker_does_not_accumulate_context(self):
         received = []
