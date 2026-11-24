@@ -7,7 +7,6 @@ import os
 import sys
 import types
 from types import SimpleNamespace
-import sys
 import tempfile
 import unittest
 from pathlib import Path
