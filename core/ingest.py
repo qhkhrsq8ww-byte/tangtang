@@ -107,7 +107,10 @@ class PrivacyPipeline:
         store_private_memory: bool = True,
     ) -> IngestResult:
         obs = dict(observation or {})
-        member_id = self.identity.resolve(obs) or obs.get("member_id") or obs.get("label")
+        # Only a successful roster resolution may establish member identity.
+        # Never fall back to caller-supplied labels/IDs: conflicting or unknown
+        # perception fields must remain an unresolved visitor, not gain family access.
+        member_id = self.identity.resolve(obs)
         if member_id is not None:
             member_id = str(member_id).strip() or None
         decision = self.privacy.assert_event_privacy(
