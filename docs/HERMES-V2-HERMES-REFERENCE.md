@@ -91,6 +91,10 @@ agent:
 - 初期不启用 Hermes Cron；调度仍由 TangTang Core/现有任务机制负责，防止双重调度。
 - Skills 工具集初期禁用；即使打开 write_approval，审批也不覆盖通用文件工具或终端。
 
+## 4. API Server 的运行进程
+
+Hermes API Server 通过 `hermes gateway` 进程提供（由 `API_SERVER_ENABLED=true` 或 `gateway.api_server.enabled: true` 启用），不是独立的 `hermes serve` Desktop backend，也不是 Hermes 自身作为 MCP Server 的 `mcp-serve` 插件。第一阶段只启动本机 API Server 所需的 Gateway，不配置外部消息渠道；进程生命周期、端口和日志要作为一个服务单独验收。
+
 ## 4. 运行形态选择
 
 优先验证 API Server 的本地 HTTP 接口与会话能力，作为 TangTang Core 的 LLM/Agent Adapter 候选；同时保留 `hermes -z` 单次 CLI 作为最小 PoC/故障诊断入口。不要直接使用默认完整工具集的 API Server。
